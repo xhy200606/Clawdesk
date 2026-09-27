@@ -198,6 +198,21 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       { id: "glm-4.7", name: "GLM-4.7" },
     ],
   },
+  {
+    id: "fangzhou-agent-plan",
+    label: "方舟 Agent Plan",
+    provider: "fangzhou-agent-plan",
+    baseUrl: "https://ark.cn-beijing.volces.com/api/plan/v3",
+    api: "openai-completions",
+    apiKeyUrl: "https://console.volcengine.com/ark",
+    allowCustomModels: true,
+    models: [
+      { id: "ark-code-latest", name: "Auto", tag: "\u63a8\u8350" },
+      { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash" },
+      { id: "doubao-seed-2.1-lite", name: "Doubao Seed 2.1 Lite" },
+      { id: "doubao-seed-evolving", name: "Doubao Seed Evolving" },
+    ],
+  },
 ];
 
 const API_OPTIONS = [
