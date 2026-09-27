@@ -1179,7 +1179,7 @@ export const en: TranslationMap = {
     },
   },
   setupWizard: {
-    welcomeTitle: "Welcome to OpenClaw",
+    welcomeTitle: "Welcome to ClawDeck",
     welcomeDesc: "Just a few steps to set up your AI assistant and get started.",
     modelStep: "Model Config",
     channelStep: "Channel Config",

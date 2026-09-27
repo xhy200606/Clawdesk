@@ -121,7 +121,7 @@ export function NavSidebar() {
       <div className="nav-brand">
         <div className="brand">
           <div className="brand-logo">
-            <img src={faviconSrc} alt="OpenClaw" />
+            <img src={faviconSrc} alt="ClawDeck" />
           </div>
           <div className="brand-text">
             <div className="brand-title">OPENCLAW</div>
