@@ -1,18 +1,19 @@
 name: macOS Release
 
-on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing release tag to validate for macOS release handoff (for example v2026.3.22 or v2026.3.22-beta.1)
-        required: true
-        type: string
-      preflight_only:
-        description: Retained for operator compatibility; this public workflow is validation-only
-        required: true
-        default: true
-        type: boolean
-
+# [disabled] GitHub 托管构建/发布已停用：镜像统一在本地 Docker 构建。
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       tag:
+#         description: Existing release tag to validate for macOS release handoff (for example v2026.3.22 or v2026.3.22-beta.1)
+#         required: true
+#         type: string
+#       preflight_only:
+#         description: Retained for operator compatibility; this public workflow is validation-only
+#         required: true
+#         default: true
+#         type: boolean
+# 
 concurrency:
   group: macos-release-${{ inputs.tag }}
   cancel-in-progress: false

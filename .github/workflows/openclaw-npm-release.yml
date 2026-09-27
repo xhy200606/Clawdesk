@@ -1,18 +1,19 @@
 name: OpenClaw NPM Release
 
-on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Release tag to publish (for example v2026.3.22, v2026.3.22-beta.1, or fallback v2026.3.22-1)
-        required: true
-        type: string
-      preflight_only:
-        description: Run validation/build only and skip the gated publish job
-        required: true
-        default: false
-        type: boolean
-
+# [disabled] GitHub 托管构建/发布已停用：镜像统一在本地 Docker 构建。
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       tag:
+#         description: Release tag to publish (for example v2026.3.22, v2026.3.22-beta.1, or fallback v2026.3.22-1)
+#         required: true
+#         type: string
+#       preflight_only:
+#         description: Run validation/build only and skip the gated publish job
+#         required: true
+#         default: false
+#         type: boolean
+# 
 concurrency:
   group: openclaw-npm-release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
   cancel-in-progress: false

@@ -11745,7 +11745,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
       },
     },
     required: ["commands"],
-    additionalProperties: false,
+    additionalProperties: {},
     title: "OpenClawConfig",
   },
   uiHints: {

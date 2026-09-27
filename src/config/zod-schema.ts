@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { parseByteSize } from "../cli/parse-bytes.js";
 import { parseDurationMs } from "../cli/parse-duration.js";
-import { upstreamCompatSections } from "./upstream-compat/index.js";
+import { upstreamCompatSectionList } from "./upstream-compat/index.js";
 import { ToolsSchema } from "./zod-schema.agent-runtime.js";
 import { AgentsSchema, AudioSchema, BindingsSchema, BroadcastSchema } from "./zod-schema.agents.js";
 import { ApprovalsSchema } from "./zod-schema.approvals.js";
@@ -232,7 +232,7 @@ const McpConfigSchema = z
 export const OpenClawSchema = z
   .object({
     // [upstream-compat] 新增顶层配置节，见 src/config/upstream-compat/README.md
-    ...upstreamCompatSections,
+    ...upstreamCompatSectionList(),
     $schema: z.string().optional(),
     meta: z
       .object({
@@ -954,7 +954,12 @@ export const OpenClawSchema = z
       .strict()
       .optional(),
   })
-  .strict()
+  // [upstream-compat] passthrough (instead of strict) at the ROOT level only:
+  // configs authored for other OpenClaw versions (newer or older sections)
+  // parse, are stored and round-trip faithfully — the WebUI adapts to
+  // whatever OpenClaw core it talks to. Section-internal validation stays
+  // strict for the sections defined here.
+  .passthrough()
   .superRefine((cfg, ctx) => {
     const agents = cfg.agents?.list ?? [];
     if (agents.length === 0) {

@@ -1,10 +1,11 @@
 name: Stale
 
-on:
-  schedule:
-    - cron: "17 3 * * *"
-  workflow_dispatch:
-
+# [disabled] GitHub 托管构建/发布已停用：镜像统一在本地 Docker 构建。
+# on:
+#   schedule:
+#     - cron: "17 3 * * *"
+#   workflow_dispatch:
+# 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 

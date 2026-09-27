@@ -1,13 +1,14 @@
 name: Auto response
 
-on:
-  issues:
-    types: [opened, edited, labeled]
-  issue_comment:
-    types: [created]
-  pull_request_target: # zizmor: ignore[dangerous-triggers] maintainer-owned label automation; no untrusted checkout or code execution
-    types: [labeled]
-
+# [disabled] GitHub 托管构建/发布已停用：镜像统一在本地 Docker 构建。
+# on:
+#   issues:
+#     types: [opened, edited, labeled]
+#   issue_comment:
+#     types: [created]
+#   pull_request_target: # zizmor: ignore[dangerous-triggers] maintainer-owned label automation; no untrusted checkout or code execution
+#     types: [labeled]
+# 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 

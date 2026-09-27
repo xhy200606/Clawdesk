@@ -25,3 +25,20 @@ export const upstreamCompatSections: Record<string, z.ZodTypeAny> = {
   accessGroups: AccessGroupsSchema,
   cloudWorkers: CloudWorkersConfigSchema,
 };
+
+/**
+ * Version-adaptive access to the extra sections.
+ *
+ * - Default (fork gateway): sections are added so the 2026.3-based core can
+ *   validate/store settings authored for newer OpenClaw releases.
+ * - OPENCLAW_DISABLE_UPSTREAM_COMPAT=1: layer fully off — the gateway runs as
+ *   vanilla OpenClaw (independent mode / other gateway cores).
+ * - Keys already defined by the running core are never overridden, so the
+ *   same layer is safe across different OpenClaw versions.
+ */
+export function upstreamCompatSectionList(): Record<string, z.ZodTypeAny> {
+  if (process.env.OPENCLAW_DISABLE_UPSTREAM_COMPAT === "1") {
+    return {};
+  }
+  return upstreamCompatSections;
+}

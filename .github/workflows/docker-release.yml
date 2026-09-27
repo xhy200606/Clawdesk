@@ -1,22 +1,23 @@
 name: Docker Release
 
-on:
-  push:
-    tags:
-      - "v*"
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
-      - "**/*.mdx"
-      - ".agents/**"
-      - "skills/**"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing release tag to backfill (for example v2026.3.22)
-        required: true
-        type: string
-
+# [disabled] GitHub 托管构建/发布已停用：镜像统一在本地 Docker 构建。
+# on:
+#   push:
+#     tags:
+#       - "v*"
+#     paths-ignore:
+#       - "docs/**"
+#       - "**/*.md"
+#       - "**/*.mdx"
+#       - ".agents/**"
+#       - "skills/**"
+#   workflow_dispatch:
+#     inputs:
+#       tag:
+#         description: Existing release tag to backfill (for example v2026.3.22)
+#         required: true
+#         type: string
+# 
 concurrency:
   group: ${{ github.event_name == 'workflow_dispatch' && format('docker-release-manual-{0}', inputs.tag) || format('docker-release-push-{0}', github.run_id) }}
   cancel-in-progress: false
