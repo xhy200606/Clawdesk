@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDurationCompact } from "../../../../src/infra/format-time/format-duration.ts";
+import { formatDurationCompact } from "../../../client-core/infra/format-time/format-duration.ts";
 import { t } from "../../i18n/index.ts";
 import {
   buildAggregatesFromSessions,

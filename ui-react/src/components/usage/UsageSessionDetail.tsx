@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useRef } from "react";
-import { formatDurationCompact } from "../../../../src/infra/format-time/format-duration.ts";
+import { formatDurationCompact } from "../../../client-core/infra/format-time/format-duration.ts";
 import { t } from "../../i18n/index.ts";
 import { parseToolSummary } from "../../lib/usage-helpers.ts";
 import { charsToTokens, formatCost, formatTokens } from "../../lib/views/usage-metrics.ts";

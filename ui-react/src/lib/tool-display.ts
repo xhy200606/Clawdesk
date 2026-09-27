@@ -1,4 +1,3 @@
-import SHARED_TOOL_DISPLAY_JSON from "../../../apps/shared/OpenClawKit/Sources/OpenClawKit/Resources/tool-display.json" with { type: "json" };
 import {
   defaultTitle,
   formatToolDetailText,
@@ -6,7 +5,8 @@ import {
   resolveActionArg,
   resolveToolVerbAndDetail,
   type ToolDisplaySpec as ToolDisplaySpecBase,
-} from "../../../src/agents/tool-display-common.js";
+} from "../../client-core/agents/tool-display-common.js";
+import SHARED_TOOL_DISPLAY_JSON from "../../client-core/assets/tool-display.json" with { type: "json" };
 import type { IconName } from "./icons.ts";
 
 type ToolDisplaySpec = ToolDisplaySpecBase & {

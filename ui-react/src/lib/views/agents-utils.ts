@@ -2,12 +2,12 @@ import { html } from "lit";
 import {
   listCoreToolSections,
   PROFILE_OPTIONS as TOOL_PROFILE_OPTIONS,
-} from "../../../../src/agents/tool-catalog.js";
+} from "../../../client-core/agents/tool-catalog.js";
 import {
   expandToolGroups,
   normalizeToolName,
   resolveToolProfilePolicy,
-} from "../../../../src/agents/tool-policy-shared.js";
+} from "../../../client-core/agents/tool-policy-shared.js";
 import { t } from "../../i18n/index.ts";
 import { avatarFromName } from "../helpers/multiavatar.ts";
 import type { AgentIdentityResult, AgentsFilesListResult, AgentsListResult } from "../types.ts";

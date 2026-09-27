@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { formatDurationCompact } from "../../../../src/infra/format-time/format-duration.ts";
+import { formatDurationCompact } from "../../../client-core/infra/format-time/format-duration.ts";
 import { t } from "../../i18n/index.ts";
 import { formatCost, formatTokens } from "../../lib/views/usage-metrics.ts";
 import type { UsageColumnId, UsageSessionEntry } from "../../lib/views/usageTypes.ts";
