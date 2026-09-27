@@ -6,6 +6,7 @@ import {
   StreamingMessage,
   ReadingIndicator,
 } from "../components/chat/ChatMessage.tsx";
+import { ContextUsage } from "../components/chat/ContextUsage.tsx";
 import { MarkdownSidebar } from "../components/chat/MarkdownSidebar.tsx";
 import { Queue, QueueSection, QueueList, QueueItem } from "../components/chat/Queue.tsx";
 import { t } from "../i18n/index.ts";
@@ -16,6 +17,7 @@ import { highlightCodeBlocks } from "../lib/chat/code-highlight.ts";
 import { normalizeMessage } from "../lib/chat/message-normalizer.ts";
 import { normalizeRoleForGrouping } from "../lib/chat/message-normalizer.ts";
 import { abortChatRun, loadChatHistory, type ChatState } from "../lib/controllers/chat.ts";
+import { loadConfig } from "../lib/controllers/config.ts";
 import { loadSessions, patchSession } from "../lib/controllers/sessions.ts";
 import { detectTextDirection } from "../lib/text-direction.ts";
 import type { ChatItem, MessageGroup } from "../lib/types/chat-types.ts";
@@ -377,60 +379,65 @@ function AttachmentPreview({
 function ComposeModelSelector() {
   const sessionKey = useAppStore((st) => st.sessionKey);
   const sessionsResult = useAppStore((st) => st.sessionsResult);
+  const configForm = useAppStore((st) => st.configForm);
   const connected = useAppStore((st) => st.connected);
-  const client = useAppStore((st) => st.client);
 
   type ModelEntry = { id: string; name?: string; provider: string };
   type GroupedModels = { provider: string; models: ModelEntry[] };
 
-  const [groups, setGroups] = useState<GroupedModels[]>([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Obtener el modelo actual de la sesión activa
   const currentModel = React.useMemo(() => {
-    if (!sessionsResult?.sessions || !sessionKey) {
+    const sessions = sessionsResult?.sessions;
+    if (!sessions || !sessionKey) {
       return null;
     }
-    const session = sessionsResult.sessions.find((s) => s.key === sessionKey);
+    const session =
+      sessions.find((item) => item.key === sessionKey) ??
+      sessions.find((item) => item.key.endsWith(`:${sessionKey}`)) ??
+      sessions.find((item) => item.key.endsWith(sessionKey)) ??
+      null;
     return session?.model ?? null;
   }, [sessionsResult, sessionKey]);
 
-  // Cargar modelos vía RPC al abrir el dropdown
+  // configForm 仅在设置页加载，聊天页连接后按需拉取一次（供显示名与下拉使用）
   useEffect(() => {
-    if (!open || !client || !connected) {
-      return;
+    if (connected && !configForm) {
+      void loadConfig(getReactiveState() as never);
     }
-    client
-      .request("models.list", {})
-      .then((res) => {
-        const payload = res as { models?: ModelEntry[] } | null;
-        if (!Array.isArray(payload?.models)) {
-          return;
+  }, [connected, configForm]);
+
+  // 仅显示「快速添加模型提供商」中配置的自定义 provider 模型（来自 config.get 的 models.providers）
+  const groups = React.useMemo<GroupedModels[]>(() => {
+    const modelsCfg = (configForm as Record<string, unknown> | null)?.models as
+      | { providers?: Record<string, unknown> }
+      | undefined;
+    const providerMap = modelsCfg?.providers ?? {};
+    const result: GroupedModels[] = [];
+    for (const [providerId, providerRaw] of Object.entries(providerMap)) {
+      if (!providerRaw || typeof providerRaw !== "object") {
+        continue;
+      }
+      const rawModels = (providerRaw as { models?: unknown[] }).models;
+      if (!Array.isArray(rawModels) || rawModels.length === 0) {
+        continue;
+      }
+      const models: ModelEntry[] = [];
+      for (const m of rawModels) {
+        const rec = m as { id?: string; name?: string };
+        if (!rec?.id) {
+          continue;
         }
-        const byProvider = new Map<string, ModelEntry[]>();
-        for (const m of payload.models) {
-          if (!m?.provider || !m?.id) {
-            continue;
-          }
-          const list = byProvider.get(m.provider) ?? [];
-          list.push(m);
-          byProvider.set(m.provider, list);
-        }
-        const result: GroupedModels[] = [];
-        for (const [provider, models] of byProvider) {
-          result.push({
-            provider,
-            models: models.toSorted((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id)),
-          });
-        }
-        result.sort((a, b) => a.provider.localeCompare(b.provider));
-        setGroups(result);
-      })
-      .catch(() => {
-        /* ignorar */
-      });
-  }, [open, client, connected]);
+        models.push({ id: rec.id, name: rec.name ?? rec.id, provider: providerId });
+      }
+      if (models.length > 0) {
+        result.push({ provider: providerId, models });
+      }
+    }
+    return result;
+  }, [configForm]);
 
   // Cerrar al hacer clic fuera
   useEffect(() => {
@@ -456,12 +463,20 @@ function ComposeModelSelector() {
     void patchSession(rs as never, key, { model: `${provider}/${modelId}` });
   }, []);
 
-  // Nombre corto del modelo para el botón
-  const displayName = currentModel
-    ? currentModel.includes("/")
-      ? currentModel.split("/").pop()!
-      : currentModel
-    : "模型";
+  // Nombre corto del modelo para el botón（优先用 quick-add 配置的显示名，如 Auto）
+  const displayName = React.useMemo(() => {
+    if (!currentModel) {
+      return "模型";
+    }
+    const short = currentModel.includes("/") ? currentModel.split("/").pop()! : currentModel;
+    for (const g of groups) {
+      const hit = g.models.find((m) => m.id === short || `${g.provider}/${m.id}` === currentModel);
+      if (hit) {
+        return hit.name ?? hit.id;
+      }
+    }
+    return short;
+  }, [currentModel, groups]);
 
   return (
     <div className="chat-compose__model-selector" ref={containerRef}>
@@ -547,6 +562,33 @@ export function ChatView() {
   const connected = s((st) => st.connected);
   const settings = s((st) => st.settings);
   const lastError = s((st) => st.lastError);
+
+  // --- Context gauge (当前会话上下文占用，数据来自 sessions.list) ---
+  const sessionsResult = s((st) => st.sessionsResult);
+  const activeSessionKey = s((st) => st.sessionKey);
+  const composeSession = React.useMemo(() => {
+    const sessions = sessionsResult?.sessions;
+    if (!sessions || !activeSessionKey) {
+      return null;
+    }
+    // store 里用短 key（如 "main"），网关返回 "agent:main:main"，做宽容匹配
+    return (
+      sessions.find((item) => item.key === activeSessionKey) ??
+      sessions.find((item) => item.key.endsWith(`:${activeSessionKey}`)) ??
+      sessions.find((item) => item.key.endsWith(activeSessionKey)) ??
+      null
+    );
+  }, [sessionsResult, activeSessionKey]);
+  const composeUsedTokens = composeSession?.totalTokens ?? null;
+  const composeContextTokens = composeSession?.contextTokens ?? null;
+  const composeModelId = composeSession?.model ?? null;
+
+  // 聊天页初始也加载会话列表（供当前模型名 / 上下文圆环使用）
+  useEffect(() => {
+    if (connected && !sessionsResult) {
+      void loadSessions(getReactiveState() as never);
+    }
+  }, [connected, sessionsResult]);
 
   // --- Sidebar ---
   const sidebarOpen = s((st) => st.sidebarOpen);
@@ -1022,6 +1064,11 @@ export function ChatView() {
                 )}
               </div>
               <ComposeModelSelector />
+              <ContextUsage
+                usedTokens={composeUsedTokens}
+                contextTokens={composeContextTokens}
+                modelId={composeModelId}
+              />
             </div>
             <div className="chat-compose__actions">
               <button

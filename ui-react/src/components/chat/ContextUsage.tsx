@@ -1,20 +1,14 @@
-import React, { useState } from "react";
-import { t } from "../../i18n/index.ts";
+import React, { useEffect, useRef, useState } from "react";
 
 // ─── Types ───────────────────────────────────────────────────
 
-interface TokenUsage {
-  inputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  cachedInputTokens?: number;
-  totalTokens?: number;
-}
-
-interface ContextUsageProps {
-  usage?: TokenUsage;
-  maxTokens?: number;
-  modelId?: string;
+export interface ContextUsageProps {
+  /** 会话已使用的 tokens（sessions.list → totalTokens） */
+  usedTokens?: number | null;
+  /** 模型上下文窗口（sessions.list → contextTokens） */
+  contextTokens?: number | null;
+  /** 当前模型 id（用于面板底部展示） */
+  modelId?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -29,30 +23,32 @@ function formatTokenCount(n: number): string {
   return String(n);
 }
 
+function gaugeColor(percent: number): string {
+  if (percent >= 0.9) return "#ef4444";
+  if (percent >= 0.7) return "#f59e0b";
+  return "#8b93a3";
+}
+
 // ─── SVG Progress Ring ───────────────────────────────────────
 
 const RADIUS = 10;
 const VIEWBOX = 24;
 const CENTER = 12;
-const STROKE_WIDTH = 2;
+const STROKE_WIDTH = 2.4;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function ProgressRing({ percent }: { percent: number }) {
-  const dashOffset = CIRCUMFERENCE * (1 - Math.min(percent, 1));
+  const clamped = Math.min(Math.max(percent, 0), 1);
+  const dashOffset = CIRCUMFERENCE * (1 - clamped);
+  const color = gaugeColor(clamped);
 
   return (
-    <svg
-      aria-label={t("chatView.contextUsageLabel")}
-      height="18"
-      role="img"
-      viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
-      width="18"
-    >
+    <svg aria-hidden="true" height="18" viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`} width="18">
       <circle
         cx={CENTER}
         cy={CENTER}
         fill="none"
-        opacity="0.2"
+        opacity="0.22"
         r={RADIUS}
         stroke="currentColor"
         strokeWidth={STROKE_WIDTH}
@@ -61,79 +57,140 @@ function ProgressRing({ percent }: { percent: number }) {
         cx={CENTER}
         cy={CENTER}
         fill="none"
-        opacity="0.8"
         r={RADIUS}
-        stroke="currentColor"
+        stroke={color}
         strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
         strokeDashoffset={dashOffset}
         strokeLinecap="round"
         strokeWidth={STROKE_WIDTH}
-        style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+        style={{
+          transform: "rotate(-90deg)",
+          transformOrigin: "center",
+          transition: "stroke-dashoffset 300ms ease",
+        }}
       />
     </svg>
   );
 }
 
-// ─── Token Breakdown Row ─────────────────────────────────────
-
-function TokenRow({ label, tokens }: { label: string; tokens?: number }) {
-  if (!tokens) {
-    return null;
-  }
-  return (
-    <div className="context-usage__row">
-      <span className="context-usage__row-label">{label}</span>
-      <span className="context-usage__row-value">{formatTokenCount(tokens)}</span>
-    </div>
-  );
-}
-
 // ─── Component ───────────────────────────────────────────────
 
-export function ContextUsage({ usage, maxTokens, modelId }: ContextUsageProps) {
-  const [isHovered, setIsHovered] = useState(false);
+export function ContextUsage({ usedTokens, contextTokens, modelId }: ContextUsageProps) {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  if (!usage) {
+  const windowTokens = contextTokens ?? 0;
+  const used = Math.max(usedTokens ?? 0, 0);
+
+  // 点击外部/Escape 关闭面板
+  useEffect(() => {
+    if (!panelOpen) {
+      return;
+    }
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setPanelOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPanelOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handleClick, true);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("mousedown", handleClick, true);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [panelOpen]);
+
+  // 拿不到窗口大小就不展示（避免无意义的百分比）。
+  // 注意：必须放在所有 hooks 之后，否则 hooks 数量在两次渲染间变化（React #310）。
+  if (!windowTokens) {
     return null;
   }
 
-  const total =
-    usage.totalTokens ??
-    (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0) + (usage.reasoningTokens ?? 0);
+  const percent = used / windowTokens;
+  const clamped = Math.min(percent, 1);
+  const pctText = `${(clamped * 100).toFixed(1)}%`;
+  const tipText = `${pctText} · ${formatTokenCount(used)} / ${formatTokenCount(windowTokens)} 上下文已使用`;
 
-  if (total === 0) {
-    return null;
-  }
-
-  const usedPercent = maxTokens ? total / maxTokens : 0;
-  const percentText = maxTokens ? `${Math.round(usedPercent * 100)}%` : formatTokenCount(total);
+  const remaining = Math.max(windowTokens - used, 0);
+  const rows: Array<{ label: string; tokens: number; color: string }> = [
+    { label: "对话消息", tokens: used, color: "#f59e0b" },
+    { label: "剩余可用", tokens: remaining, color: "#4c8dff" },
+  ];
 
   return (
     <div
       className="context-usage"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      ref={containerRef}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <div className="context-usage__trigger">
-        <span className="context-usage__pct">{percentText}</span>
-        {maxTokens ? <ProgressRing percent={usedPercent} /> : null}
-      </div>
+      <button
+        type="button"
+        className="context-usage__trigger"
+        title="上下文用量"
+        onClick={() => setPanelOpen((v) => !v)}
+      >
+        <ProgressRing percent={clamped} />
+      </button>
 
-      {isHovered && (
+      {hovered && !panelOpen && (
+        <div className="context-usage__tip" role="tooltip">
+          {tipText}
+        </div>
+      )}
+
+      {panelOpen && (
         <div className="context-usage__card">
-          {maxTokens && (
-            <div className="context-usage__header">
-              <span>{percentText}</span>
-              <span className="context-usage__header-detail">
-                {formatTokenCount(total)} / {formatTokenCount(maxTokens)}
-              </span>
-            </div>
-          )}
-          <div className="context-usage__body">
-            <TokenRow label="Input" tokens={usage.inputTokens} />
-            <TokenRow label="Output" tokens={usage.outputTokens} />
-            <TokenRow label="Reasoning" tokens={usage.reasoningTokens} />
-            <TokenRow label="Cache" tokens={usage.cachedInputTokens} />
+          <div className="context-usage__title">
+            <span>上下文用量</span>
+            <button
+              type="button"
+              className="context-usage__close"
+              aria-label="关闭"
+              onClick={() => setPanelOpen(false)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="context-usage__hero">
+            <span className="context-usage__pct">{pctText}</span>
+            <span className="context-usage__used">
+              已使用 {formatTokenCount(used)} / {formatTokenCount(windowTokens)}
+            </span>
+          </div>
+          <div className="context-usage__bar">
+            <div
+              className="context-usage__bar-fill"
+              style={{ width: `${clamped * 100}%`, background: gaugeColor(clamped) }}
+            />
+          </div>
+          <div className="context-usage__rows">
+            {rows.map((row) => (
+              <div key={row.label} className="context-usage__row">
+                <span className="context-usage__row-label">
+                  <i className="context-usage__dot" style={{ background: row.color }} />
+                  {row.label}
+                </span>
+                <span className="context-usage__row-value">
+                  {windowTokens > 0 ? `${((row.tokens / windowTokens) * 100).toFixed(1)}%` : "0%"}
+                </span>
+              </div>
+            ))}
           </div>
           {modelId && (
             <div className="context-usage__footer">

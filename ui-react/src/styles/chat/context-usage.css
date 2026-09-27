@@ -1,4 +1,4 @@
-/* ContextUsage — Token 使用量展示 */
+/* ContextUsage — 上下文用量圆环（ClawDeck 聊天输入框旁） */
 
 /* ── Container ─────────────────────────────────── */
 
@@ -8,43 +8,75 @@
   align-items: center;
 }
 
-/* ── Trigger ──────────────────────────────────── */
+/* ── Trigger（纯圆环按钮） ─────────────────────── */
 
 .context-usage__trigger {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  cursor: default;
-  font-size: 11px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   color: var(--muted);
+  cursor: pointer;
   transition: color 150ms ease, background 150ms ease;
 }
 
-.context-usage:hover .context-usage__trigger {
+.context-usage__trigger:hover,
+.context-usage__trigger:focus-visible {
   color: var(--text);
-  background: rgba(128, 128, 128, 0.08);
+  background: rgba(128, 128, 128, 0.1);
+  outline: none;
 }
 
-.context-usage__pct {
-  font-weight: 500;
+/* ── Hover Tip（单行提示） ─────────────────────── */
+
+.context-usage__tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card, #1c1f27);
+  color: var(--text, #e6e8ec);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 120;
+  animation: context-tip-appear 120ms ease-out;
 }
 
-/* ── Hover Card ──────────────────────────────── */
+@keyframes context-tip-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ── Panel（点击弹出的明细卡片） ───────────────── */
 
 .context-usage__card {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   right: 0;
-  min-width: 200px;
+  width: 300px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
-  z-index: 100;
+  border-radius: 14px;
+  background: var(--card, #1c1f27);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  padding: 14px 16px 10px;
+  z-index: 130;
   animation: context-card-appear 150ms ease-out;
 }
 
@@ -59,58 +91,124 @@
   }
 }
 
-/* ── Header ──────────────────────────────────── */
-
-.context-usage__header {
+.context-usage__title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--text, #e6e8ec);
 }
 
-.context-usage__header-detail {
-  font-weight: 400;
+.context-usage__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.context-usage__close:hover {
+  color: var(--text);
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.context-usage__hero {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.context-usage__pct {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text, #e6e8ec);
+  font-variant-numeric: tabular-nums;
+}
+
+.context-usage__used {
+  font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Body ─────────────────────────────────────── */
+/* ── Segment bar ──────────────────────────────── */
 
-.context-usage__body {
-  padding: 8px 12px;
+.context-usage__bar {
+  height: 8px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.18);
+  overflow: hidden;
+}
+
+.context-usage__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 300ms ease;
+}
+
+/* ── Breakdown rows ───────────────────────────── */
+
+.context-usage__rows {
+  margin-top: 10px;
 }
 
 .context-usage__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3px 0;
-  font-size: 12px;
+  padding: 4px 0;
+  font-size: 12.5px;
 }
 
 .context-usage__row-label {
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text, #e6e8ec);
+}
+
+.context-usage__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 .context-usage__row-value {
-  font-weight: 500;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Footer ──────────────────────────────────── */
+/* ── Footer（模型 id） ────────────────────────── */
 
 .context-usage__footer {
-  padding: 8px 12px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--border);
-  background: rgba(128, 128, 128, 0.04);
 }
 
 .context-usage__model {
   font-size: 11px;
   color: var(--muted);
   font-family: var(--font-mono, monospace);
+}
+
+/* ── 移动端：面板贴左边，避免溢出 ─────────────── */
+
+@media (max-width: 600px) {
+  .context-usage__card {
+    right: auto;
+    left: -60px;
+    width: min(300px, calc(100vw - 48px));
+  }
 }
