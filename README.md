@@ -1,7 +1,19 @@
+> [!IMPORTANT]
+> **上游项目致谢 / Upstream Attribution**
+>
+> 本仓库基于 **[josephxie1/openclaw-UI--Chinese](https://github.com/josephxie1/openclaw-UI--Chinese)**（中文增强版）
+> 改造，该项目又是 **[openclaw/openclaw](https://github.com/openclaw/openclaw)**（upstream 基线 v2026.3.28）的 fork。
+>
+> **所有核心功能、网关与原始代码均归上游作者所有**，感谢 [@josephxie1](https://github.com/josephxie1)
+> 的中文化与增强工作，以及 OpenClaw 上游开发团队。
+> 本仓库仅做了部署形态调整（WebUI 化、适配层），不声明任何原始代码的权利。
+
 <p align="center">
   <strong>🌐 Language / 语言</strong><br>
   <strong>中文</strong> | <a href="README_EN.md">English</a>
 </p>
+
+# OpenClaw 增强版 🚀
 
 # OpenClaw 增强版 🚀
 
