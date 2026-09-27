@@ -229,8 +229,10 @@ export class GatewayBrowserClient {
       };
     }
     const params = {
+      // [version-adapt] 协商区间而非硬编码：OpenClaw v2026.3.x 为 protocol 3，
+      // v2026.9.x 为 protocol 4，区间协商可同时兼容两者。
       minProtocol: 3,
-      maxProtocol: 3,
+      maxProtocol: 99,
       client: {
         id: this.opts.clientName ?? GATEWAY_CLIENT_NAMES.CONTROL_UI,
         version: this.opts.clientVersion ?? "dev",

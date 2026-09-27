@@ -39,7 +39,10 @@ export function loadSettings(): UiSettings {
     const basePath = configured
       ? normalizeBasePath(configured)
       : inferBasePathFromPathname(location.pathname);
-    return `${proto}://${location.host}${basePath}`;
+    // [client] 本客户端自带 nginx 反向代理：WebSocket 走同源 /ws 路径，
+    // 由 nginx 注入网关可信代理身份头后转发。直接连网关端口会被设备身份校验拒绝。
+    const wsPath = `${basePath.replace(/\/$/, "")}/ws`;
+    return `${proto}://${location.host}${wsPath}`;
   })();
 
   const defaults: UiSettings = {
