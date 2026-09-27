@@ -1,0 +1,88 @@
+{
+  "name": "openclaw-desktop",
+  "version": "1.0.0",
+  "description": "OpenClaw 中文版桌面客户端",
+  "author": "josephxie1",
+  "main": "main.js",
+  "scripts": {
+    "build": "electron-builder",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "40.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.openclaw.desktop",
+    "productName": "OpenClaw",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "icon.png",
+      "icon-tray.png",
+      "icon-trayTemplate.png",
+      "icon-trayTemplate@2x.png"
+    ],
+    "extraResources": [
+      {
+        "from": "gateway",
+        "to": "gateway",
+        "filter": [
+          "**/*",
+          "!.git",
+          "!src/**"
+        ]
+      },
+      {
+        "from": "node-bin",
+        "to": "node-bin",
+        "filter": [
+          "node",
+          "npm",
+          "npx",
+          "lib/**"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "icon.png",
+      "identity": "dengcheng xie (TS24L3Q4NA)",
+      "hardenedRuntime": true,
+      "entitlements": null,
+      "entitlementsInherit": null,
+      "notarize": false,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "icon.png",
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "dmg": {
+      "artifactName": "OpenClaw-${version}-standalone-${arch}.${ext}"
+    }
+  }
+}

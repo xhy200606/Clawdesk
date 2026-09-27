@@ -1,0 +1,992 @@
+/* eslint-disable */
+// @ts-nocheck
+const {
+  app,
+  BrowserWindow,
+  Tray,
+  Menu,
+  shell,
+  dialog,
+  globalShortcut,
+  ipcMain,
+} = require("electron");
+const { fork, execFile } = require("child_process");
+const path = require("path");
+const http = require("http");
+const fs = require("fs");
+const os = require("os");
+
+// Suppress EPIPE errors (harmless, happens when pipes close during shutdown)
+process.stdout.on("error", () => {});
+process.stderr.on("error", () => {});
+process.on("uncaughtException", (err) => {
+  if (err.code === "EPIPE") return;
+  console.error("[desktop] Uncaught exception:", err);
+});
+
+// ── Config ──────────────────────────────────────
+const GATEWAY_PORT = 18789;
+const GATEWAY_URL = `http://127.0.0.1:${GATEWAY_PORT}`;
+let GATEWAY_URL_ACTUAL = GATEWAY_URL;
+const POLL_INTERVAL = 500;
+const MAX_WAIT = 30000;
+
+let mainWindow = null;
+let tray = null;
+let gatewayProcess = null;
+let isQuitting = false;
+let externalGateway = false;
+let lastGatewayArgs = [];
+let lastGatewayHome = null;
+let isRestarting = false;
+
+// ── Resolve bundled gateway path ────────────────
+
+function getGatewayPath() {
+  // In packaged app: resources/gateway/
+  // In dev: ./gateway/
+  const candidates = [
+    path.join(process.resourcesPath || "", "gateway"),
+    path.join(__dirname, "gateway"),
+  ];
+  for (const dir of candidates) {
+    const entry = path.join(dir, "openclaw.mjs");
+    if (fs.existsSync(entry)) {
+      return { dir, entry };
+    }
+  }
+  return null;
+}
+
+// ── Check if gateway is already running ─────────
+
+function isGatewayRunning() {
+  return new Promise((resolve) => {
+    const req = http.get(GATEWAY_URL, (res) => {
+      res.resume();
+      resolve(true);
+    });
+    req.on("error", () => resolve(false));
+    req.setTimeout(2000, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+// ── Ensure minimal config on fresh machines ─────
+
+function buildMinimalConfig(workspaceDir) {
+  return {
+    $schema: "https://openclaw.com/schema.json",
+    meta: {
+      lastTouchedVersion: "2026.3.2",
+      lastTouchedAt: new Date().toISOString(),
+    },
+    gateway: {
+      mode: "local",
+      bind: "loopback",
+    },
+    agents: {
+      defaults: {
+        workspace: workspaceDir,
+        skipBootstrap: false,
+      },
+      list: [
+        {
+          id: "main",
+          default: true,
+          workspace: workspaceDir,
+          identity: {
+            name: "OpenClaw",
+            emoji: "🦞",
+          },
+        },
+      ],
+    },
+    commands: {
+      native: "auto",
+      restart: true,
+    },
+    channels: {
+      telegram: { enabled: true },
+      whatsapp: { enabled: true },
+      discord: { enabled: true },
+      slack: { enabled: true },
+      signal: { enabled: true },
+      imessage: { enabled: true },
+      googlechat: { enabled: true },
+      feishu: { enabled: true },
+    },
+    plugins: {
+      entries: {
+        feishu: {
+          enabled: true,
+        },
+      },
+    },
+  };
+}
+
+function ensureMinimalConfig() {
+  const home = app.getPath("home");
+  const configDir = path.join(home, ".openclaw");
+  const configPath = path.join(configDir, "openclaw.json");
+
+  if (fs.existsSync(configPath)) {
+    // Config exists — check if models are configured
+    try {
+      const raw = fs.readFileSync(configPath, "utf-8");
+      const config = JSON.parse(raw);
+      const providers = config?.models?.providers;
+      if (!providers || Object.keys(providers).length === 0) {
+        console.log("[desktop] Config exists but no models configured, showing onboarding");
+        return true;
+      }
+    } catch {
+      // Parse error, skip
+    }
+    return false;
+  }
+
+  console.log("[desktop] No config found, creating minimal config at:", configPath);
+
+  const workspaceDir = path.join(configDir, "workspace");
+  const minimalConfig = buildMinimalConfig(workspaceDir);
+
+  try {
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    if (!fs.existsSync(workspaceDir)) {
+      fs.mkdirSync(workspaceDir, { recursive: true });
+    }
+    fs.writeFileSync(configPath, JSON.stringify(minimalConfig, null, 2) + "\n");
+    console.log("[desktop] Created minimal config successfully");
+    return true;
+  } catch (err) {
+    console.error("[desktop] Failed to create config:", err.message);
+    return false;
+  }
+}
+
+// ── Gateway lifecycle ───────────────────────────
+
+function startGateway(extraArgs = [], customHome = null) {
+  lastGatewayArgs = extraArgs;
+  lastGatewayHome = customHome;
+  const bundled = getGatewayPath();
+
+  if (bundled) {
+    // ── Standalone mode: use Electron's Node to run bundled gateway ──
+    console.log("[desktop] Starting bundled gateway from:", bundled.dir);
+
+    const { spawn, execSync } = require("child_process");
+
+    // Resolve node binary: bundled node-bin > system node > Electron node (last resort)
+    let nodeBin = "node";
+    let useElectronNode = false;
+    if (app.isPackaged) {
+      const bundledNode = path.join(process.resourcesPath, "node-bin", "node");
+      if (fs.existsSync(bundledNode)) {
+        nodeBin = bundledNode;
+        console.log("[desktop] Using bundled node:", bundledNode);
+      } else {
+        try {
+          execSync("node --version", { stdio: "ignore" });
+          console.log("[desktop] Using system node");
+        } catch {
+          nodeBin = process.execPath;
+          useElectronNode = true;
+          console.log("[desktop] Falling back to Electron node");
+        }
+      }
+    }
+    const env = Object.assign({}, process.env, {
+      NODE_PATH: path.join(bundled.dir, "node_modules"),
+    });
+    // Prepend bundled node-bin to PATH so npm/npx are available for skill installs
+    const nodeBinDir = path.dirname(nodeBin);
+    if (app.isPackaged && nodeBinDir !== ".") {
+      env.PATH = nodeBinDir + path.delimiter + (env.PATH || "");
+    }
+    // Remove npm env vars and set correct gateway version
+    delete env.npm_package_version;
+    delete env.npm_package_name;
+    try {
+      const gwPkg = JSON.parse(fs.readFileSync(path.join(bundled.dir, "package.json"), "utf8"));
+      env.OPENCLAW_BUNDLED_VERSION = gwPkg.version;
+      env.OPENCLAW_VERSION = gwPkg.version;
+    } catch {}
+
+    if (useElectronNode) {
+      env.ELECTRON_RUN_AS_NODE = "1";
+      env.ELECTRON_NO_ATTACH_CONSOLE = "1";
+    }
+    // Prevenir que el gateway genere un nuevo proceso del sistema al reiniciarse
+    // (el proceso del sistema usa la UI Lit antigua en lugar de la React UI del desktop)
+    env.OPENCLAW_NO_RESPAWN = "1";
+    // Point gateway to bundled plugins (e.g. feishu plugin)
+    const extensionsDir = path.join(bundled.dir, "extensions");
+    if (fs.existsSync(extensionsDir)) {
+      env.OPENCLAW_BUNDLED_PLUGINS_DIR = extensionsDir;
+    }
+    if (customHome) env.OPENCLAW_HOME = customHome;
+
+    gatewayProcess = spawn(
+      nodeBin,
+      [
+        "--no-warnings",
+        bundled.entry,
+        "gateway",
+        "--allow-unconfigured",
+        "--auth",
+        "none",
+        ...extraArgs,
+      ],
+      {
+        cwd: bundled.dir,
+        stdio: ["ignore", "pipe", "pipe"],
+        env,
+      },
+    );
+  } else {
+    // ── Fallback: use system openclaw command ──
+    console.log("[desktop] No bundled gateway found, using system openclaw");
+    const { spawn } = require("child_process");
+    const fallbackEnv = Object.assign({}, process.env);
+    if (customHome) fallbackEnv.OPENCLAW_HOME = customHome;
+    gatewayProcess = spawn(
+      "openclaw",
+      ["gateway", "--allow-unconfigured", "--auth", "none", ...extraArgs],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: fallbackEnv,
+        detached: false,
+      },
+    );
+  }
+
+  if (gatewayProcess.stdout) {
+    gatewayProcess.stdout.on("data", (data) => {
+      try {
+        process.stdout.write("[gateway] " + data);
+      } catch {}
+    });
+  }
+  if (gatewayProcess.stderr) {
+    gatewayProcess.stderr.on("data", (data) => {
+      try {
+        process.stderr.write("[gateway] " + data);
+      } catch {}
+    });
+  }
+
+  gatewayProcess.on("error", (err) => {
+    console.error("[desktop] Failed to start gateway:", err.message);
+    dialog.showErrorBox(
+      "OpenClaw 启动失败",
+      "无法启动网关：" + err.message + "\n\n请检查应用是否完整。",
+    );
+  });
+
+  gatewayProcess.on("exit", (code) => {
+    console.log("[desktop] Gateway exited with code " + code);
+    gatewayProcess = null;
+    if (!isQuitting && !isRestarting) {
+      // Gateway self-restart (SIGUSR1) exits with code 0 and spawns its own
+      // replacement. Check if the port is already taken before auto-restarting.
+      // Retry multiple times since gateway startup can take 2-3 seconds.
+      const checkUrl = GATEWAY_URL_ACTUAL || GATEWAY_URL;
+      let attempts = 0;
+      const maxAttempts = 3;
+      const checkRestart = () => {
+        attempts++;
+        const req = http.get(checkUrl + "/api/v1/status", (res) => {
+          // Port is alive — gateway self-restarted, just reconnect the window
+          console.log("[desktop] Gateway self-restarted, reconnecting window...");
+          // Clear onboarding flag to prevent re-triggering wizard on reload
+          delete process.env.OPENCLAW_ONBOARDING;
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.loadURL(checkUrl);
+          }
+          req.destroy();
+        });
+        req.on("error", () => {
+          if (attempts < maxAttempts) {
+            // Retry after 2 seconds
+            console.log(
+              "[desktop] Port not ready yet, retrying... (" + attempts + "/" + maxAttempts + ")",
+            );
+            setTimeout(checkRestart, 2000);
+          } else {
+            // Port not in use after retries — genuine crash, auto-restart
+            console.log("[desktop] Gateway crashed, auto-restarting...");
+            if (!isQuitting) {
+              startGateway(lastGatewayArgs, lastGatewayHome);
+            }
+          }
+        });
+        req.setTimeout(2000, () => {
+          req.destroy();
+          if (attempts < maxAttempts) {
+            console.log(
+              "[desktop] Port check timeout, retrying... (" + attempts + "/" + maxAttempts + ")",
+            );
+            setTimeout(checkRestart, 2000);
+          } else {
+            console.log("[desktop] Gateway crashed (timeout), auto-restarting...");
+            if (!isQuitting) {
+              startGateway(lastGatewayArgs, lastGatewayHome);
+            }
+          }
+        });
+      };
+      // Wait 2 seconds before first check (gateway needs time to bind port)
+      setTimeout(checkRestart, 2000);
+    }
+  });
+}
+
+/**
+ * Agresivamente libera el puerto matando todos los procesos gateway y ocupantes del puerto.
+ */
+function forceCleanPort(portNum) {
+  const { execSync } = require("child_process");
+  try {
+    execSync("pkill -9 -f openclaw-gateway 2>/dev/null || true");
+  } catch {}
+  for (let i = 0; i < 10; i++) {
+    try {
+      const pids = execSync(`lsof -ti:${portNum} 2>/dev/null`, { encoding: "utf-8" }).trim();
+      if (!pids) return true;
+      console.log(
+        `[desktop] Port ${portNum} still held by pid ${pids.replace(/\n/g, ", ")}, killing...`,
+      );
+      execSync(`kill -9 ${pids.replace(/\n/g, " ")} 2>/dev/null || true`);
+      execSync("sleep 0.5");
+    } catch {
+      return true;
+    }
+  }
+  return false;
+}
+
+function stopGateway() {
+  return new Promise((resolve) => {
+    if (!gatewayProcess) return resolve();
+    console.log("[desktop] Stopping gateway...");
+    const proc = gatewayProcess;
+    gatewayProcess = null;
+
+    // Matar el proceso inmediatamente con SIGKILL (no SIGTERM que puede triggear auto-restart)
+    try {
+      proc.kill("SIGKILL");
+    } catch {}
+
+    const timeout = setTimeout(() => {
+      // Fallback: limpiar puerto por si el proceso no murió
+      try {
+        forceCleanPort(DESKTOP_PORT);
+      } catch {}
+      resolve();
+    }, 3000);
+
+    proc.once("exit", () => {
+      clearTimeout(timeout);
+      // Limpieza adicional del puerto para matar subprocesos huérfanos
+      try {
+        forceCleanPort(DESKTOP_PORT);
+      } catch {}
+      resolve();
+    });
+  });
+}
+
+// ── Wait for gateway to be ready ────────────────
+
+function waitForGateway(url = GATEWAY_URL) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+
+    function poll() {
+      const req = http.get(url, (res) => {
+        res.resume();
+        resolve();
+      });
+      req.on("error", () => {
+        if (Date.now() - start > MAX_WAIT) {
+          reject(new Error("Gateway did not start within 30s"));
+        } else {
+          setTimeout(poll, POLL_INTERVAL);
+        }
+      });
+    }
+
+    poll();
+  });
+}
+
+// ── Window ──────────────────────────────────────
+
+// Set dock icon (for dev mode; packaged apps use the built icon)
+if (process.platform === "darwin" && app.dock) {
+  const { nativeImage } = require("electron");
+  app.dock.setIcon(nativeImage.createFromPath(path.join(__dirname, "icon.png")));
+}
+
+function createWindow() {
+  const isDark = require("electron").nativeTheme.shouldUseDarkColors;
+  mainWindow = new BrowserWindow({
+    width: 1440,
+    height: 900,
+    minWidth: 800,
+    minHeight: 600,
+    // macOS: 原生标题栏；Windows/Linux: 自定义 chrome
+    ...(process.platform === "darwin" ? {} : { titleBarStyle: "hidden", titleBarOverlay: true }),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+    show: false,
+    backgroundColor: isDark ? "#0a0a14" : "#f5f5f7",
+  });
+
+  // IPC: sync window background color when web theme changes
+  ipcMain.on("theme-bg-change", (_, color) => {
+    if (mainWindow) mainWindow.setBackgroundColor(color);
+  });
+
+  // IPC: clear onboarding flag when wizard completes
+  ipcMain.on("onboarding-done", () => {
+    console.log("[desktop] Onboarding completed, clearing flag");
+    delete process.env.OPENCLAW_ONBOARDING;
+  });
+
+  // IPC: return real system CPU and memory stats
+  ipcMain.handle("get-system-stats", () => {
+    const cpus = os.cpus();
+    let totalIdle = 0;
+    let totalTick = 0;
+    for (const cpu of cpus) {
+      for (const type of Object.keys(cpu.times)) {
+        totalTick += cpu.times[type];
+      }
+      totalIdle += cpu.times.idle;
+    }
+    const cpuPercent = Math.round(((totalTick - totalIdle) / totalTick) * 100);
+    const totalMem = os.totalmem();
+
+    // macOS os.freemem() only reports truly free pages, excluding reclaimable
+    // cache/inactive pages, leading to wildly inflated usage (e.g. 99%).
+    // Parse vm_stat for accurate available memory on macOS.
+    let availableMem;
+    if (process.platform === "darwin") {
+      try {
+        const { execSync } = require("child_process");
+        const output = execSync("vm_stat", { encoding: "utf-8", timeout: 2000 });
+        const pageSizeMatch = output.match(/page size of (\d+) bytes/);
+        const pageSize = pageSizeMatch ? Number(pageSizeMatch[1]) : 16384;
+        const getValue = (label) => {
+          const m = output.match(new RegExp(`${label}:\\s+(\\d+)`));
+          return m ? Number(m[1]) : 0;
+        };
+        const free = getValue("Pages free");
+        const inactive = getValue("Pages inactive");
+        const purgeable = getValue("Pages purgeable");
+        const speculative = getValue("Pages speculative");
+        availableMem = (free + inactive + purgeable + speculative) * pageSize;
+      } catch {
+        availableMem = os.freemem();
+      }
+    } else {
+      availableMem = os.freemem();
+    }
+
+    const memPercent = Math.round(((totalMem - availableMem) / totalMem) * 100);
+    return {
+      cpuPercent,
+      memPercent,
+      totalMem,
+      freeMem: availableMem,
+      usedMem: totalMem - availableMem,
+    };
+  });
+
+  // Show splash screen while gateway starts
+  mainWindow.loadFile(path.join(__dirname, "splash.html"));
+
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+
+    // Inject version override: show "Desktop X.X.X + OC Y.Y.Y"
+    const desktopVersion = require("./package.json").version;
+    mainWindow.webContents.executeJavaScript(`
+      (function() {
+        function patchVersion() {
+          const pills = document.querySelectorAll('.pill .mono');
+          for (const el of pills) {
+            const prev = el.previousElementSibling;
+            if (prev && prev.textContent.includes('版本')) {
+              const gwVersion = el.textContent.trim();
+              if (!gwVersion || gwVersion === '不适用' || gwVersion === 'N/A') return false;
+              if (el.dataset.patched) return true;
+              el.textContent = 'Desktop ${desktopVersion} + OC ' + gwVersion;
+              el.dataset.patched = '1';
+              return true;
+            }
+          }
+          return false;
+        }
+        const obs = new MutationObserver(() => { if (patchVersion()) obs.disconnect(); });
+        obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+        setTimeout(() => obs.disconnect(), 30000);
+      })();
+    `);
+  });
+
+  // DevTools shortcut: Cmd+Shift+I (macOS) / Ctrl+Shift+I (others)
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.key === "I" && input.shift && (input.meta || input.control)) {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  mainWindow.on("close", (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      if (mainWindow) mainWindow.hide();
+    }
+  });
+}
+
+// ── Tray ────────────────────────────────────────
+
+function createTray() {
+  const iconPath = path.join(__dirname, "icon-trayTemplate.png");
+  try {
+    tray = new Tray(iconPath);
+  } catch (e) {
+    return;
+  }
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "显示 OpenClaw",
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    { type: "separator" },
+    {
+      label: "在浏览器中打开",
+      click: () => shell.openExternal(GATEWAY_URL_ACTUAL),
+    },
+    { type: "separator" },
+    {
+      label: "重启网关",
+      click: async () => {
+        if (externalGateway) {
+          dialog.showMessageBox({ message: "当前连接的是外部网关，无法从桌面端重启。" });
+          return;
+        }
+        console.log("[desktop] Restarting gateway...");
+        isRestarting = true;
+
+        // Show loading overlay with animated claw
+        if (mainWindow) {
+          mainWindow.webContents.executeJavaScript(`
+            (function() {
+              let ov = document.getElementById('__restart_overlay');
+              if (ov) ov.remove();
+              ov = document.createElement('div');
+              ov.id = '__restart_overlay';
+              ov.innerHTML = \`
+                <style>
+                  @keyframes oc-breathe { 0%,100% { transform:scale(1); filter:drop-shadow(0 0 20px rgba(99,102,241,0.4)) } 50% { transform:scale(1.08); filter:drop-shadow(0 0 40px rgba(167,139,250,0.7)) } }
+                  @keyframes oc-rotate { 0% { transform:rotate(-3deg) } 50% { transform:rotate(3deg) } 100% { transform:rotate(-3deg) } }
+                  @keyframes oc-pulse-ring { 0% { transform:scale(0.8); opacity:0.6 } 100% { transform:scale(2.5); opacity:0 } }
+                  @keyframes oc-text-glow { 0%,100% { opacity:0.7; text-shadow:0 0 8px rgba(99,102,241,0.3) } 50% { opacity:1; text-shadow:0 0 20px rgba(167,139,250,0.6) } }
+                  @keyframes oc-progress { 0% { background-position:200% 0 } 100% { background-position:-200% 0 } }
+                  @keyframes oc-dot { 0%,80%,100% { transform:scale(0) } 40% { transform:scale(1) } }
+                </style>
+                <div style="position:fixed;inset:0;background:rgba(10,10,20,0.88);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:20px;">
+                  <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;">
+                    <div style="position:absolute;width:80px;height:80px;border-radius:50%;background:rgba(99,102,241,0.15);animation:oc-pulse-ring 2s ease-out infinite;"></div>
+                    <div style="position:absolute;width:80px;height:80px;border-radius:50%;background:rgba(99,102,241,0.1);animation:oc-pulse-ring 2s ease-out 0.5s infinite;"></div>
+                    <svg width="64" height="64" viewBox="0 0 512 512" style="animation:oc-breathe 2s ease-in-out infinite;">
+                      <g style="animation:oc-rotate 3s ease-in-out infinite;" transform-origin="256 256">
+                        <path fill="rgba(255,255,255,0.9)" d="M175.656 22.375l-48.47 82.094c-23.017 4.384-43.547 11.782-60.124 22.374-24.436 15.613-40.572 37.414-45.5 67.875-4.79 29.62 1.568 68.087 24.125 116.093 93.162 22.88 184.08-10.908 257.25-18.813 37.138-4.012 71.196-.898 96.344 22.97 22.33 21.19 36.21 56.808 41.908 113.436 29.246-35.682 44.538-69.065 49.343-99.594 5.543-35.207-2.526-66.97-20.31-95.593-8.52-13.708-19.368-26.618-32-38.626l14.217-33-41.218 10.625c-8.637-6.278-17.765-12.217-27.314-17.782l-7.03-59.782-38.157 37.406c-12.418-5.186-25.184-9.804-38.158-13.812l-8.375-71.28-57.625 56.5c-9.344-1.316-18.625-2.333-27.812-2.97l-31.094-78.125zM222 325.345c-39.146 7.525-82.183 14.312-127.156 11.686 47.403 113.454 207.056 224.082 260.125 87-101.18 33.84-95.303-49.595-132.97-98.686z"/>
+                      </g>
+                    </svg>
+                  </div>
+                  <div style="color:#fff;font-size:15px;font-weight:500;letter-spacing:0.5px;animation:oc-text-glow 2s ease-in-out infinite;">正在重启网关</div>
+                  <div style="display:flex;gap:6px;margin-top:-8px;">
+                    <div style="width:6px;height:6px;background:#a78bfa;border-radius:50%;animation:oc-dot 1.4s infinite ease-in-out;"></div>
+                    <div style="width:6px;height:6px;background:#a78bfa;border-radius:50%;animation:oc-dot 1.4s infinite ease-in-out 0.2s;"></div>
+                    <div style="width:6px;height:6px;background:#a78bfa;border-radius:50%;animation:oc-dot 1.4s infinite ease-in-out 0.4s;"></div>
+                  </div>
+                  <div style="width:180px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:4px;">
+                    <div style="width:100%;height:100%;background:linear-gradient(90deg,transparent,#6366f1,#a78bfa,#6366f1,transparent);background-size:200% 100%;border-radius:2px;animation:oc-progress 1.5s linear infinite;"></div>
+                  </div>
+                </div>
+              \`;
+              document.body.appendChild(ov);
+            })();
+          `);
+        }
+
+        // Unload LaunchAgent to prevent auto-restart
+        const { execSync } = require("child_process");
+        try {
+          execSync(
+            "launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.openclaw.gateway.plist 2>/dev/null || true",
+          );
+          console.log("[desktop] LaunchAgent unloaded");
+        } catch {}
+
+        await stopGateway();
+
+        // Also kill any lingering process on the port
+        try {
+          const portNum = GATEWAY_URL_ACTUAL.match(/:(\d+)/)?.[1];
+          if (portNum) execSync(`lsof -ti:${portNum} | xargs kill -9 2>/dev/null || true`);
+        } catch {}
+
+        // Wait for the port to be released
+        const portUrl = GATEWAY_URL_ACTUAL;
+        const portFreeTimeout = Date.now() + 10000;
+        while (Date.now() < portFreeTimeout) {
+          const still = await new Promise((resolve) => {
+            const req = http.get(portUrl + "/health", () => resolve(true));
+            req.on("error", () => resolve(false));
+            req.setTimeout(500, () => {
+              req.destroy();
+              resolve(false);
+            });
+          });
+          if (!still) break;
+          await new Promise((r) => setTimeout(r, 300));
+        }
+        console.log("[desktop] Port released, starting new gateway...");
+        startGateway(lastGatewayArgs, lastGatewayHome);
+        try {
+          await waitForGateway(GATEWAY_URL_ACTUAL);
+          if (mainWindow) mainWindow.reload();
+          console.log("[desktop] Gateway restarted successfully");
+        } catch (err) {
+          dialog.showErrorBox("OpenClaw 重启失败", "网关未能在 30 秒内重新启动。");
+        } finally {
+          isRestarting = false;
+        }
+      },
+    },
+    { type: "separator" },
+    {
+      label: "退出",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setToolTip("OpenClaw 中文版");
+  tray.setContextMenu(contextMenu);
+
+  tray.on("click", () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+// ── launchctl (macOS auto-start) ────────────────
+
+function installLaunchAgent() {
+  if (process.platform !== "darwin") return;
+
+  const plistName = "com.openclaw.gateway";
+  const plistDir = path.join(app.getPath("home"), "Library", "LaunchAgents");
+  const plistPath = path.join(plistDir, plistName + ".plist");
+  const appPath = app.getPath("exe");
+
+  // Only install if not already present
+  if (fs.existsSync(plistPath)) return;
+
+  const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${plistName}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${appPath}</string>
+        <string>--hidden</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/openclaw-gateway.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/openclaw-gateway.err</string>
+</dict>
+</plist>`;
+
+  try {
+    if (!fs.existsSync(plistDir)) {
+      fs.mkdirSync(plistDir, { recursive: true });
+    }
+    fs.writeFileSync(plistPath, plist);
+    console.log("[desktop] Installed LaunchAgent:", plistPath);
+  } catch (err) {
+    console.error("[desktop] Failed to install LaunchAgent:", err.message);
+  }
+}
+
+// ── App lifecycle ───────────────────────────────
+
+const startHidden = process.argv.includes("--hidden");
+
+app
+  .whenReady()
+  .then(async () => {
+    let isFirstLaunch = false;
+
+    // Desktop 永远使用独立配置目录和独立端口，不连接主 gateway
+    const DESKTOP_PORT = GATEWAY_PORT + 1; // 18790
+    const independentHome = path.join(app.getPath("home"), ".openclaw-desktop");
+    GATEWAY_URL_ACTUAL = `http://127.0.0.1:${DESKTOP_PORT}`;
+
+    console.log(
+      "[desktop] Starting Desktop gateway on port " +
+        DESKTOP_PORT +
+        " with home: " +
+        independentHome,
+    );
+
+    // 确保独立配置目录存在
+    const independentConfigDir = path.join(independentHome, ".openclaw");
+    if (!fs.existsSync(independentConfigDir)) {
+      fs.mkdirSync(independentConfigDir, { recursive: true });
+    }
+    const independentConfig = path.join(independentConfigDir, "openclaw.json");
+    if (!fs.existsSync(independentConfig)) {
+      const independentWorkspace = path.join(independentConfigDir, "workspace");
+      if (!fs.existsSync(independentWorkspace)) {
+        fs.mkdirSync(independentWorkspace, { recursive: true });
+      }
+      fs.writeFileSync(
+        independentConfig,
+        JSON.stringify(buildMinimalConfig(independentWorkspace), null, 2) + "\n",
+      );
+      isFirstLaunch = true;
+    } else {
+      // 配置已存在 — 检查是否配置了模型
+      try {
+        const raw = fs.readFileSync(independentConfig, "utf-8");
+        const config = JSON.parse(raw);
+        const providers = config?.models?.providers;
+        if (!providers || Object.keys(providers).length === 0) {
+          console.log("[desktop] Config exists but no models, showing onboarding");
+          isFirstLaunch = true;
+        }
+      } catch {
+        // Parse error, skip
+      }
+    }
+
+    // 启动前强力清理端口（杀掉所有残留的 gateway 进程）
+    forceCleanPort(DESKTOP_PORT);
+
+    // Pass onboarding flag to renderer via env → preload
+    if (isFirstLaunch) {
+      process.env.OPENCLAW_ONBOARDING = "1";
+    }
+
+    // macOS application menu bar (must be set before createWindow for packaged builds)
+    const appMenu = Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          { role: "about", label: `关于 ${app.name}` },
+          { type: "separator" },
+          { role: "services", label: "服务" },
+          { type: "separator" },
+          { role: "hide", label: `隐藏 ${app.name}` },
+          { role: "hideOthers", label: "隐藏其他" },
+          { role: "unhide", label: "显示全部" },
+          { type: "separator" },
+          { role: "quit", label: `退出 ${app.name}` },
+        ],
+      },
+      {
+        label: "编辑",
+        submenu: [
+          { role: "undo", label: "撤销" },
+          { role: "redo", label: "重做" },
+          { type: "separator" },
+          { role: "cut", label: "剪切" },
+          { role: "copy", label: "复制" },
+          { role: "paste", label: "粘贴" },
+          { role: "selectAll", label: "全选" },
+        ],
+      },
+      {
+        label: "窗口",
+        submenu: [
+          { role: "minimize", label: "最小化" },
+          { role: "zoom", label: "缩放" },
+          { type: "separator" },
+          { role: "front", label: "全部置前" },
+          { role: "togglefullscreen", label: "全屏" },
+        ],
+      },
+    ]);
+    Menu.setApplicationMenu(appMenu);
+
+    // Show window with splash immediately
+    createWindow();
+    createTray();
+
+    // If started with --hidden (e.g. from launchctl), don't show window
+    if (startHidden && mainWindow) {
+      mainWindow.hide();
+    }
+
+    // 永远以独立模式启动 gateway
+    if (!externalGateway) {
+      startGateway(["--port", String(DESKTOP_PORT)], independentHome);
+      try {
+        await waitForGateway(GATEWAY_URL_ACTUAL);
+      } catch (err) {
+        dialog.showErrorBox("OpenClaw 启动超时", "网关未能在 30 秒内启动。\n请检查应用是否完整。");
+        app.quit();
+        return;
+      }
+    }
+
+    // Navigate to gateway URL
+    if (mainWindow) {
+      // Show welcome text on splash before navigating
+      await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          document.querySelector('.subtitle').textContent = '';
+          document.querySelector('.dots').style.display = 'none';
+          document.querySelector('.progress-track').style.display = 'none';
+          var welcome = document.createElement('div');
+          welcome.textContent = '嗨，准备好和龙虾一起探索世界了吗？🦞';
+          welcome.style.cssText = 'color:var(--title-color);font-size:36px;font-weight:600;opacity:0;transform:translateY(8px);transition:all 0.5s ease;margin-top:-8px;';
+          document.querySelector('.subtitle').after(welcome);
+          requestAnimationFrame(function() {
+            welcome.style.opacity = '1';
+            welcome.style.transform = 'translateY(0)';
+          });
+        })();
+      `);
+      await new Promise((r) => setTimeout(r, 1500));
+
+      // Prevent HTML <title> from overriding window title
+      mainWindow.on("page-title-updated", (e) => e.preventDefault());
+      const url = isFirstLaunch
+        ? GATEWAY_URL_ACTUAL + (GATEWAY_URL_ACTUAL.includes("?") ? "&" : "?") + "onboarding=true"
+        : GATEWAY_URL_ACTUAL;
+      mainWindow.loadURL(url);
+
+      // Inject desktop-specific CSS after page loads
+      mainWindow.webContents.on("did-finish-load", () => {
+        mainWindow.webContents.executeJavaScript(`
+          (function() {
+            const style = document.createElement('style');
+            style.textContent = \`
+              /* ── Desktop compact wizard ── */
+              .setup-wizard { padding: 0.5rem; }
+              .setup-wizard__container {
+                zoom: 0.85;
+              }
+              /* Hide web update banner — desktop has its own updater */
+              .update-banner { display: none !important; }
+            \`;
+            document.head.appendChild(style);
+
+            // Sync Electron window background color when theme changes
+            const syncBg = () => {
+              const theme = document.documentElement.getAttribute('data-theme');
+              const bg = theme === 'light' ? '#f5f5f7' : '#0a0a14';
+              if (window.desktop && window.desktop.setThemeBg) window.desktop.setThemeBg(bg);
+            };
+            syncBg();
+            const obs = new MutationObserver(syncBg);
+            obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+          })();
+        `);
+      });
+    }
+
+    installLaunchAgent();
+
+    app.on("activate", () => {
+      if (mainWindow) {
+        mainWindow.show();
+      }
+    });
+  })
+  .catch((err) => {
+    console.error("[desktop] Fatal error:", err);
+    app.quit();
+  });
+
+app.on("before-quit", async () => {
+  isQuitting = true;
+  if (!externalGateway) {
+    await stopGateway();
+    // Force-kill anything still on the port
+    try {
+      const { execSync } = require("child_process");
+      const portNum = GATEWAY_URL_ACTUAL.match(/:(\d+)/)?.[1];
+      if (portNum) execSync(`lsof -ti:${portNum} | xargs kill -9 2>/dev/null || true`);
+    } catch {}
+  }
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    isQuitting = true;
+    if (!externalGateway) {
+      stopGateway();
+    }
+    app.quit();
+  }
+});
+
+// Handle Ctrl+C / terminal kill — clean up gateway before exit
+for (const sig of ["SIGINT", "SIGTERM"]) {
+  process.on(sig, () => {
+    console.log(`[desktop] Received ${sig}, cleaning up...`);
+    isQuitting = true;
+    if (gatewayProcess) {
+      try {
+        gatewayProcess.kill("SIGKILL");
+      } catch {}
+      gatewayProcess = null;
+    }
+    forceCleanPort(DESKTOP_PORT);
+    app.quit();
+  });
+}
