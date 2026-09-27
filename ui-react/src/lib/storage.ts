@@ -4,6 +4,14 @@ import { isSupportedLocale } from "../i18n/index.ts";
 import { inferBasePathFromPathname, normalizeBasePath } from "./navigation.ts";
 import type { ThemeMode } from "./theme.ts";
 
+// [multi-gateway] 一个可切换的 OpenClaw 网关连接配置
+export type GatewayProfile = {
+  id: string;
+  name: string;
+  url: string;
+  token: string;
+};
+
 export type UiSettings = {
   gatewayUrl: string;
   token: string;
@@ -16,6 +24,9 @@ export type UiSettings = {
   navCollapsed: boolean; // Collapsible sidebar state
   navGroupsCollapsed: Record<string, boolean>; // Which nav groups are collapsed
   locale?: string;
+  // [multi-gateway] 已保存的网关列表与当前激活项
+  gateways?: GatewayProfile[];
+  activeGatewayId?: string | null;
 };
 
 export function loadSettings(): UiSettings {
@@ -42,6 +53,8 @@ export function loadSettings(): UiSettings {
     splitRatio: 0.6,
     navCollapsed: false,
     navGroupsCollapsed: {},
+    gateways: [{ id: "default", name: "默认网关", url: defaultUrl, token: "" }],
+    activeGatewayId: "default",
   };
 
   try {
@@ -88,6 +101,23 @@ export function loadSettings(): UiSettings {
           ? parsed.navGroupsCollapsed
           : defaults.navGroupsCollapsed,
       locale: isSupportedLocale(parsed.locale) ? parsed.locale : undefined,
+      gateways: Array.isArray(parsed.gateways)
+        ? parsed.gateways
+            .filter(
+              (g): g is GatewayProfile =>
+                !!g && typeof g.id === "string" && typeof g.url === "string",
+            )
+            .map((g) => ({
+              id: g.id,
+              name: typeof g.name === "string" && g.name.trim() ? g.name : g.id,
+              url: g.url,
+              token: typeof g.token === "string" ? g.token : "",
+            }))
+        : defaults.gateways,
+      activeGatewayId:
+        typeof parsed.activeGatewayId === "string" && parsed.activeGatewayId
+          ? parsed.activeGatewayId
+          : defaults.activeGatewayId,
     };
   } catch {
     return defaults;

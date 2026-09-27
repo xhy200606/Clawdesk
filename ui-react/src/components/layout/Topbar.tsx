@@ -18,7 +18,7 @@ export function Topbar() {
     setRestarting(true);
     try {
       // Paso 1: obtener hash de la config actual (slim, sin RangeError)
-      const snapshot = await client.request("config.get", {});
+      const snapshot = await client.request<{ hash?: string }>("config.get", {});
       const baseHash = snapshot?.hash;
       if (!baseHash) {
         throw new Error("no hash");

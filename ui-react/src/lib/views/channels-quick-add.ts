@@ -4,7 +4,7 @@ import { renderDropdown } from "../components/dropdown.ts";
 import type { DropdownGroup } from "../components/dropdown.ts";
 import { generateRandomAvatars } from "../helpers/multiavatar.ts";
 
-export type ChannelType = "telegram" | "feishu";
+export type ChannelType = "telegram" | "feishu" | "discord" | "whatsapp" | "weixin";
 
 export interface ChannelQuickAddForm {
   channelType: ChannelType;

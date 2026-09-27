@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { AccessCard } from "../components/overview/AccessCard.tsx";
 import { AgentsCard } from "../components/overview/AgentsCard.tsx";
+import { GatewayCard } from "../components/overview/GatewayCard.tsx";
 import { OrchestrationCard } from "../components/overview/OrchestrationCard.tsx";
 import { RanchScene } from "../components/overview/RanchScene.tsx";
 // Pure React overview components
@@ -99,7 +100,7 @@ function TokenStatsRow({ todayTokens, allTokens }: { todayTokens: number; allTok
 
 // ─── Main View ───────────────────────────────────────────────
 
-const DEFAULT_CARD_ORDER = ["usage", "access", "agents"];
+const DEFAULT_CARD_ORDER = ["usage", "access", "gateways", "agents"];
 
 export function OverviewView() {
   const s = useAppStore;
@@ -109,6 +110,11 @@ export function OverviewView() {
   const password = s((st) => st.password);
   const lastError = s((st) => st.lastError);
   const lastErrorCode = s((st) => st.lastErrorCode);
+  const reconnect = useCallback(() => {
+    void import("../lib/app-gateway.ts").then(({ connectGateway }) => {
+      connectGateway(useAppStore.getState() as never);
+    });
+  }, []);
   const cronStatus = s((st) => st.cronStatus);
   const presenceEntries = s((st) => st.presenceEntries);
   const sessionsResult = s((st) => st.sessionsResult);
@@ -173,7 +179,10 @@ export function OverviewView() {
     ) ?? 0;
   const allTokens = (overviewCostDaily as CostUsageSummary | null)?.totals?.totalTokens ?? 0;
 
-  const cardOrder = useMemo(() => getSavedCardOrder(DEFAULT_CARD_ORDER), []);
+  const cardOrder = useMemo(() => {
+    const saved = getSavedCardOrder(DEFAULT_CARD_ORDER);
+    return saved.includes("gateways") ? saved : [...saved, "gateways"];
+  }, []);
 
   const cardMap: Record<string, React.ReactNode> = {
     usage: (
@@ -198,6 +207,16 @@ export function OverviewView() {
         }}
         onConnect={() => {}}
         onRefresh={() => void loadOverview(getReactiveState() as never)}
+      />
+    ),
+    gateways: (
+      <GatewayCard
+        key="gateways"
+        settings={settings}
+        connected={connected}
+        helloVersion={hello?.server?.version ?? null}
+        onSettingsChange={(next) => applySettings(next)}
+        onReconnect={() => reconnect()}
       />
     ),
     agents: (
