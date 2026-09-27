@@ -1,0 +1,90 @@
+/* ===========================================
+   手机 / 平板适配增强
+   追加于所有样式之后，仅在小屏生效；不改动桌面端表现
+   =========================================== */
+
+/* ── 通用：触控目标最小尺寸 ── */
+@media (max-width: 1100px) {
+  :where(button, .btn, .nav-item, select, summary, [role="button"], [role="tab"]) {
+    min-height: 40px;
+  }
+
+  :where(input[type="checkbox"], input[type="radio"]) {
+    min-width: 20px;
+    min-height: 20px;
+  }
+}
+
+/* ── 触摸设备：去掉依赖 hover 的效果 ── */
+@media (hover: none) {
+  :where(.card, .btn, .nav-item, .row):hover {
+    transform: none;
+  }
+}
+
+/* ── 手机（≤600px）── */
+@media (max-width: 600px) {
+  /* 输入框不小于 16px，避免 iOS 聚焦时整页缩放 */
+  :where(input, select, textarea) {
+    font-size: 16px;
+  }
+
+  /* 表格与长内容横向滚动，避免撑破布局 */
+  :where(table) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  :where(pre, code) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* 抽屉 / 弹层铺满宽度 */
+  :where(.drawer, .channel-drawer, .modal) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :where(.drawer__body, .channel-drawer__body) {
+    padding: 12px;
+  }
+
+  /* 行内元素换行堆叠，避免横向溢出 */
+  :where(.row, .card-header-row, .quick-add__toggle-row) {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* 卡片留白收紧 */
+  :where(.card) {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  /* 刘海屏 / 底部手势条安全区 */
+  :where(.topbar) {
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+
+  :where(.nav) {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}
+
+/* ── 平板（601–1100px）── */
+@media (min-width: 601px) and (max-width: 1100px) {
+  :where(.card) {
+    padding: 14px;
+  }
+
+  :where(.row) {
+    gap: 10px;
+  }
+
+  /* 内容区两侧留白适中，避免平板边缘过挤 */
+  :where(.shell) {
+    --shell-pad: 12px;
+  }
+}
