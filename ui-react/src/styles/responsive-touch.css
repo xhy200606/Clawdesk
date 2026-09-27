@@ -1,0 +1,86 @@
+/* ===========================================
+   手机 / 平板适配增强
+   —— 在 layout.mobile.css 基础上补充触控与溢出处理
+   =========================================== */
+
+/* ── 触控目标：可点击元素在触屏上足够大 ── */
+@media (max-width: 1100px) {
+  button,
+  .btn,
+  .nav-item,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 40px;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 20px;
+  }
+
+  /* 触屏上取消依赖悬停的位移效果 */
+  .card:hover,
+  .nav-item:hover {
+    transform: none;
+  }
+}
+
+/* ── 平板及以下：防止内容横向溢出 ── */
+@media (max-width: 900px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .row {
+    flex-wrap: wrap;
+  }
+}
+
+/* ── 手机：单列与全宽 ── */
+@media (max-width: 600px) {
+  .card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  /* 弹层在小屏铺满，避免内容被裁切 */
+  .modal,
+  .drawer,
+  .dialog {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .nav-item {
+    min-height: 44px;
+  }
+
+  /* 表单控件占满宽度，便于点按与输入 */
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
+
+/* ── 横屏手机：顶部栏更紧凑，留出纵向空间 ── */
+@media (max-height: 480px) and (orientation: landscape) {
+  .topbar {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+}
