@@ -91,6 +91,20 @@ export type GatewayBrowserClientOptions = {
 // 4008 = application-defined code (browser rejects 1008 "Policy Violation")
 const CONNECT_FAILED_CLOSE_CODE = 4008;
 
+// [version-adapt] 网关能力清单：来自 hello-ok.features.methods。
+// 用于跳过当前所连网关不支持的调用（不同版本 OpenClaw 的方法集不同），
+// 避免因轮询不存在的方法而持续产生 INVALID_REQUEST 错误。
+let gatewayMethods: Set<string> | null = null;
+
+export function setGatewayMethods(methods?: string[]): void {
+  gatewayMethods = Array.isArray(methods) && methods.length > 0 ? new Set(methods) : null;
+}
+
+export function gatewaySupportsMethod(method: string): boolean {
+  // 未拿到能力清单时保持原行为（乐观调用）
+  return gatewayMethods === null ? true : gatewayMethods.has(method);
+}
+
 export class GatewayBrowserClient {
   private ws: WebSocket | null = null;
   private pending = new Map<string, Pending>();
@@ -260,6 +274,7 @@ export class GatewayBrowserClient {
           });
         }
         this.backoffMs = 800;
+        setGatewayMethods(hello?.features?.methods);
         this.opts.onHello?.(hello);
       })
       .catch((err: unknown) => {

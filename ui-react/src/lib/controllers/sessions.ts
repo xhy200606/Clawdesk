@@ -1,5 +1,5 @@
 import { toNumber } from "../format.ts";
-import type { GatewayBrowserClient } from "../gateway.ts";
+import { gatewaySupportsMethod, type GatewayBrowserClient } from "../gateway.ts";
 import type { SessionsListResult, SessionActivityResult } from "../types.ts";
 
 export type SessionsState = {
@@ -132,6 +132,10 @@ export type SessionActivityState = {
 
 export async function loadSessionActivity(state: SessionActivityState) {
   if (!state.client || !state.connected) {
+    return;
+  }
+  // [version-adapt] 网关未提供该方法时直接跳过，避免每轮轮询都报错
+  if (!gatewaySupportsMethod("sessions.activity")) {
     return;
   }
   try {
