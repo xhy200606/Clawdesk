@@ -6,6 +6,7 @@ import { ConnectErrorDetailCodes } from "../../lib/gateway-protocol.ts";
 import type { GatewayHelloOk } from "../../lib/gateway.ts";
 import { openExternalUrlSafe } from "../../lib/open-external-url.ts";
 import { shouldShowPairingHint } from "../../lib/views/overview-hints.ts";
+import { useAppStore } from "../../store/appStore.ts";
 
 // ─── Donut Chart ─────────────────────────────────────────────
 
@@ -75,37 +76,65 @@ function DonutChart({
 
 type SystemStats = { cpuPercent: number; memPercent: number };
 
-function useSystemStats(gatewayUrl: string) {
-  const [cpu, setCpu] = useState(0);
-  const [mem, setMem] = useState(0);
+type GatewaySystemInfo = {
+  cpuCount?: number;
+  loadAverage?: [number, number, number];
+  memoryTotalBytes?: number;
+  memoryFreeBytes?: number;
+};
+
+/**
+ * [system-info] 旧实现 fetch `${gatewayUrl}/api/system-stats`（桌面端专用，网关 404），
+ * 导致脑力负载/体力消耗恒为 0。改走网关 WS RPC `system.info`（loadAverage + memory），
+ * 每 5 秒轮询一次。
+ */
+function useSystemStats(enabled: boolean): SystemStats {
+  const client = useAppStore((st) => st.client);
+  const [stats, setStats] = useState<SystemStats>({ cpuPercent: 0, memPercent: 0 });
 
   useEffect(() => {
-    const desktop = (
-      globalThis as unknown as { desktop?: { getSystemStats?: () => Promise<SystemStats> } }
-    ).desktop;
+    if (!client || !enabled) {
+      return;
+    }
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = (await client.request<GatewaySystemInfo>("system.info", {})) ?? null;
+        if (!alive || !res) return;
+        const cpuCount = res.cpuCount && res.cpuCount > 0 ? res.cpuCount : 1;
+        const load1 = res.loadAverage?.[0];
+        const cpuPercent =
+          typeof load1 === "number" && load1 >= 0
+            ? Math.min(100, Math.round((load1 / cpuCount) * 100))
+            : 0;
+        const memPercent =
+          typeof res.memoryTotalBytes === "number" &&
+          typeof res.memoryFreeBytes === "number" &&
+          res.memoryTotalBytes > 0
+            ? Math.min(
+                100,
+                Math.max(
+                  0,
+                  Math.round(
+                    ((res.memoryTotalBytes - res.memoryFreeBytes) / res.memoryTotalBytes) * 100,
+                  ),
+                ),
+              )
+            : 0;
+        setStats({ cpuPercent, memPercent });
+      } catch {
+        /* 网关不支持时保持 0 */
+      }
+    };
+    void load();
+    const id = setInterval(() => void load(), 5000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [client, enabled]);
 
-    const gwHttpBase = gatewayUrl
-      .replace(/^wss:\/\//, "https://")
-      .replace(/^ws:\/\//, "http://")
-      .replace(/\/+$/, "");
-
-    const promise: Promise<SystemStats | null> = desktop?.getSystemStats
-      ? desktop.getSystemStats()
-      : fetch(`${gwHttpBase}/api/system-stats`)
-          .then((r) => (r.ok ? (r.json() as Promise<SystemStats>) : null))
-          .catch(() => null);
-
-    promise
-      .then((stats) => {
-        if (stats) {
-          setCpu(stats.cpuPercent);
-          setMem(stats.memPercent);
-        }
-      })
-      .catch(() => {});
-  }, [gatewayUrl]);
-
-  return { cpuPercent: cpu, memPercent: mem };
+  return stats;
 }
 
 // ─── Error Hints ─────────────────────────────────────────────
@@ -485,9 +514,8 @@ export function SnapshotCard(props: SnapshotCardProps) {
     presenceCount,
     sessionsCount,
     cronJobsCount,
-    gatewayUrl,
   } = props;
-  const { cpuPercent, memPercent } = useSystemStats(gatewayUrl);
+  const { cpuPercent, memPercent } = useSystemStats(connected);
 
   const snapshot = hello?.snapshot as
     | { uptimeMs?: number; policy?: { tickIntervalMs?: number }; authMode?: string }
@@ -514,8 +542,18 @@ export function SnapshotCard(props: SnapshotCardProps) {
           colorOverride={connected ? "#34d399" : "#ff6b6b"}
         />
         <DonutChart percent={100} label="连续打工" valueText={uptime} colorOverride="#38bdf8" />
-        <DonutChart percent={cpuPercent} label="脑力负载" valueText={`${cpuPercent}%`} />
-        <DonutChart percent={memPercent} label="体力消耗" valueText={`${memPercent}%`} />
+        <DonutChart
+          percent={cpuPercent}
+          label="脑力负载"
+          valueText={`${cpuPercent}%`}
+          colorOverride="#a78bfa"
+        />
+        <DonutChart
+          percent={memPercent}
+          label="体力消耗"
+          valueText={`${memPercent}%`}
+          colorOverride="#f472b6"
+        />
         <DonutChart
           percent={presenceCount * 10}
           label="在线牛马"
@@ -529,8 +567,8 @@ export function SnapshotCard(props: SnapshotCardProps) {
           colorOverride="#38bdf8"
         />
         <DonutChart
-          percent={cronJobsCount != null ? (cronJobsCount > 0 ? 100 : 0) : 0}
-          label="待办鞭策"
+          percent={cronJobsCount != null ? Math.min((cronJobsCount ?? 0) * 20, 100) : 0}
+          label="定时任务"
           valueText={`${cronJobsCount ?? 0}`}
           colorOverride="#fbbf24"
         />

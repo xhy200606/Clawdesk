@@ -4,6 +4,25 @@ import { isSupportedLocale } from "../i18n/index.ts";
 import { inferBasePathFromPathname, normalizeBasePath } from "./navigation.ts";
 import type { ThemeMode } from "./theme.ts";
 
+/** 可用主题色（与 base.css 中 data-accent 色板一一对应） */
+export const ACCENT_IDS = ["blue", "green", "purple", "orange", "rose", "cyan"] as const;
+export const ACCENT_LABELS: Record<string, string> = {
+  blue: "经典蓝",
+  green: "牧场绿",
+  purple: "暮光紫",
+  orange: "暖阳橙",
+  rose: "蔷薇红",
+  cyan: "湖水青",
+};
+export const ACCENT_COLORS: Record<string, string> = {
+  blue: "#0A84FF",
+  green: "#30D158",
+  purple: "#BF5AF2",
+  orange: "#FF9F0A",
+  rose: "#FF375F",
+  cyan: "#64D2FF",
+};
+
 // [multi-gateway] 一个可切换的 OpenClaw 网关连接配置
 export type GatewayProfile = {
   id: string;
@@ -24,6 +43,7 @@ export type UiSettings = {
   navCollapsed: boolean; // Collapsible sidebar state
   navGroupsCollapsed: Record<string, boolean>; // Which nav groups are collapsed
   fileExplorerOpen: boolean; // 聊天页右侧 Workspace 文件管理器开关
+  accent?: string; // 主题色（data-accent）：blue/green/purple/orange/rose/cyan
   locale?: string;
   // [multi-gateway] 已保存的网关列表与当前激活项
   gateways?: GatewayProfile[];
@@ -58,6 +78,7 @@ export function loadSettings(): UiSettings {
     navCollapsed: false,
     navGroupsCollapsed: {},
     fileExplorerOpen: false,
+    accent: "blue",
     gateways: [{ id: "default", name: "默认网关", url: defaultUrl, token: "" }],
     activeGatewayId: "default",
   };
@@ -109,6 +130,11 @@ export function loadSettings(): UiSettings {
         typeof parsed.fileExplorerOpen === "boolean"
           ? parsed.fileExplorerOpen
           : defaults.fileExplorerOpen,
+      accent:
+        typeof parsed.accent === "string" &&
+        (ACCENT_IDS as readonly string[]).includes(parsed.accent)
+          ? parsed.accent
+          : defaults.accent,
       locale: isSupportedLocale(parsed.locale) ? parsed.locale : undefined,
       gateways: Array.isArray(parsed.gateways)
         ? parsed.gateways

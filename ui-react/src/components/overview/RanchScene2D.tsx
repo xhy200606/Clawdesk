@@ -4,6 +4,7 @@
  * thinking / tool_calling / speaking / idle / error / spawning
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { resolveAgentSpecies } from "../../lib/animals.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ type RanchZone = {
 type AnimalData = {
   id: string;
   name: string;
+  emoji?: string;
   baseState: AgentState;
   visualStatus: RanchVisualStatus;
   palette: { body: string; spot: string };
@@ -575,7 +577,7 @@ function PixelGate({ open }: { open: boolean }) {
 
 // ─── Cow/Horse Sprite ───────────────────────────────────────────────
 
-function CowHorseSprite({ bodyColor, spotColor }: { bodyColor: string; spotColor: string }) {
+export function CowHorseSprite({ bodyColor, spotColor }: { bodyColor: string; spotColor: string }) {
   return (
     <svg className="ranch-animal__sprite" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="16" cy="30" rx="10" ry="3" fill="rgba(0,0,0,0.15)" />
@@ -860,7 +862,10 @@ function RanchAnimal({ animal, onBubble }: { animal: AnimalData; onBubble: (id: 
       {animal.visualStatus === "spawning" && <span className="ranch-spawn-flash">✨</span>}
 
       <CowHorseSprite bodyColor={animal.palette.body} spotColor={animal.palette.spot} />
-      <div className="ranch-animal__name">{animal.name}</div>
+      <div className="ranch-animal__name">
+        {animal.emoji ? `${animal.emoji} ` : ""}
+        {animal.name}
+      </div>
       <div className={`ranch-animal__activity ranch-animal__activity--${animal.visualStatus}`}>
         {animal.activityLabel}
       </div>
@@ -977,7 +982,9 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
       const agentId = agent.id;
       const name = agent.identity?.name ?? agent.name ?? agentId;
       const baseState = agentStateMap.get(agentId) ?? "idle";
-      const pal = PALETTES[idx % PALETTES.length];
+      // [species] 优先用 agent 选定的动物形象（identity.emoji），否则按索引回退色板
+      const species = resolveAgentSpecies(agent.identity?.emoji, idx);
+      const pal = { body: species.body, spot: species.spot };
       const sess = agentSessionMap.get(agentId);
 
       // Determina visual status
@@ -1023,6 +1030,7 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
       return {
         id: agentId,
         name,
+        emoji: agent.identity?.emoji,
         baseState,
         visualStatus,
         palette: pal,

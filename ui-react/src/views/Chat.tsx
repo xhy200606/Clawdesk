@@ -12,7 +12,7 @@ import { Queue, QueueSection, QueueList, QueueItem } from "../components/chat/Qu
 import { t } from "../i18n/index.ts";
 import { handleSendChat, refreshChat, type ChatHost } from "../lib/app-chat.ts";
 import { resolveAssistantAvatarUrl } from "../lib/app-render.ts";
-import { handleChatScroll, scheduleChatScroll } from "../lib/app-scroll.ts";
+import { handleChatScroll } from "../lib/app-scroll.ts";
 import { highlightCodeBlocks } from "../lib/chat/code-highlight.ts";
 import { normalizeMessage } from "../lib/chat/message-normalizer.ts";
 import { normalizeRoleForGrouping } from "../lib/chat/message-normalizer.ts";
@@ -581,10 +581,18 @@ export function ChatView() {
   }, [sessionsResult, activeSessionKey]);
   const composeContextTokens = composeSession?.contextTokens ?? null;
   const composeModelId = composeSession?.model ?? null;
-  // [fix] 部分提供商不向网关回报 usage（totalTokens 恒为 0），此时按当前
-  // 已加载的聊天内容估算 token 数（CJK≈0.75 token/字，其余≈0.25 token/字符）
+  // [context-fix] 上下文占用优先取网关回报的 contextUsage.promptTokens（当前上下文
+  // 输入规模，最准确）；其次 totalTokens（累计用量，responseUsage 开启后可用）；
+  // 都没有时按当前已加载的聊天内容估算（CJK≈0.75 token/字，其余≈0.25 token/字符）。
+  const ctxUsage = composeSession?.contextUsage;
+  const gwPromptTokens =
+    ctxUsage?.state === "available" && (ctxUsage.promptTokens ?? 0) > 0
+      ? (ctxUsage.promptTokens as number)
+      : null;
   const gatewayTotalTokens = composeSession?.totalTokens ?? null;
-  const composeEstimated = !(gatewayTotalTokens && gatewayTotalTokens > 0);
+  const gwUsedTokens =
+    gwPromptTokens ?? (gatewayTotalTokens && gatewayTotalTokens > 0 ? gatewayTotalTokens : null);
+  const composeEstimated = !gwUsedTokens;
   const estimatedTokens = React.useMemo(() => {
     let chars = 0;
     const scan = (arr: unknown[]) => {
@@ -602,7 +610,7 @@ export function ChatView() {
     scan(chatMessages ?? []);
     return Math.ceil(chars);
   }, [chatMessages]);
-  const composeUsedTokens = composeEstimated ? estimatedTokens : gatewayTotalTokens;
+  const composeUsedTokens = composeEstimated ? estimatedTokens : (gwUsedTokens as number);
 
   // 聊天页初始也加载会话列表（供当前模型名 / 上下文圆环使用）
   useEffect(() => {
@@ -681,9 +689,31 @@ export function ChatView() {
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
 
   // --- Auto-scroll ---
+  // [scroll-fix] 滚动容器是 .chat-main（threadRef），不是 .chat-thread（overflow: visible
+  // 滚不动，旧 scheduleChatScroll 滚错了元素导致切会话停留在顶部）。改为直接滚 threadRef，
+  // 并在切换会话时强制滚到最新消息。
   useEffect(() => {
-    scheduleChatScroll(getReactiveState() as never, false, false);
+    const el = threadRef.current;
+    if (!el) return;
+    const host = getReactiveState() as unknown as { chatUserNearBottom?: boolean };
+    const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (host.chatUserNearBottom || dist < 450) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [chatMessages, chatStream]);
+
+  // 切换会话：重置「用户在底部」标记并强制滚到最新
+  useEffect(() => {
+    const host = getReactiveState() as unknown as { chatUserNearBottom?: boolean };
+    host.chatUserNearBottom = true;
+    const raf = requestAnimationFrame(() => {
+      const el = threadRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [sessionKey]);
 
   // --- Highlight code blocks ---
   const themeResolved = s((st) => st.themeResolved);

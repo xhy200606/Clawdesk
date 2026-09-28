@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { formatRelativeTimestamp } from "../../lib/format.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
 import { resolveAgentAvatarSrc } from "../../lib/views/agents-utils.ts";
+import { AgentAnimal } from "./AgentAnimal.tsx";
 import { AgentEditDialog } from "./AgentEditDialog.tsx";
 import { OverviewIcons } from "./SnapshotCard.tsx";
 
@@ -69,6 +70,11 @@ export type AgentsCardProps = {
     queueDepth?: number;
     totalTokens?: number | null;
     contextTokens?: number | null;
+    contextUsage?: {
+      state: "available" | "unavailable";
+      promptTokens?: number;
+      totalTokens?: number;
+    };
   }> | null;
   channelBindings?: Record<string, string[]>;
 };
@@ -77,6 +83,7 @@ export type AgentsCardProps = {
 
 export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProps) {
   const [editingAgent, setEditingAgent] = useState<GatewayAgentRow | null>(null);
+  const [creating, setCreating] = useState(false);
   // [version-adapt] 网关 2026.9.x 无 sessions.activity RPC，改用 sessions.list 的 status 字段
   const allSessions = sessions ?? [];
   const runningSessions = allSessions.filter((x) => x.status === "running");
@@ -102,6 +109,15 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
                 {OverviewIcons.running()} {runningCount} {OverviewIcons.moon()} {idleCount}
               </div>
             </div>
+            <button
+              type="button"
+              className="btn btn--sm primary"
+              style={{ marginLeft: "auto" }}
+              onClick={() => setCreating(true)}
+              title="新增一头牛马"
+            >
+              + 新增牛马
+            </button>
           </div>
           <div className="ov-agent-grid">
             {agents.map((agent) => {
@@ -151,21 +167,24 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
                     <div className="agent-card-pixel__id">{agent.id}</div>
                   </div>
 
-                  {/* ── Portrait: Circular Avatar ── */}
+                  {/* ── Portrait: 状态动物动画（奔跑/趴卧），自定义头像缩略为角标 ── */}
                   <div className="agent-card-pixel__portrait">
                     <div
                       className={`agent-card-pixel__avatar-ring agent-card-pixel__avatar-ring--${agentState}`}
                     >
-                      {avatarSrc ? (
+                      <AgentAnimal
+                        state={agentState}
+                        emoji={agent.identity?.emoji}
+                        idx={agents.indexOf(agent)}
+                        size={76}
+                      />
+                      {avatarSrc && (
                         <img
-                          className="agent-card-pixel__avatar-img"
+                          className="agent-card-pixel__avatar-badge"
                           src={avatarSrc}
                           alt={displayName}
+                          title={`头像：${displayName}`}
                         />
-                      ) : (
-                        <div className="agent-card-pixel__avatar-fallback">
-                          {displayName.slice(0, 1)}
-                        </div>
                       )}
                     </div>
                   </div>
@@ -200,21 +219,29 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
                                   </span>
                                 )}
                               </div>
-                              {s.totalTokens != null && s.contextTokens ? (
-                                <div className="agent-card-pixel__bar-row">
-                                  <div className="agent-card-pixel__token-bar">
-                                    <div
-                                      className="agent-card-pixel__token-fill"
-                                      style={{
-                                        width: `${Math.min((s.totalTokens / s.contextTokens) * 100, 100)}%`,
-                                      }}
-                                    />
+                              {(() => {
+                                // [context-fix] 优先用网关回报的 contextUsage.promptTokens（当前上下文占用）
+                                const cu = s.contextUsage;
+                                const usedTok =
+                                  cu?.state === "available" && (cu.promptTokens ?? 0) > 0
+                                    ? (cu.promptTokens as number)
+                                    : (s.totalTokens ?? 0);
+                                return usedTok > 0 && s.contextTokens ? (
+                                  <div className="agent-card-pixel__bar-row">
+                                    <div className="agent-card-pixel__token-bar">
+                                      <div
+                                        className="agent-card-pixel__token-fill"
+                                        style={{
+                                          width: `${Math.min((usedTok / s.contextTokens) * 100, 100)}%`,
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="agent-card-pixel__token-val">
+                                      {OverviewIcons.wheat(9)} {usedTok.toLocaleString()}
+                                    </span>
                                   </div>
-                                  <span className="agent-card-pixel__token-val">
-                                    {OverviewIcons.wheat(9)} {s.totalTokens.toLocaleString()}
-                                  </span>
-                                </div>
-                              ) : null}
+                                ) : null;
+                              })()}
                             </div>
                           ))}
                         </div>
@@ -253,9 +280,14 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
         </div>
       </div>
       <AgentEditDialog
-        open={editingAgent !== null}
+        open={editingAgent !== null || creating}
         agent={editingAgent}
-        onClose={() => setEditingAgent(null)}
+        createMode={creating}
+        existingIds={agents.map((a) => a.id)}
+        onClose={() => {
+          setEditingAgent(null);
+          setCreating(false);
+        }}
       />
     </div>
   );

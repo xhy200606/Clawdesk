@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { t, i18n, SUPPORTED_LOCALES, type Locale } from "../../i18n/index.ts";
 import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/external-link.ts";
 import type { UiSettings } from "../../lib/storage.ts";
+import { GatewayFields } from "./GatewayCard.tsx";
 
 // ─── Drag Handle SVG ─────────────────────────────────────────
 
@@ -41,11 +42,15 @@ export type AccessCardProps = {
   settings: UiSettings;
   password: string;
   isTrustedProxy: boolean;
+  /** [merge] 网关连接状态（与网关连接卡片合并后展示） */
+  connected?: boolean;
+  helloVersion?: string | null;
   onSettingsChange: (next: UiSettings) => void;
   onPasswordChange: (next: string) => void;
   onSessionKeyChange: (next: string) => void;
   onConnect: () => void;
   onRefresh: () => void;
+  onReconnect?: () => void;
 };
 
 export function AccessCard(props: AccessCardProps) {
@@ -53,11 +58,14 @@ export function AccessCard(props: AccessCardProps) {
     settings,
     password,
     isTrustedProxy,
+    connected,
+    helloVersion,
     onSettingsChange,
     onPasswordChange,
     onSessionKeyChange,
     onConnect,
     onRefresh,
+    onReconnect,
   } = props;
   const currentLocale = i18n.getLocale();
 
@@ -101,15 +109,26 @@ export function AccessCard(props: AccessCardProps) {
   return (
     <div data-swapy-slot="access">
       <div data-swapy-item="access">
-        <div className="card ov-card--access">
+        <div className="card ov-card--access ov-card--merged">
           <div className="card-header-row">
             <DragHandle />
             <div>
-              <div className="card-title">牧场大门</div>
-              <div className="card-sub">{t("overview.access.subtitle")}</div>
+              <div className="card-title">牧场大门 · 网关连接</div>
+              <div className="card-sub">连接、鉴权与网关管理</div>
             </div>
+            {connected !== undefined && (
+              <span
+                className="pill"
+                style={{
+                  marginLeft: "auto",
+                  color: connected ? "var(--color-success, #1D9E75)" : "#A32D2D",
+                }}
+              >
+                {connected ? "已连接" : "未连接"}
+              </span>
+            )}
           </div>
-          <div className="access-grid" style={{ marginTop: 14 }}>
+          <div className="access-grid access-grid--compact" style={{ marginTop: 10 }}>
             <label className="field">
               <span>WebSocket URL</span>
               <input type="text" defaultValue={settings.gatewayUrl} onBlur={handleUrlChange} />
@@ -138,7 +157,19 @@ export function AccessCard(props: AccessCardProps) {
               />
             </label>
           </div>
-          <div className="row" style={{ marginTop: 14, gap: 10, alignItems: "center" }}>
+
+          {/* [merge] 网关连接管理（原独立「网关连接」卡片） */}
+          {onReconnect && (
+            <GatewayFields
+              settings={settings}
+              connected={Boolean(connected)}
+              helloVersion={helloVersion ?? null}
+              onSettingsChange={onSettingsChange}
+              onReconnect={onReconnect}
+            />
+          )}
+
+          <div className="row" style={{ margin: "8px 0 0", gap: 8, alignItems: "center" }}>
             <label className="field" style={{ margin: 0, flex: "0 0 auto" }}>
               <select value={currentLocale} onChange={handleLocaleChange}>
                 {SUPPORTED_LOCALES.map((loc) => {
@@ -151,10 +182,10 @@ export function AccessCard(props: AccessCardProps) {
                 })}
               </select>
             </label>
-            <button className="btn" onClick={onConnect}>
+            <button className="btn btn--sm" onClick={onConnect}>
               {t("common.connect")}
             </button>
-            <button className="btn" onClick={onRefresh}>
+            <button className="btn btn--sm" onClick={onRefresh}>
               {t("common.refresh")}
             </button>
             <span className="muted">

@@ -433,6 +433,18 @@ export type GatewaySessionRow = {
   model?: string;
   modelProvider?: string;
   contextTokens?: number;
+  /** 运行状态（active run 时为 "running"） */
+  status?: string;
+  /** 距上次活动的毫秒数 */
+  lastActivityAgo?: number;
+  /** 排队中的消息数 */
+  queueDepth?: number;
+  /** 网关侧上下文占用（responseUsage 开启时可用） */
+  contextUsage?: {
+    state: "available" | "unavailable";
+    promptTokens?: number;
+    totalTokens?: number;
+  };
 };
 
 export type SessionsListResult = {

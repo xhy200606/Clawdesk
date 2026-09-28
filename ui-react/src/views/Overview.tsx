@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo } from "react";
 import { AccessCard } from "../components/overview/AccessCard.tsx";
 import { AgentsCard } from "../components/overview/AgentsCard.tsx";
-import { GatewayCard } from "../components/overview/GatewayCard.tsx";
 import { OrchestrationCard } from "../components/overview/OrchestrationCard.tsx";
 import { RanchScene } from "../components/overview/RanchScene.tsx";
 // Pure React overview components
@@ -100,7 +99,8 @@ function TokenStatsRow({ todayTokens, allTokens }: { todayTokens: number; allTok
 
 // ─── Main View ───────────────────────────────────────────────
 
-const DEFAULT_CARD_ORDER = ["usage", "access", "gateways", "agents"];
+// [merge] gateways 已并入 access（牧场大门 · 网关连接）
+const DEFAULT_CARD_ORDER = ["usage", "access", "agents"];
 
 export function OverviewView() {
   const s = useAppStore;
@@ -140,6 +140,47 @@ export function OverviewView() {
   const agents = (agentsList?.agents ?? []) as unknown as GatewayAgentRow[];
   const configForm = s((st) => st.configForm) as Record<string, unknown> | null;
   const channelsSnapshot = s((st) => st.channelsSnapshot) as ChannelsStatusSnapshot | null;
+
+  // [ranch-fix] 网关 2026.9.x 无 sessions.activity RPC（恒 null → 牧场永远摸鱼中）。
+  // 用 sessions.list 派生等价的 activity 数据，供 RanchScene2D/3D 与 OrchestrationCard 使用。
+  const derivedActivity = React.useMemo<SessionActivityResult | null>(() => {
+    if (!sessionsResult) return null;
+    const rows = allSessions.map((x) => {
+      const row = x as {
+        agentId?: string;
+        status?: string;
+        state?: string;
+        lastActivityAgo?: number;
+        queueDepth?: number;
+        updatedAt?: number | null;
+        totalTokens?: number;
+        contextTokens?: number;
+      };
+      const running = row.status === "running";
+      const lastAgo =
+        typeof row.lastActivityAgo === "number"
+          ? row.lastActivityAgo
+          : row.updatedAt
+            ? Math.max(0, Date.now() - row.updatedAt)
+            : 999999;
+      return {
+        key: row.agentId ? `agent:${row.agentId}:main` : x.key,
+        state: (running ? "processing" : "idle") as "processing" | "idle",
+        lastActivityAgo: lastAgo,
+        queueDepth: row.queueDepth ?? 0,
+        totalTokens: row.totalTokens ?? undefined,
+        contextTokens: row.contextTokens ?? undefined,
+      };
+    });
+    return {
+      ts: Date.now(),
+      processing: rows.filter((r) => r.state === "processing").length,
+      waiting: 0,
+      idle: rows.filter((r) => r.state !== "processing").length,
+      sessions: rows,
+    };
+  }, [sessionsResult, allSessions]);
+  const ranchActivity = (sessionActivity as SessionActivityResult | null) ?? derivedActivity;
 
   // Calcular qué canales están vinculados a cada agent
   const channelBindings = useMemo(() => {
@@ -189,8 +230,9 @@ export function OverviewView() {
   const allTokens = (overviewCostDaily as CostUsageSummary | null)?.totals?.totalTokens ?? 0;
 
   const cardOrder = useMemo(() => {
-    const saved = getSavedCardOrder(DEFAULT_CARD_ORDER);
-    return saved.includes("gateways") ? saved : [...saved, "gateways"];
+    // [merge] gateways 卡片已合并进 access（牧场大门），旧的自定义顺序里去掉它
+    const saved = getSavedCardOrder(DEFAULT_CARD_ORDER).filter((x) => x !== "gateways");
+    return saved;
   }, []);
 
   const cardMap: Record<string, React.ReactNode> = {
@@ -208,6 +250,8 @@ export function OverviewView() {
         settings={settings}
         password={password}
         isTrustedProxy={isTrustedProxy}
+        connected={connected}
+        helloVersion={hello?.server?.version ?? null}
         onSettingsChange={(next) => applySettings(next)}
         onPasswordChange={(next) => set({ password: next })}
         onSessionKeyChange={(next) => {
@@ -216,15 +260,6 @@ export function OverviewView() {
         }}
         onConnect={() => {}}
         onRefresh={() => void loadOverview(getReactiveState() as never)}
-      />
-    ),
-    gateways: (
-      <GatewayCard
-        key="gateways"
-        settings={settings}
-        connected={connected}
-        helloVersion={hello?.server?.version ?? null}
-        onSettingsChange={(next) => applySettings(next)}
         onReconnect={() => reconnect()}
       />
     ),
@@ -242,10 +277,7 @@ export function OverviewView() {
     <SwapyLayout>
       <div className="ov-ranch-snapshot-row">
         <div className="ov-ranch-col">
-          <RanchScene
-            agents={agents}
-            sessionActivity={sessionActivity as SessionActivityResult | null}
-          />
+          <RanchScene agents={agents} sessionActivity={ranchActivity} />
         </div>
         <div className="ov-snapshot-col">
           <SnapshotCard
@@ -264,7 +296,7 @@ export function OverviewView() {
         </div>
       </div>
       <div className="overview-swapy">{cardOrder.map((slot) => cardMap[slot])}</div>
-      <OrchestrationCard sessionActivity={sessionActivity as SessionActivityResult | null} />
+      <OrchestrationCard sessionActivity={ranchActivity} />
     </SwapyLayout>
   );
 }

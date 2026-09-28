@@ -796,6 +796,10 @@ export const useAppStore = create<AppState & AppActions>()((setState) => ({
         : next.theme;
     document.documentElement.dataset.theme = resolved;
     document.documentElement.style.colorScheme = resolved;
+    // [accent] 同步主题色
+    if (next.accent) {
+      document.documentElement.dataset.accent = next.accent;
+    }
 
     // Optimistic: update Zustand state + persist immediately
     saveSettings(next);

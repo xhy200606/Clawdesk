@@ -34,6 +34,11 @@ export function App() {
     applySettingsFromUrl(host);
     syncTabWithLocation(host, true);
     syncThemeWithSettings(host);
+    // [accent] 初始化主题色
+    const accent = useAppStore.getState().settings.accent;
+    if (accent) {
+      document.documentElement.dataset.accent = accent;
+    }
     attachThemeListener(host);
     void loadControlUiBootstrapConfig(host);
 

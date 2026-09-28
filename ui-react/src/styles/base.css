@@ -400,3 +400,112 @@ select {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   [accent] 多主题色板 —— data-accent 属性切换
+   每套色板覆盖 accent 家族变量；暗色为默认，data-theme="light" 时用亮色变体。
+   追加在文件末尾以覆盖 :root 与 :root[data-theme="light"] 的默认蓝色。
+   ═══════════════════════════════════════════════════════════ */
+
+:root[data-accent="green"] {
+  --accent: #30D158;
+  --accent-hover: #4ce073;
+  --accent-muted: rgba(48, 209, 88, 0.8);
+  --accent-subtle: rgba(48, 209, 88, 0.15);
+  --accent-foreground: #06280f;
+  --accent-glow: rgba(48, 209, 88, 0.25);
+  --primary: #30D158;
+  --ring: #30D158;
+}
+
+:root[data-theme="light"][data-accent="green"] {
+  --accent: #1d9e4f;
+  --accent-hover: #23b55b;
+  --accent-subtle: rgba(29, 158, 79, 0.12);
+  --accent-foreground: #ffffff;
+  --accent-glow: rgba(29, 158, 79, 0.15);
+  --primary: #1d9e4f;
+  --ring: #1d9e4f;
+}
+
+:root[data-accent="purple"] {
+  --accent: #BF5AF2;
+  --accent-hover: #d07af8;
+  --accent-muted: rgba(191, 90, 242, 0.8);
+  --accent-subtle: rgba(191, 90, 242, 0.15);
+  --accent-foreground: #ffffff;
+  --accent-glow: rgba(191, 90, 242, 0.25);
+  --primary: #BF5AF2;
+  --ring: #BF5AF2;
+}
+
+:root[data-theme="light"][data-accent="purple"] {
+  --accent: #9d3fd4;
+  --accent-hover: #b05ae8;
+  --accent-subtle: rgba(157, 63, 212, 0.12);
+  --accent-glow: rgba(157, 63, 212, 0.15);
+  --primary: #9d3fd4;
+  --ring: #9d3fd4;
+}
+
+:root[data-accent="orange"] {
+  --accent: #FF9F0A;
+  --accent-hover: #ffb340;
+  --accent-muted: rgba(255, 159, 10, 0.8);
+  --accent-subtle: rgba(255, 159, 10, 0.15);
+  --accent-foreground: #2b1a00;
+  --accent-glow: rgba(255, 159, 10, 0.25);
+  --primary: #FF9F0A;
+  --ring: #FF9F0A;
+}
+
+:root[data-theme="light"][data-accent="orange"] {
+  --accent: #d97e00;
+  --accent-hover: #f08e0a;
+  --accent-subtle: rgba(217, 126, 0, 0.12);
+  --accent-foreground: #ffffff;
+  --accent-glow: rgba(217, 126, 0, 0.15);
+  --primary: #d97e00;
+  --ring: #d97e00;
+}
+
+:root[data-accent="rose"] {
+  --accent: #FF375F;
+  --accent-hover: #ff6080;
+  --accent-muted: rgba(255, 55, 95, 0.8);
+  --accent-subtle: rgba(255, 55, 95, 0.15);
+  --accent-foreground: #ffffff;
+  --accent-glow: rgba(255, 55, 95, 0.25);
+  --primary: #FF375F;
+  --ring: #FF375F;
+}
+
+:root[data-theme="light"][data-accent="rose"] {
+  --accent: #e02a50;
+  --accent-hover: #f54568;
+  --accent-subtle: rgba(224, 42, 80, 0.12);
+  --accent-glow: rgba(224, 42, 80, 0.15);
+  --primary: #e02a50;
+  --ring: #e02a50;
+}
+
+:root[data-accent="cyan"] {
+  --accent: #64D2FF;
+  --accent-hover: #8adfff;
+  --accent-muted: rgba(100, 210, 255, 0.8);
+  --accent-subtle: rgba(100, 210, 255, 0.15);
+  --accent-foreground: #00283a;
+  --accent-glow: rgba(100, 210, 255, 0.25);
+  --primary: #64D2FF;
+  --ring: #64D2FF;
+}
+
+:root[data-theme="light"][data-accent="cyan"] {
+  --accent: #0f9bc4;
+  --accent-hover: #1caff5;
+  --accent-subtle: rgba(15, 155, 196, 0.12);
+  --accent-foreground: #ffffff;
+  --accent-glow: rgba(15, 155, 196, 0.15);
+  --primary: #0f9bc4;
+  --ring: #0f9bc4;
+}
