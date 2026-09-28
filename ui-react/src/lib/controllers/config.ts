@@ -296,7 +296,15 @@ export async function saveConfig(state: ConfigState) {
   }
 }
 
-export async function applyConfig(state: ConfigState) {
+/**
+ * 应用配置到网关运行时。
+ *
+ * opts.sessionKey 可覆盖 state.applySessionKey：传 null 走「快速应用」——
+ * 网关只重载配置不重启会话（实测 ~0.4s vs 带 sessionKey 的全量应用 ~17s，
+ * 全量应用会触发 restart-sentinel 重启目标会话）。
+ * 身份/形象/模型这类轻量编辑用快速应用即可，运行时都会加载新配置。
+ */
+export async function applyConfig(state: ConfigState, opts?: { sessionKey?: string | null }) {
   if (!state.client || !state.connected) {
     return;
   }
@@ -312,10 +320,11 @@ export async function applyConfig(state: ConfigState) {
       state.lastError = "Config hash missing; reload and retry.";
       return;
     }
+    const applySessionKey = opts && "sessionKey" in opts ? opts.sessionKey : state.applySessionKey;
     await state.client.request("config.apply", {
       raw,
       baseHash,
-      sessionKey: state.applySessionKey,
+      ...(applySessionKey ? { sessionKey: applySessionKey } : {}),
     });
     state.configFormDirty = false;
     await loadConfig(state);

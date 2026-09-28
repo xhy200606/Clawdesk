@@ -1,25 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ANIMAL_SPECIES } from "../../lib/animals.ts";
 import { loadAgents } from "../../lib/controllers/agents.ts";
-import {
-  applyConfig,
-  ensureConfigLoaded,
-  saveConfig,
-  updateConfigFormValue,
-  removeConfigFormValue,
-  type ConfigState,
-} from "../../lib/controllers/config.ts";
+import { loadConfig, type ConfigState } from "../../lib/controllers/config.ts";
 import type { GatewayAgentRow } from "../../lib/types.ts";
 import { getReactiveState } from "../../store/appStore.ts";
 
 // ─── 牛马档案 · Agent 信息编辑/新增弹窗 ──────────────────────────
-// 「资料」页编辑 identity.name / identity.avatar / identity.emoji（动物形象）/ model.primary，
-// 写回 configForm.agents.entries.<agentId>（网关 schema：agents 是 strict 对象，
-// 合法键为 ownership / defaults / entries，entries 是按 agentId 为键的 record，
-// 条目不可携带 id 字段），经 saveConfig + applyConfig 持久化。
-// 新建模式：输入新 agentId + 选择动物形象，保存后网关会创建对应 agent。
-// 删除：从 agents.entries 移除键（main 等默认 agent 不允许删除；entries 清空时整键移除，
-// 避免 "entries must contain at least one configured agent" 校验失败）。
+// 「资料」页编辑 identity.name / identity.avatar / identity.emoji（动物形象）/ model.primary。
+//
+// 持久化走网关专用 RPC（实测远快于 config.set + config.apply）：
+//  - 新建：agents.create { name, emoji, avatar, model } —— 一次调用直接落库
+//    identity + workspace + model（~0.6s）。注意 create 会触发网关内部异步
+//    配置管线（~13s），期间 config.set/config.apply/agents.update 都会被
+//    卡住或报 not found，所以新建后轮询 agents.list 等运行时可见即可。
+//  - 编辑：agents.update { agentId, name, emoji, avatar, model } —— 网关内部
+//    应用配置并写 workspace 的 IDENTITY.md（~0.1s），model 传 null 可清空。
+//  - 删除：agents.delete { agentId } —— 清配置条目 + 工作区（运行时已同步时很快）。
+//
 // 文件页编辑 workspace 内的 SOUL.md / AGENTS.md / USER.md / IDENTITY.md，
 // 走网关 agents.files.get / agents.files.set RPC 直接读写。
 
@@ -159,9 +156,38 @@ export function AgentEditDialog({
 
   const onAvatarFile = useCallback((file: File | null) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setAvatar(String(reader.result ?? ""));
-    reader.readAsDataURL(file);
+    // 头像是直接写进 openclaw.json 的：原图 data URI 动辄数 MB，会让 config.set /
+    // config.apply 极慢甚至超时（表现就是「保存转圈半天最后没生效」）。
+    // 先在客户端缩放到 160px 以内再存，通常只有 5~15KB。
+    const MAX = 160;
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, MAX / Math.max(img.width || MAX, img.height || MAX));
+        const w = Math.max(1, Math.round((img.width || MAX) * scale));
+        const h = Math.max(1, Math.round((img.height || MAX) * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("canvas 不可用");
+        ctx.drawImage(img, 0, 0, w, h);
+        setAvatar(canvas.toDataURL("image/jpeg", 0.72));
+      } catch {
+        // 压缩失败则退回原图，但至少保证可用
+        const reader = new FileReader();
+        reader.onload = () => setAvatar(String(reader.result ?? ""));
+        reader.readAsDataURL(file);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setError("图片读取失败，请换一张");
+    };
+    img.src = objectUrl;
   }, []);
 
   const onSaveFile = useCallback(
@@ -213,47 +239,67 @@ export function AgentEditDialog({
       };
       if (!reactive.client) throw new Error("网关未连接");
 
-      // 概览页不一定加载过 config：先拉取完整快照（含 hash），
-      // 否则 config.set 会报 "Config hash missing"，且空表单会覆盖整个配置。
-      const ready = await ensureConfigLoaded(reactive);
-      if (!ready) throw new Error("配置尚未加载完成，请稍后重试");
-
-      let avatarValue = avatar.trim();
-      // data URI 头像走 RPC 存成文件，避免配置膨胀
-      if (/^data:image\//i.test(avatarValue)) {
-        try {
-          const res = (await reactive.client.request("agent.avatar.save", {
-            agentId: targetId.trim(),
-            dataUri: avatarValue,
-          })) as { path?: string } | null;
-          if (res?.path) avatarValue = res.path;
-        } catch {
-          /* 存失败则原样写 data URI */
-        }
+      // 头像只存压缩后的小图（见 onAvatarFile）；过大的 data URI 会拖慢落盘
+      const avatarValue = avatar.trim();
+      if (/^data:image\//i.test(avatarValue) && avatarValue.length > 120_000) {
+        throw new Error("头像过大（>120KB），请换一张更小的图片或直接用动物形象");
       }
-
-      // 网关 schema：agents.entries 是按 agentId 为键的 record，条目不可携带 id 字段
-      const entries = readAgentEntries(reactive.configForm as Record<string, unknown> | null);
-      const prev = entries[targetId.trim()] ?? {};
-      const entry: AgentFormEntry = { ...prev, identity: { ...(prev.identity ?? {}) } };
-      entry.identity = {
-        ...entry.identity,
-        name: name.trim() || targetId.trim(),
-        avatar: avatarValue,
-        emoji: emoji.trim() || undefined,
-      };
+      const emojiValue = emoji.trim() || undefined;
       const trimmedModel = model.trim();
-      if (trimmedModel) {
-        entry.model = { ...((prev.model as AgentFormEntry["model"]) ?? {}), primary: trimmedModel };
-      } else {
-        delete entry.model;
-      }
-      entries[targetId.trim()] = entry;
 
-      updateConfigFormValue(reactive, ["agents", "entries"], entries);
-      await new Promise((r) => setTimeout(r, 50));
-      await saveConfig(reactive);
-      await applyConfig(reactive);
+      if (isCreate) {
+        // 新建：专用 RPC 一次落库 identity + workspace + model（~0.6s）。
+        // 不走 config.set/apply —— create 之后网关内部有 ~13s 的异步配置管线，
+        // 紧跟着的 set/apply 会被卡住（这正是之前「保存很慢且失效」的根因）。
+        await reactive.client.request("agents.create", {
+          name: targetId.trim(),
+          ...(emojiValue ? { emoji: emojiValue } : {}),
+          ...(avatarValue ? { avatar: avatarValue } : {}),
+          ...(trimmedModel ? { model: trimmedModel } : {}),
+        });
+        // 运行时同步有 1~2s 延迟：轮询 agents.list 直到新牛马可见（最多 ~12s）
+        let visible = false;
+        for (let i = 0; i < 12 && !visible; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          try {
+            const rows = (await reactive.client.request("agents.list", {})) as {
+              agents?: Array<{ id?: string; agentId?: string }>;
+            } | null;
+            const arr = rows?.agents ?? [];
+            visible = arr.some((a) => (a.id ?? a.agentId) === targetId.trim());
+          } catch {
+            visible = false;
+          }
+        }
+        if (!visible) {
+          throw new Error("牛马已创建，但运行时尚未加载（请稍后刷新页面查看）");
+        }
+        // create 的 name 参数是 agentId；用户填了独立昵称时补一次 update
+        const displayName = name.trim();
+        if (displayName && displayName !== targetId.trim()) {
+          try {
+            await reactive.client.request("agents.update", {
+              agentId: targetId.trim(),
+              name: displayName,
+            });
+          } catch {
+            // 昵称补写失败不阻塞：agent 已创建成功，可稍后在编辑里改
+          }
+        }
+      } else {
+        // 编辑：agents.update 网关内部应用配置 + 写 IDENTITY.md（~0.1s），
+        // model 传 null 表示清空主模型选择
+        await reactive.client.request("agents.update", {
+          agentId: agent!.id,
+          ...(name.trim() ? { name: name.trim() } : {}),
+          ...(emojiValue ? { emoji: emojiValue } : {}),
+          ...(avatarValue ? { avatar: avatarValue } : {}),
+          ...(trimmedModel ? { model: trimmedModel } : { model: null }),
+        });
+      }
+
+      // 刷新本地配置快照（hash）与牛马列表
+      await loadConfig(reactive);
       await loadAgents(getReactiveState() as unknown as Parameters<typeof loadAgents>[0]);
       onClose();
     } catch (err) {
@@ -272,20 +318,10 @@ export function AgentEditDialog({
         client: { request: (method: string, params: unknown) => Promise<unknown> } | null;
       };
       if (!reactive.client) throw new Error("网关未连接");
-      const ready = await ensureConfigLoaded(reactive);
-      if (!ready) throw new Error("配置尚未加载完成，请稍后重试");
-      // 从 agents.entries record 移除该键；清空时整键移除（entries 空对象会触发
-      // "must contain at least one configured agent" 校验失败）
-      const entries = readAgentEntries(reactive.configForm as Record<string, unknown> | null);
-      delete entries[agent.id];
-      if (Object.keys(entries).length === 0) {
-        removeConfigFormValue(reactive, ["agents", "entries"]);
-      } else {
-        updateConfigFormValue(reactive, ["agents", "entries"], entries);
-      }
-      await new Promise((r) => setTimeout(r, 50));
-      await saveConfig(reactive);
-      await applyConfig(reactive);
+      // agents.delete 一次清掉配置条目 + workspace/agentDir + 绑定；
+      // 若该牛马刚创建（运行时管线未同步）可能要等十几秒，属正常现象
+      await reactive.client.request("agents.delete", { agentId: agent.id });
+      await loadConfig(reactive);
       await loadAgents(getReactiveState() as unknown as Parameters<typeof loadAgents>[0]);
       onClose();
     } catch (err) {

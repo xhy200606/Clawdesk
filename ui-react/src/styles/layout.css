@@ -6,6 +6,8 @@
   --shell-pad: clamp(12px, 2vw, 20px);
   --shell-gap: clamp(12px, 2vw, 20px);
   --shell-nav-width: clamp(180px, 16vw, 240px);
+  /* 侧栏收起后仍保留一条图标导轨，方便重新展开与直接跳转 */
+  --shell-nav-rail: 60px;
   --shell-topbar-height: 56px;
   --shell-focus-duration: 200ms;
   --shell-focus-ease: var(--ease-out);
@@ -39,12 +41,13 @@
   }
 }
 
+/* 收起 = 图标导轨（不是彻底隐藏，否则没有入口再展开） */
 .shell--nav-collapsed {
-  grid-template-columns: 0px minmax(0, 1fr);
+  grid-template-columns: var(--shell-nav-rail) minmax(0, 1fr);
 }
 
 .shell--nav-collapsed .topbar {
-  left: 0;
+  left: var(--shell-nav-rail);
 }
 
 .shell--chat-focus {
@@ -378,17 +381,166 @@
   opacity: 0;
 }
 
+/* 折叠态：保留图标导轨（图标 + 展开按钮），隐藏文字与会话列表 */
 .nav--collapsed {
-  width: 0;
-  min-width: 0;
-  padding: 0;
-  overflow: hidden;
-  border: none;
-  opacity: 0;
-  pointer-events: none;
+  width: var(--shell-nav-rail);
+  min-width: var(--shell-nav-rail);
+  padding: 10px 6px;
+  overflow: hidden auto;
+  border-right: 1px solid var(--border);
+  opacity: 1;
+  pointer-events: auto;
 }
 
-/* Nav collapse toggle */
+.nav--collapsed .nav-item__text,
+.nav--collapsed .nav-label__text,
+.nav--collapsed .nav-label__chevron,
+.nav--collapsed .session-list,
+.nav--collapsed .brand-text,
+.nav--collapsed .nav-bottom-items .nav-item__text {
+  display: none;
+}
+
+.nav--collapsed .nav-brand {
+  justify-content: center;
+  padding-bottom: 10px;
+}
+
+.nav--collapsed .nav-item,
+.nav--collapsed .nav-item--standalone {
+  justify-content: center;
+  padding: 9px 0;
+  gap: 0;
+}
+
+.nav--collapsed .nav-label {
+  justify-content: center;
+}
+
+.nav--collapsed .nav-item__icon {
+  margin: 0;
+}
+
+.nav--collapsed .nav-collapse-toggle {
+  margin: 0 auto;
+}
+
+.nav--collapsed .nav-group__items,
+.nav--collapsed .nav-group--collapsed .nav-group__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 导轨里不要分组标题（只剩空按钮） */
+.nav--collapsed .nav-label {
+  display: none;
+}
+
+/* ─── 项目栏（会话分组）───────────────────────────────── */
+.project-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 2px 6px;
+}
+
+.project-bar--new {
+  padding-top: 0;
+}
+
+.project-bar__select {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 11.5px;
+  outline: none;
+}
+
+.project-bar__select:focus {
+  border-color: var(--accent);
+}
+
+.project-bar__input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 11.5px;
+  outline: none;
+}
+
+.project-bar__input:focus {
+  border-color: var(--accent);
+}
+
+.project-bar__btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.project-bar__btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.project-bar__btn--danger:hover {
+  color: var(--destructive);
+  border-color: var(--destructive);
+}
+
+.session-item__project {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.session-item:hover .session-item__project {
+  opacity: 1;
+}
+
+.session-item__project:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.session-item__project--on {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+/* ─── Nav collapse toggle ─────────────────────────────── */
 .nav-collapse-toggle {
   width: 32px;
   height: 32px;

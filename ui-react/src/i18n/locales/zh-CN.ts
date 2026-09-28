@@ -17,6 +17,7 @@ export const zh_CN: TranslationMap = {
   nav: {
     overview: "概览",
     chat: "聊天",
+    teams: "协作",
     models: "模型",
     control: "控制",
     agent: "Agent",
@@ -27,6 +28,7 @@ export const zh_CN: TranslationMap = {
   tabs: {
     agents: "Agent设置",
     overview: "概览",
+    teams: "协作",
     channels: "频道管理",
     instances: "实例",
     sessions: "会话",
@@ -45,6 +47,7 @@ export const zh_CN: TranslationMap = {
   subtitles: {
     agents: "管理Agent工作区、工具和身份。",
     overview: "网关状态、入口点和快速健康读取。",
+    teams: "Agent Teams 协同、SubAgent 可视化与 Agent 间通信。",
     channels: "管理频道和设置。",
     instances: "来自已连接客户端和节点的在线信号。",
     sessions: "检查活动会话并调整每个会话的默认设置。",

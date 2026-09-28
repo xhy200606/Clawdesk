@@ -1,0 +1,597 @@
+/* ─── 协作工作台（Teams）─────────────────────────────────────────
+   Agent Teams 协同 / SubAgent 可视化 / Agent 间通信 / 运行追踪
+   风格：深色卡片 + 网格 + 状态徽章，主题变量驱动，随整套换肤变化。
+   ────────────────────────────────────────────────────────────── */
+
+.teams {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(10px, 1.6vw, 20px);
+  min-height: 0;
+}
+
+/* ── 头部 ── */
+.teams__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.teams__title h1 {
+  margin: 0;
+  font-size: clamp(17px, 2.2vw, 22px);
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  color: var(--text-strong);
+}
+
+.teams__title p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.teams__stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.teams-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.teams-stat b {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.teams-stat--run b {
+  color: var(--ok);
+}
+
+/* ── 视图切换 ── */
+.teams__tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.teams__tab {
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.teams__tab:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.teams__tab--active {
+  background: var(--accent-subtle);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.teams__refresh {
+  margin-left: auto;
+}
+
+/* ── 提示条 ── */
+.teams__alert {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  border: 1px solid var(--border);
+}
+
+.teams__alert--err {
+  background: color-mix(in srgb, var(--destructive) 14%, transparent);
+  border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
+  color: var(--destructive);
+}
+
+.teams__alert--ok {
+  background: var(--ok-subtle);
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  color: var(--ok);
+}
+
+/* ── 团队卡片网格 ── */
+.teams__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 12px;
+}
+
+.teams-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.teams-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.teams-card--working {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ok) 18%, transparent);
+}
+
+.teams-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.teams-card__avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.teams-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.teams-card__emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.teams-card__ident {
+  min-width: 0;
+  flex: 1;
+}
+
+.teams-card__name {
+  font-size: 14px;
+  font-weight: 620;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teams-card__id {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teams-badge {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: var(--bg-muted);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.teams-badge--run {
+  background: var(--ok-subtle);
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+}
+
+.teams-card__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.teams-card__meta div {
+  min-width: 0;
+}
+
+.teams-card__meta dt {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.teams-card__meta dd {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teams-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.teams-card__task {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.teams-card__task-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── 编排树 ── */
+.teams-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  overflow-x: auto;
+}
+
+.teams-tree__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  flex-wrap: wrap;
+}
+
+.teams-tree__row--running {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+.teams-tree__name {
+  font-size: 13px;
+  color: var(--text);
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teams-tree__meta {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.teams-tree__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+/* ── 状态点 ── */
+.teams-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.teams-dot--running {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent);
+  animation: teams-pulse 1.4s ease-in-out infinite;
+}
+
+.teams-dot--completed {
+  background: var(--accent);
+}
+
+.teams-dot--failed {
+  background: var(--destructive);
+}
+
+@keyframes teams-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.teams-tag {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  background: var(--bg-muted);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.teams-tag--sub {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ── 通信面板 ── */
+.teams-comms {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.teams-comms__form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.teams-comms__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.teams-comms__form select {
+  min-width: 148px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.teams-comms__arrow {
+  padding-bottom: 8px;
+  color: var(--muted);
+}
+
+.teams-comms__check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  padding-bottom: 8px;
+  font-size: 12px !important;
+}
+
+.teams-comms__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.teams-comms__hint {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.teams-comms__list {
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.teams-comms__list h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.teams-comms__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12.5px;
+}
+
+.teams-comms__who {
+  min-width: 120px;
+  color: var(--text);
+}
+
+.teams-comms__row code {
+  flex: 1;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 运行追踪 ── */
+.teams-traces {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.teams-trace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  font-size: 12px;
+}
+
+.teams-trace__run {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.teams-trace__model {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teams-trace__dur {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.teams-trace .btn {
+  margin-left: auto;
+}
+
+/* ── 公共 ── */
+.teams__textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.teams__textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.teams__empty {
+  padding: 26px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+/* ── 手机适配 ── */
+@media (max-width: 720px) {
+  .teams {
+    padding: 10px;
+    gap: 12px;
+  }
+
+  .teams__head {
+    align-items: stretch;
+  }
+
+  .teams__stats {
+    gap: 6px;
+  }
+
+  .teams-stat {
+    padding: 5px 10px;
+    font-size: 10.5px;
+  }
+
+  .teams-stat b {
+    font-size: 13px;
+  }
+
+  .teams__tabs {
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .teams__tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .teams__tab {
+    padding: 6px 11px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .teams__refresh {
+    margin-left: 0;
+  }
+
+  .teams__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .teams-card__meta {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .teams-tree__name {
+    max-width: 100%;
+  }
+
+  .teams-comms__form select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .teams-comms__form label {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teams-dot--running {
+    animation: none;
+  }
+  .teams-card:hover {
+    transform: none;
+  }
+}

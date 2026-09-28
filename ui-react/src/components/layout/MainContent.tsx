@@ -21,12 +21,14 @@ import { NodesView } from "../../views/Nodes.tsx";
 import { OverviewView } from "../../views/Overview.tsx";
 import { SessionsView } from "../../views/Sessions.tsx";
 import { SkillsView } from "../../views/Skills.tsx";
+import { TeamsView } from "../../views/Teams.tsx";
 import { UsageView } from "../../views/Usage.tsx";
 import { SetupWizard } from "../onboarding/SetupWizard.tsx";
 
 const VIEW_MAP: Record<string, React.ComponentType> = {
   chat: ChatView,
   overview: OverviewView,
+  teams: TeamsView,
   agents: AgentsView,
   config: ConfigPageView,
   "json-edit": JsonEditView,

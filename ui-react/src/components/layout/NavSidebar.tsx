@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { t } from "../../i18n/index.ts";
 import { resolveSessionDisplayName, isCronSessionKey } from "../../lib/app-render.helpers.ts";
@@ -16,6 +16,15 @@ import {
   normalizeBasePath,
   type Tab,
 } from "../../lib/navigation.ts";
+import {
+  createProject,
+  deleteProject,
+  getActiveProjectId,
+  loadProjects,
+  setActiveProjectId,
+  toggleSessionInProject,
+  type Project,
+} from "../../lib/projects.ts";
 import { useAppStore, getReactiveState } from "../../store/appStore.ts";
 import { UserProfileBar } from "./UserProfileBar.tsx";
 
@@ -106,12 +115,67 @@ export function NavSidebar() {
     });
   }, []);
 
+  // 项目（客户端分组，用来收纳不同话题的会话）
+  const [projects, setProjects] = useState<Project[]>(() => loadProjects());
+  const [activeProject, setActiveProject] = useState<string | null>(() => getActiveProjectId());
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  // 手机底部标签栏要能看到全部入口（桌面只显示概览/聊天/协作）
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches,
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 720px)");
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const onCreateProject = useCallback(() => {
+    const next = createProject(newProjectName);
+    setProjects(next);
+    const created = next[next.length - 1];
+    setActiveProject(created.id);
+    setActiveProjectId(created.id);
+    setNewProjectName("");
+    setCreatingProject(false);
+  }, [newProjectName]);
+
+  const onDeleteProject = useCallback(() => {
+    if (!activeProject) return;
+    setProjects(deleteProject(activeProject));
+    setActiveProject(null);
+    setActiveProjectId(null);
+  }, [activeProject]);
+
+  const onToggleProject = useCallback(
+    (key: string) => {
+      if (!activeProject) return;
+      setProjects(toggleSessionInProject(activeProject, key));
+    },
+    [activeProject],
+  );
+
   // Session list
   const sessions = sessionsResult?.sessions ?? [];
   const hideCron = (settings as { sessionsHideCron?: boolean }).sessionsHideCron ?? true;
   const filtered = sessions
     .filter((s) => !hideCron || !isCronSessionKey(s.key))
     .slice(0, MAX_SIDEBAR_SESSIONS);
+
+  // 选中项目时：项目内会话排前面，其余作为「其他会话」仍可加入
+  const activeProjectMeta = projects.find((p) => p.id === activeProject) ?? null;
+  const visibleSessions = useMemo(() => {
+    if (!activeProjectMeta) return filtered;
+    const inSet = new Set(activeProjectMeta.sessionKeys);
+    return [
+      ...filtered.filter((s) => inSet.has(s.key)),
+      ...filtered.filter((s) => !inSet.has(s.key)),
+    ];
+  }, [activeProjectMeta, filtered]);
+  const inProjectSet = new Set(activeProjectMeta?.sessionKeys ?? []);
 
   const navClass = `nav${settings.navCollapsed ? " nav--collapsed" : ""}`;
 
@@ -154,7 +218,11 @@ export function NavSidebar() {
       </div>
 
       {(TAB_GROUPS as ReadonlyArray<{ label: string; tabs: readonly string[] }>)
-        .filter((g) => g.label !== "settings" && g.label !== "agent" && g.label !== "control")
+        // 桌面只保留概览 / 聊天 / 协作，手机上要能看到全部入口（底部标签栏）
+        .filter(
+          (g) =>
+            isMobile || (g.label !== "settings" && g.label !== "agent" && g.label !== "control"),
+        )
         .map((group) => {
           const isGroupCollapsed = settings.navGroupsCollapsed?.[group.label] ?? false;
 
@@ -214,6 +282,66 @@ export function NavSidebar() {
                 </button>
                 {!isGroupCollapsed && (
                   <div className="session-list">
+                    {/* 项目：把会话收纳到不同项目里（纯客户端分组） */}
+                    <div className="project-bar">
+                      <select
+                        className="project-bar__select"
+                        value={activeProject ?? ""}
+                        onChange={(e) => {
+                          const id = e.target.value || null;
+                          setActiveProject(id);
+                          setActiveProjectId(id);
+                        }}
+                        title="按项目筛选会话"
+                      >
+                        <option value="">全部会话</option>
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="project-bar__btn"
+                        title="新建项目"
+                        onClick={() => setCreatingProject((v) => !v)}
+                      >
+                        ＋
+                      </button>
+                      {activeProject && (
+                        <button
+                          type="button"
+                          className="project-bar__btn project-bar__btn--danger"
+                          title="删除当前项目（不会删除会话）"
+                          onClick={onDeleteProject}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    {creatingProject && (
+                      <div className="project-bar project-bar--new">
+                        <input
+                          className="project-bar__input"
+                          value={newProjectName}
+                          autoFocus
+                          placeholder="项目名称，如「客户 A」"
+                          onChange={(e) => setNewProjectName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") onCreateProject();
+                            if (e.key === "Escape") setCreatingProject(false);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn--sm primary"
+                          onClick={onCreateProject}
+                        >
+                          新建
+                        </button>
+                      </div>
+                    )}
                     <button
                       className="session-item session-item--new"
                       onClick={() => {
@@ -226,7 +354,7 @@ export function NavSidebar() {
                       <span className="session-item__icon">+</span>
                       <span className="session-item__name">{t("chatView.newSession")}</span>
                     </button>
-                    {filtered.map((session) => {
+                    {visibleSessions.map((session) => {
                       const isActive = session.key === sessionKey;
                       const baseName = resolveSessionDisplayName(session.key, session);
                       const preview = getSessionPreview(session.key);
@@ -239,6 +367,9 @@ export function NavSidebar() {
                           name={name}
                           time={time}
                           isActive={isActive}
+                          projectMode={Boolean(activeProjectMeta)}
+                          inProject={inProjectSet.has(session.key)}
+                          onToggleProject={() => onToggleProject(session.key)}
                           onSwitch={() => {
                             if (!isActive) {
                               switchSession(session.key);
@@ -273,7 +404,7 @@ export function NavSidebar() {
               </button>
               <div className="nav-group__items">
                 {(group.tabs as readonly Tab[])
-                  .filter((t_) => t_ !== "skills" && t_ !== "nodes" && t_ !== "usage")
+                  .filter((t_) => isMobile || (t_ !== "skills" && t_ !== "nodes" && t_ !== "usage"))
                   .map((t_) => {
                     const href = pathForTab(t_, basePath);
                     return (
@@ -350,9 +481,22 @@ type SessionItemProps = {
   time: string;
   isActive: boolean;
   onSwitch: () => void;
+  /** 当前选中了某个项目：显示加入/移出项目的小按钮 */
+  projectMode?: boolean;
+  inProject?: boolean;
+  onToggleProject?: () => void;
 };
 
-function SessionItem({ sessionKey, name, time, isActive, onSwitch }: SessionItemProps) {
+function SessionItem({
+  sessionKey,
+  name,
+  time,
+  isActive,
+  onSwitch,
+  projectMode,
+  inProject,
+  onToggleProject,
+}: SessionItemProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [renaming, setRenaming] = useState(false);
@@ -438,6 +582,18 @@ function SessionItem({ sessionKey, name, time, isActive, onSwitch }: SessionItem
       >
         <span className="session-item__name">{name}</span>
         {time && <span className="session-item__time">{time}</span>}
+        {projectMode && (
+          <button
+            className={`session-item__project${inProject ? " session-item__project--on" : ""}`}
+            title={inProject ? "从当前项目移出" : "加入当前项目"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleProject?.();
+            }}
+          >
+            {inProject ? "✓" : "＋"}
+          </button>
+        )}
         <button ref={dotsRef} className="session-item__dots" onClick={openMenu} title="更多操作">
           ⋯
         </button>
