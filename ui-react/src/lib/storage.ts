@@ -23,6 +23,7 @@ export type UiSettings = {
   splitRatio: number; // Sidebar split ratio (0.4 to 0.7, default 0.6)
   navCollapsed: boolean; // Collapsible sidebar state
   navGroupsCollapsed: Record<string, boolean>; // Which nav groups are collapsed
+  fileExplorerOpen: boolean; // 聊天页右侧 Workspace 文件管理器开关
   locale?: string;
   // [multi-gateway] 已保存的网关列表与当前激活项
   gateways?: GatewayProfile[];
@@ -56,6 +57,7 @@ export function loadSettings(): UiSettings {
     splitRatio: 0.6,
     navCollapsed: false,
     navGroupsCollapsed: {},
+    fileExplorerOpen: false,
     gateways: [{ id: "default", name: "默认网关", url: defaultUrl, token: "" }],
     activeGatewayId: "default",
   };
@@ -103,6 +105,10 @@ export function loadSettings(): UiSettings {
         typeof parsed.navGroupsCollapsed === "object" && parsed.navGroupsCollapsed !== null
           ? parsed.navGroupsCollapsed
           : defaults.navGroupsCollapsed,
+      fileExplorerOpen:
+        typeof parsed.fileExplorerOpen === "boolean"
+          ? parsed.fileExplorerOpen
+          : defaults.fileExplorerOpen,
       locale: isSupportedLocale(parsed.locale) ? parsed.locale : undefined,
       gateways: Array.isArray(parsed.gateways)
         ? parsed.gateways

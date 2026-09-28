@@ -1735,3 +1735,297 @@
 .quick-add__actions .quick-add__test {
     margin-left: 8px;
 }
+
+/* ─── 主窗口 · 右侧 Workspace 文件管理器 ─────────────── */
+.content-split {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+}
+
+.content-split>*:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-explorer {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 320px;
+    min-height: 0;
+    margin-left: 12px;
+    border: 1px solid var(--border, rgba(127, 127, 127, 0.25));
+    border-radius: 10px;
+    background: var(--panel, rgba(127, 127, 127, 0.06));
+    overflow: hidden;
+}
+
+.file-explorer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.2));
+}
+
+.file-explorer__agent {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 0;
+}
+
+.file-explorer__agent-id {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.65;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-explorer__head-actions {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.file-explorer__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.file-explorer__icon-btn:hover:not(:disabled) {
+    background: rgba(127, 127, 127, 0.18);
+}
+
+.file-explorer__icon-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.file-explorer__crumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.15));
+    font-size: 12px;
+    min-height: 30px;
+}
+
+.file-explorer__crumb {
+    border: none;
+    background: transparent;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: inherit;
+    opacity: 0.75;
+    cursor: pointer;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-explorer__crumb:hover:not(:disabled) {
+    background: rgba(127, 127, 127, 0.15);
+    opacity: 1;
+}
+
+.file-explorer__crumb--current {
+    opacity: 1;
+    font-weight: 600;
+}
+
+.file-explorer__crumb-sep {
+    display: inline-flex;
+    opacity: 0.4;
+}
+
+.file-explorer__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.file-explorer__state {
+    padding: 16px 12px;
+    font-size: 12px;
+    opacity: 0.6;
+    text-align: center;
+}
+
+.file-explorer__state--error {
+    color: #c0392b;
+    opacity: 1;
+    word-break: break-all;
+    text-align: left;
+}
+
+.file-explorer__list {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.file-explorer__item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 5px 7px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.file-explorer__item:hover:not(:disabled) {
+    background: rgba(127, 127, 127, 0.14);
+}
+
+.file-explorer__item:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.file-explorer__item--parent {
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.file-explorer__item-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+.file-explorer__item-icon--dir {
+    color: #d9a441;
+}
+
+.file-explorer__item-icon--parent {
+    font-family: var(--mono, monospace);
+    font-size: 12px;
+    width: 15px;
+    text-align: center;
+}
+
+.file-explorer__item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-explorer__item-meta {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    flex-shrink: 0;
+    font-size: 10px;
+    opacity: 0.55;
+    font-family: var(--mono, monospace);
+}
+
+/* 文件查看器 */
+.file-explorer__viewer {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.file-explorer__viewer-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.15));
+}
+
+.file-explorer__viewer-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-explorer__viewer-meta {
+    flex-shrink: 0;
+    font-size: 10px;
+    opacity: 0.55;
+    font-family: var(--mono, monospace);
+}
+
+.file-explorer__viewer-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 10px;
+}
+
+.file-explorer__viewer-text {
+    margin: 0;
+    font-family: var(--mono, monospace);
+    font-size: 11.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.file-explorer__viewer-img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
+
+.file-explorer__viewer-empty {
+    font-size: 12px;
+    opacity: 0.6;
+    padding: 16px 0;
+    text-align: center;
+}
+
+/* 顶栏开关激活态 */
+.topbar-restart-btn--active {
+    background: rgba(74, 152, 88, 0.16);
+    color: #2e7d43;
+}
+
+@media (max-width: 900px) {
+    .file-explorer {
+        width: 240px;
+    }
+}

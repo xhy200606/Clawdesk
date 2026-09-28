@@ -22,6 +22,7 @@ import { OverviewView } from "../../views/Overview.tsx";
 import { SessionsView } from "../../views/Sessions.tsx";
 import { SkillsView } from "../../views/Skills.tsx";
 import { UsageView } from "../../views/Usage.tsx";
+import { FileExplorerPanel } from "../chat/FileExplorerPanel.tsx";
 import { SetupWizard } from "../onboarding/SetupWizard.tsx";
 
 const VIEW_MAP: Record<string, React.ComponentType> = {
@@ -167,6 +168,7 @@ export function MainContent() {
   const tab = useAppStore((s) => s.tab);
   const lastError = useAppStore((s) => s.lastError);
   const onboarding = useAppStore((s) => s.onboarding);
+  const feOpen = useAppStore((s) => s.settings.fileExplorerOpen === true);
   const isChat = tab === "chat";
 
   const ViewComponent = VIEW_MAP[tab] ?? ChatView;
@@ -194,7 +196,13 @@ export function MainContent() {
       )}
 
       {/* View content */}
-      {!onboarding && <ViewComponent />}
+      {!onboarding && isChat && feOpen && (
+        <div className="content-split">
+          <ViewComponent />
+          <FileExplorerPanel />
+        </div>
+      )}
+      {!onboarding && !(isChat && feOpen) && <ViewComponent />}
     </main>
   );
 }
