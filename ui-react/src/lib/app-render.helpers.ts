@@ -472,9 +472,11 @@ export function resolveSessionOptions(
   hideCron = false,
 ) {
   const seen = new Set<string>();
-  const options: Array<{ key: string; displayName?: string }> = [];
+  const options: Array<{ key: string; displayName?: string; running?: boolean }> = [];
 
-  const resolvedMain = mainSessionKey && sessions?.sessions?.find((s) => s.key === mainSessionKey);
+  const resolvedMain = mainSessionKey
+    ? sessions?.sessions?.find((s) => s.key === mainSessionKey)
+    : undefined;
   const resolvedCurrent = sessions?.sessions?.find((s) => s.key === sessionKey);
 
   // Add main session key first
@@ -483,6 +485,7 @@ export function resolveSessionOptions(
     options.push({
       key: mainSessionKey,
       displayName: resolveSessionDisplayName(mainSessionKey, resolvedMain || undefined),
+      running: resolvedMain?.status === "running",
     });
   }
 
@@ -493,6 +496,7 @@ export function resolveSessionOptions(
     options.push({
       key: sessionKey,
       displayName: resolveSessionDisplayName(sessionKey, resolvedCurrent),
+      running: resolvedCurrent?.status === "running",
     });
   }
 
@@ -504,6 +508,7 @@ export function resolveSessionOptions(
         options.push({
           key: s.key,
           displayName: resolveSessionDisplayName(s.key, s),
+          running: s.status === "running",
         });
       }
     }

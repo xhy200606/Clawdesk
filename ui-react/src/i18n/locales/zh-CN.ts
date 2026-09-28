@@ -132,6 +132,7 @@ export const zh_CN: TranslationMap = {
   chat: {
     disconnected: "已断开与网关的连接。",
     refreshTitle: "刷新聊天数据",
+    runningNow: "正在工作中",
     thinkingToggle: "切换助手思考/工作输出",
     focusToggle: "全屏",
     hideCronSessions: "隐藏定时任务会话",

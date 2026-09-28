@@ -133,6 +133,7 @@ export const en: TranslationMap = {
   chat: {
     disconnected: "Disconnected from gateway.",
     refreshTitle: "Refresh chat data",
+    runningNow: "Working now",
     thinkingToggle: "Toggle assistant thinking/working output",
     focusToggle: "Fullscreen",
     hideCronSessions: "Hide cron sessions",

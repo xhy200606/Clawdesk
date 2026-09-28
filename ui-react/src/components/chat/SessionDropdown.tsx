@@ -6,6 +6,8 @@ import { t } from "../../i18n/index.ts";
 export type DropdownItem = {
   value: string;
   label: string;
+  /** 会话正在运行（显示呼吸动画） */
+  running?: boolean;
 };
 
 export type DropdownGroup = {
@@ -69,6 +71,11 @@ export function SessionDropdown({
     ? findLabel(value, items, groups)
     : (placeholder ?? t("shared.select"));
 
+  // 当前选中会话是否正在运行（触发器上也显示呼吸点）
+  const activeRunning =
+    items?.find((item) => item.value === value)?.running === true ||
+    groups?.some((g) => g.items.find((item) => item.value === value)?.running === true);
+
   const hasItems =
     (items && items.length > 0) || (groups && groups.some((g) => g.items.length > 0));
 
@@ -106,6 +113,7 @@ export function SessionDropdown({
         <span className={`oc-dropdown__label${!value ? " oc-dropdown__label--placeholder" : ""}`}>
           {displayLabel}
         </span>
+        {activeRunning && <span className="oc-session-running" title={t("chat.runningNow")} />}
         <span className="oc-dropdown__chevron">{open ? "▴" : "▾"}</span>
       </button>
 
@@ -127,6 +135,7 @@ export function SessionDropdown({
               >
                 <span className="oc-dropdown__check">{active ? "✓" : ""}</span>
                 <span>{item.label}</span>
+                {item.running && <span className="oc-session-running" />}
               </button>
             );
           })}
@@ -161,6 +170,7 @@ export function SessionDropdown({
                       >
                         <span className="oc-dropdown__check">{active ? "✓" : ""}</span>
                         <span>{item.label}</span>
+                        {item.running && <span className="oc-session-running" />}
                       </button>
                     );
                   })}

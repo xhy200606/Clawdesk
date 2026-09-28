@@ -121,6 +121,7 @@ export function ChatControls() {
   const dropdownItems: DropdownItem[] = sessionOptions.map((entry) => ({
     value: entry.key,
     label: entry.displayName ?? entry.key,
+    running: entry.running,
   }));
 
   const handleSessionSelect = useCallback((next: string) => {
