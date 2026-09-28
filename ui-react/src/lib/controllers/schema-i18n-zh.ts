@@ -4656,12 +4656,54 @@ export const ZH_CN_MAP: SchemaTranslationMap = {
   "gateway.nodes.commands": { label: "命令" },
   "gateway.nodes.commands.allow": { label: "网关节点允许列表 Extra 命令" },
   "gateway.nodes.commands.deny": { label: "网关节点拒绝列表" },
-  cloudWorkers: { label: "云端工作节点", help: "云端工作节点的实例池、配置文件与项目映射。" },
-  "cloudWorkers.desktop": { label: "Cloud 工作节点桌面 Labs" },
-  "cloudWorkers.preparedPool": { label: "Cloud 工作节点 Prepared Pool" },
-  "cloudWorkers.preparedPool.maxTotal": { label: "Cloud 工作节点 Ready Reserve Cap" },
-  "cloudWorkers.projectProfiles": { label: "Cloud 工作节点 Project 配置文件" },
-  "cloudWorkers.profiles": { label: "Cloud 工作节点配置文件" },
+  cloudWorkers: {
+    label: "云端工作节点",
+    help: "可选的云端工作节点配置文件，用于一次性远程环境。如果省略本节点或没有配置文件，则无法创建云端工作节点，现有网关/节点状态行为保持不变。",
+  },
+  "cloudWorkers.desktop": {
+    label: "云端桌面工作节点（Labs）",
+    help: "为支持桌面环境的云端工作节点启用实验性的 worker.desktop.observe 接口与 Control UI 桌面面板。",
+  },
+  "cloudWorkers.preparedPool": {
+    label: "云端工作节点预备池",
+    help: "保持若干云端工作节点处于预备状态，供后续会话快速使用。预备实例会持续产生运行费用，直到提供商完成清理；其固定过期策略由实际项目需求和提供商的空闲策略共同决定。",
+  },
+  "cloudWorkers.preparedPool.maxTotal": {
+    label: "全网关预备上限",
+    help: "跨项目、跨配置文件的未分配预备云端工作节点总数上限（默认：4）。正在准备中的工作节点和未确认的预备清理都会计入该上限。设为 0 可排空未分配预备并停止自动补充，同时保留快照复用和活动会话。",
+  },
+  "cloudWorkers.projectProfiles": {
+    label: "项目默认配置文件",
+    help: "以规范化的小写仓库标识（host/owner/repo）为键，配置各项目默认使用的云端工作节点配置文件。显式指定的调度配置文件 ID 优先级更高。",
+  },
+  "cloudWorkers.projectProfiles.*": {
+    label: "项目默认配置文件",
+    help: "当会话工作树的来源匹配该仓库身份时，默认使用的云端工作节点配置文件名称。",
+  },
+  "cloudWorkers.profiles": {
+    label: "云端工作节点配置文件",
+    help: "具名的云端工作节点配置文件。每个文件选择一个由插件注册的工作节点提供商，并携带该提供商私有的设置。",
+  },
+  "cloudWorkers.profiles.*.provider": {
+    label: "工作节点提供商",
+    help: "由插件注册的工作节点提供商 ID。网关只有在对应插件暴露该 ID 后，才能按此配置文件创建环境。",
+  },
+  "cloudWorkers.profiles.*.install": {
+    label: "安装方式",
+    help: "工作节点安装方式：bundle（默认）传输网关内容哈希后的已安装构建，支持已发布、开发中及未发布的版本；npm 安装精确的网关版本，仅当该版本已发布时可用。",
+  },
+  "cloudWorkers.profiles.*.suspendAfter": {
+    label: "空闲暂停时长",
+    help: "云端工作节点空闲超过该时长后自动回收，例如 45m 或 2h；下次消息到达时会重新创建。最短 1m。留空以保持工作节点持续运行。",
+  },
+  "cloudWorkers.profiles.*.readyWorkers": {
+    label: "预备目标数量",
+    help: "使用该配置文件的每个符合条件的项目，目标未分配预备工作节点数量（默认：1），受全网关预备池总上限限制。设为 0 可停用该配置文件的预备，同时保留快照复用。准备中的工作节点和未确认的预备清理都会计入目标。",
+  },
+  "cloudWorkers.profiles.*.settings": {
+    label: "提供商设置",
+    help: "由所选提供商拥有并校验的设置。涉密值请使用 SecretRef 对象；普通不透明设置不会自动获得密钥解析能力。",
+  },
   desktop: { label: "桌面", help: "本地桌面（Desktop）的连接与控制设置。" },
   "desktop.host": { label: "本地桌面" },
   "desktop.host.enabled": { label: "桌面 Sharing" },
@@ -6331,4 +6373,2587 @@ export const ZH_CN_MAP: SchemaTranslationMap = {
   "proxy.tls": { label: "Managed 代理TLS 加密" },
   "proxy.tls.caFile": { label: "Managed 代理TLS 加密证书颁发机构文件" },
   "proxy.loopbackMode": { label: "Managed 代理 Loopback 模式" },
+
+  // ─── 批量补充翻译（2026-09-28 覆盖率扫描后补齐） ───
+  "agents.defaults.mediaModels.image.fallbacks": {
+    label: "图像生成模型回退列表",
+    help: "有序的回退图像生成模型（provider/model）。",
+  },
+  "agents.defaults.mediaModels.image.primary": {
+    label: "图像生成模型",
+    help: "共享图像生成能力使用的可选图像生成模型（provider/model）。",
+  },
+  "agents.defaults.mediaModels.image.timeoutMs": {
+    label: "图像生成超时（毫秒）",
+    help: "image_generate 调用的默认提供商请求超时时间（毫秒）。每次调用的 timeoutMs 会覆盖此项。",
+  },
+  "agents.defaults.mediaModels.music.fallbacks": {
+    label: "音乐生成模型回退列表",
+    help: "有序的音乐生成回退模型（provider/model）。",
+  },
+  "agents.defaults.mediaModels.music.primary": {
+    label: "音乐生成模型",
+    help: "共享音乐生成能力使用的可选音乐生成模型（provider/model）。",
+  },
+  "agents.defaults.mediaModels.video.fallbacks": {
+    label: "视频生成模型回退列表",
+    help: "有序的回退视频生成模型（provider/model）。",
+  },
+  "agents.defaults.mediaModels.video.primary": {
+    label: "视频生成模型",
+    help: "共享视频生成能力使用的可选视频生成模型（provider/model）。",
+  },
+  "agents.defaults.mediaModels.video.timeoutMs": {
+    label: "视频生成超时（毫秒）",
+    help: "video_generate 调用的默认提供商请求超时时间（毫秒）。单次调用的 timeoutMs 会覆盖此值，此值又覆盖提供商自带的默认值。",
+  },
+  "agents.defaults.models.*.agentRuntime": {
+    label: "默认 Agent 模型运行时",
+    help: "默认 Agent 的可选按模型运行时策略。用于特定模型的运行时例外，而不是设置整个 Agent 的运行时。",
+  },
+  "agents.defaults.models.*.agentRuntime.id": {
+    label: "默认 Agent 模型运行时 ID",
+    help: '默认 Agent 的模型运行时 id："openclaw"、"auto"、已注册的插件宿主环境 id（如 "codex"），或受支持的 CLI 后端别名（如 "claude-cli"）。',
+  },
+  "agents.defaults.models.*.codeMode": {
+    label: "代码模式",
+    help: "此精确提供商/模型的 OpenClaw Code Mode：On 强制开启，Off 禁用，Default 继承 tools.codeMode.enabled。Agent 专属激活设置优先。这不会更改所选运行时或 Codex 原生 Code Mode。",
+  },
+  "agents.defaults.voiceModel.fallbacks": {
+    label: "语音模型回退列表",
+    help: "有序的语音回退模型（provider/model）。",
+  },
+  "agents.defaults.voiceModel.primary": {
+    label: "语音模型",
+    help: "语音、转录和实时语音能力使用的可选语音模型（provider/model）。",
+  },
+  "agents.defaults.voiceModel.timeoutMs": {
+    label: "语音超时（毫秒）",
+    help: "调用方支持超时时，语音模型操作的默认提供商请求超时时间（毫秒）。",
+  },
+  "agents.entries.*.agentRuntime": { label: "旧版 Agent 运行时" },
+  "agents.entries.*.agentRuntime.id": { label: "旧版 Agent 运行时 ID" },
+  "agents.entries.*.bootstrapMaxChars": {
+    label: "Agent 引导内容单文件上限",
+    help: "注入此 Agent 系统提示词的每个工作区引导文件最大字符数的逐 Agent 覆盖项。省略则继承 agents.defaults.bootstrapMaxChars。",
+  },
+  "agents.entries.*.bootstrapTotalMaxChars": {
+    label: "Agent 引导内容总上限",
+    help: "注入此 Agent 系统提示词的所有工作区引导文件合计最大字符数的逐 Agent 覆盖项。省略则继承 agents.defaults.bootstrapTotalMaxChars。",
+  },
+  "agents.entries.*.contextInjection": {
+    label: "Agent 上下文注入",
+    help: "内嵌运行时下工作区引导文件注入的逐 Agent 覆盖项。省略则继承 agents.defaults.contextInjection。不控制基于 CLI 的提示词准备。",
+  },
+  "agents.entries.*.contextLimits": {
+    label: "Agent 上下文限制",
+    help: "聚焦上下文预算各配置项的可选逐 Agent 覆盖项。省略的字段继承 agents.defaults.contextLimits。",
+  },
+  "agents.entries.*.contextLimits.memoryGetMaxChars": {
+    label: "Agent memory_get 字符上限",
+    help: "默认 memory_get 最大字符预算的逐 Agent 覆盖项。",
+  },
+  "agents.entries.*.contextLimits.postCompactionMaxChars": {
+    label: "Agent 压缩后字符上限",
+    help: "压缩后 AGENTS.md 摘录预算的逐 Agent 覆盖项。",
+  },
+  "agents.entries.*.cwd": {
+    label: "Agent 工作目录",
+    help: "此 Agent 回复运行的工作目录。覆盖 agents.defaults.cwd，但不覆盖会话派生的 cwd；引导文件和记忆文件仍保留在工作区中。支持 ~ 和相对路径；使用不同的 cwd 需要在非沙箱环境下运行。",
+  },
+  "agents.entries.*.decisionModel": {
+    label: "Agent 决策模型",
+    help: "按 Agent 的决策模型。未设置时继承 agents.defaults.decisionModel；空字符串会禁用此 Agent 的决策调用。",
+  },
+  "agents.entries.*.embeddedAgent": {
+    label: "Agent 内嵌 OpenClaw",
+    help: "可选的按 Agent 内嵌 OpenClaw 覆盖项。用于让特定 Agent 采用更严格的 GPT-5 执行行为，而不改变全局默认值。",
+  },
+  "agents.entries.*.embeddedAgent.executionContract": {
+    label: "Agent 内嵌 OpenClaw 执行契约",
+    help: '可选的按 Agent 内嵌 OpenClaw 执行契约覆盖项。设为 "strict-agentic" 可在受支持的 OpenAI/OpenAI Codex GPT-5 系列运行中为该 Agent 启用结构化计划跟踪和不可见轮次恢复；设为 "default" 则继承标准运行器行为。',
+  },
+  "agents.entries.*.experimental": {
+    label: "Agent 实验特性开关",
+    help: "逐 Agent 的实验性开关。省略的字段继承 agents.defaults.experimental。",
+  },
+  "agents.entries.*.experimental.localModelLean": {
+    label: "Agent 精简本地模型模式",
+    help: "精简本地模型模式的逐 Agent 故障排查覆盖项。仅当限制可选工具能解决已证实的模型故障时才启用，且不必从每个 Agent 上裁剪工具。",
+  },
+  "agents.entries.*.fastModeDefault": {
+    label: "Agent 快速模式默认设置",
+    help: '可选的逐 Agent 快速模式默认值（"auto"、true 或 false）。在没有逐消息或会话快速模式覆盖时生效。',
+  },
+  "agents.entries.*.heartbeat.directPolicy": {
+    label: "心跳直达策略",
+    help: '按 Agent 覆盖心跳直发/私聊投递策略；对于只应向非私聊目的地发送心跳提醒的 Agent，请使用 "block"。',
+  },
+  "agents.entries.*.heartbeat.target": {
+    help: '投递目标（"owner"、"last"、"none" 或渠道 ID）。已知渠道：feishu, googlechat, nostr, buzz, msteams, mattermost, nextcloud-talk, matrix, raft, a2a, line, zalo, clickclack, zalouser, sms, synology-chat, tlon, discord, imessage, irc, reef, signal, slack, telegram, twitch, whatsapp, qa-channel。',
+  },
+  "agents.entries.*.heartbeat.timeoutSeconds": {
+    label: "心跳超时（秒）",
+    help: "按 Agent 设置心跳 Agent 轮次在被中止前允许的最长时间（秒）。留空则继承合并后的心跳超时，其次取 agents.defaults.timeoutSeconds（若已设置），否则取心跳周期，上限 600 秒。",
+  },
+  "agents.entries.*.identity.avatar": {
+    label: "身份头像",
+    help: "Agent 头像（工作区相对路径、http(s) URL 或 data URI）。",
+  },
+  "agents.entries.*.modelPolicy": {
+    label: "Agent 模型策略",
+    help: "逐 Agent 的模型覆盖策略。显式的允许列表会替换该 Agent 的默认策略。",
+  },
+  "agents.entries.*.modelPolicy.allow": {
+    label: "允许的 Agent 模型",
+    help: '此 Agent 允许的模型覆盖引用。接受别名、完整的 "provider/model" 引用，以及尾部前缀通配符（如 "provider/*" 或 "provider/namespace/*"）；留空表示允许任何模型。',
+  },
+  "agents.entries.*.models": {
+    label: "Agent 模型覆盖",
+    help: "按完整提供商/模型 ID 索引的逐 Agent 模型目录覆盖项。",
+  },
+  "agents.entries.*.models.*.agentRuntime": {
+    label: "Agent 模型运行时",
+    help: "此 Agent 的可选逐模型运行时策略。用于 Agent 专属的模型例外情况，而不是设置整个 Agent 的运行时。",
+  },
+  "agents.entries.*.models.*.agentRuntime.id": {
+    label: "Agent 模型运行时 ID",
+    help: '逐 Agent 的模型运行时 id："openclaw"、"auto"、已注册的插件宿主环境 id（如 "codex"），或受支持的 CLI 后端别名（如 "claude-cli"）。',
+  },
+  "agents.entries.*.models.*.codeMode": {
+    label: "代码模式",
+    help: "此 Agent 及其精确提供商/模型的 OpenClaw Code Mode：On 强制开启，Off 禁用，Default 依次继承 Agent 激活设置、共享模型覆盖和 tools.codeMode.enabled。这不会更改所选运行时或 Codex 原生 Code Mode。",
+  },
+  "agents.entries.*.reasoningDefault": {
+    label: "Agent 推理默认设置",
+    help: "可选的逐 Agent 默认推理可见性（on|off|stream）。在没有逐消息或会话推理覆盖时生效。",
+  },
+  "agents.entries.*.runtime": {
+    label: "Agent 运行时",
+    help: "此 Agent 的可选运行时描述符。默认 OpenClaw 执行使用 embedded，外部 ACP 宿主环境默认值使用 acp。",
+  },
+  "agents.entries.*.runtime.acp": {
+    label: "Agent ACP 运行时",
+    help: "runtime.type=acp 时此 Agent 的 ACP 运行时默认值。绑定级 ACP 覆盖项在每个会话中仍优先生效。",
+  },
+  "agents.entries.*.runtime.acp.agent": {
+    label: "Agent ACP 宿主 Agent",
+    help: "此 OpenClaw Agent 使用的可选 ACP 宿主环境 agent id（例如 codex、claude、cursor、gemini、openclaw）。",
+  },
+  "agents.entries.*.runtime.acp.backend": {
+    label: "Agent ACP 后端",
+    help: "此 Agent 的 ACP 会话的可选 ACP 后端覆盖项（回退到全局 acp.backend）。",
+  },
+  "agents.entries.*.runtime.acp.cwd": {
+    label: "Agent ACP 工作目录",
+    help: "此 Agent 的 ACP 会话的可选默认工作目录。",
+  },
+  "agents.entries.*.runtime.acp.mode": {
+    label: "Agent ACP 模式",
+    help: "此 Agent 的可选 ACP 会话模式默认值（persistent 或 oneshot）。",
+  },
+  "agents.entries.*.runtime.type": {
+    label: "Agent 运行时类型",
+    help: '此 Agent 的运行时类型："embedded"（默认 OpenClaw 运行时）或 "acp"（ACP 宿主环境默认值）。',
+  },
+  "agents.entries.*.sandbox.browser.cdpSourceRange": {
+    label: "Agent 沙箱浏览器 CDP 来源范围",
+    help: "按 Agent 覆盖 CDP 来源 CIDR 白名单。",
+  },
+  "agents.entries.*.sandbox.browser.network": {
+    label: "Agent 沙箱浏览器网络",
+    help: '按 Agent 覆盖沙箱浏览器的 Docker 网络。请使用 bridge 网络；不支持 "none"，因为浏览器控制需要发布 CDP 端口。',
+  },
+  "agents.entries.*.sandbox.docker.dangerouslyAllowContainerNamespaceJoin": {
+    label: "Agent 沙箱 Docker 允许加入容器命名空间",
+    help: "在沙箱 Docker 网络模式下按 Agent 覆盖容器命名空间加入，属于危险操作。",
+  },
+  "agents.entries.*.sandbox.docker.gpus": {
+    label: "Agent 沙箱 Docker GPU 配置",
+    help: "按 Agent 覆盖沙箱容器的 Docker GPU 直通。",
+  },
+  "agents.entries.*.skills": {
+    label: "Agent 技能过滤",
+    help: "此 Agent 的可选技能白名单。若省略，则当 agents.defaults.skills 已设置时该 Agent 会继承它，否则技能不受限制。设为 [] 表示没有任何技能。显式列表会完全替换继承的默认值，而不是与之合并。",
+  },
+  "agents.entries.*.skillsLimits": {
+    label: "Agent 技能限制",
+    help: "技能子系统预算的可选逐 Agent 覆盖项。当某个 Agent 需要不同的技能提示词预算而又不想引入第二条通用上下文限制路径时使用。",
+  },
+  "agents.entries.*.skillsLimits.maxSkillsPromptChars": {
+    label: "Agent 技能提示词上限",
+    help: "技能提示词字符预算的逐 Agent 覆盖项。它扩展现有的 skills.limits.maxSkillsPromptChars 路径，而不是让同一预算经由 contextLimits。",
+  },
+  "agents.entries.*.subagents.delegationMode": {
+    label: "子 Agent 委派模式",
+    help: '按 Agent 覆盖子 Agent 委派强度。省略时在此 Agent 的主会话中使用 "prefer"，其他位置使用 "suggest"；显式的 "prefer" 或 "suggest" 始终优先。',
+  },
+  "agents.entries.*.thinkingDefault": {
+    label: "Agent 思考默认设置",
+    help: "可选的逐 Agent 默认思考级别。在没有逐消息或会话覆盖时，为该 Agent 覆盖 agents.defaults.thinkingDefault。",
+  },
+  "agents.entries.*.tools.alsoAllow": {
+    label: "Agent 工具白名单追加",
+    help: "在全局和配置文件策略之上按 Agent 追加的工具白名单。保持范围狭窄，以避免专用 Agent 意外扩大权限。",
+  },
+  "agents.entries.*.tools.byProvider": {
+    label: "按提供商划分的 Agent 工具策略",
+    help: "按 Agent 按提供商设置的工具策略覆盖，用于渠道范围内的能力控制。当单个 Agent 需要对某个提供商施加比其他提供商更严格的限制时使用。",
+  },
+  "agents.entries.*.tools.codeMode": {
+    label: "Agent 代码模式",
+    help: "按 Agent 设置的 Code Mode 选项。显式的 enabled 会覆盖共享模型与全局激活默认值；Agent 专属的模型 codeMode 覆盖优先级更高。其他选项合并到 tools.codeMode 之上，不改变激活状态。",
+  },
+  "agents.entries.*.tools.exec.timeoutSeconds": { label: "Agent 命令执行超时（秒）" },
+  "agents.entries.*.tools.github": {
+    label: "Agent GitHub CLI 身份覆盖",
+    help: "此 Agent 的完整受管 GitHub CLI 身份与 Git 作者覆盖。省略则继承系统身份。",
+  },
+  "agents.entries.*.tools.github.gitAuthor.email": { label: "Agent Git 作者邮箱" },
+  "agents.entries.*.tools.github.gitAuthor.name": { label: "Agent Git 作者名称" },
+  "agents.entries.*.tools.github.kind": { label: "Agent GitHub 凭据类型" },
+  "agents.entries.*.tools.github.profileId": { label: "Agent GitHub 配置版本" },
+  "agents.entries.*.tools.message.actions.allow": {
+    label: "Agent 消息操作白名单",
+    help: '消息工具的按 Agent 消息操作白名单。对公开沙箱 Agent 设为最小列表（如 ["send"]），使读取、编辑、删除、表情回应及其他提供商专属消息操作保持隐藏并被阻止。',
+  },
+  "agents.entries.*.tools.message.crossContext.allowAcrossProviders": {
+    label: "Agent 跨上下文消息（跨提供商）",
+    help: "按 Agent 覆盖跨提供商发送。继承全局设置（默认：true）。设为 false 可阻止此 Agent 的跨提供商消息发送。",
+  },
+  "agents.entries.*.tools.message.crossContext.allowWithinProvider": {
+    label: "Agent 跨上下文消息（同一提供商）",
+    help: "按 Agent 的消息防护，控制向同一提供商上的其他对话发送消息。对于仅限当前对话的公开 Agent，将此项与 allowAcrossProviders 都设为 false。",
+  },
+  "agents.entries.*.tools.profile": {
+    label: "Agent 工具配置",
+    help: "按 Agent 覆盖工具配置文件选择，适用于某个 Agent 需要不同能力基线的场景。请谨慎使用，使各 Agent 之间的策略差异保持有意且可审查。",
+  },
+  "agents.entries.*.tools.swarm": {
+    label: "Agent 集群（Swarm）",
+    help: "按 Agent 的 swarm 覆盖。值合并到顶层 tools.swarm 配置之上。",
+  },
+  "agents.entries.*.typingMode": {
+    label: "Agent 输入状态模式",
+    help: "为单个 Agent 覆盖默认的输入状态开始策略，而不影响其他 Agent。",
+  },
+  "agents.entries.*.utilityModel": {
+    label: "Agent 辅助任务模型",
+    help: "可选的按 Agent 实用模型覆盖，用于简短的内部任务。覆盖 agents.defaults.utilityModel。",
+  },
+  "approvals.exec.targets.*.accountId": {
+    label: "审批目标账号 ID",
+    help: "多账号渠道设置的可选账号选择器，用于审批必须经特定账号上下文路由的情况。仅当目标渠道配置了多个身份时使用。",
+  },
+  "approvals.exec.targets.*.channel": {
+    label: "审批目标渠道",
+    help: "用于转发审批投递的渠道/提供商 ID，如 discord、slack 或插件渠道 ID。仅使用有效的渠道 ID，以免审批因未知路由而静默失败。",
+  },
+  "approvals.exec.targets.*.threadId": {
+    label: "审批目标线程 ID",
+    help: "可选的话题/主题目标，用于支持以话题形式投递转发的审批的渠道。用于将审批流量保持在运维话题中，而不是主频道。",
+  },
+  "approvals.exec.targets.*.to": {
+    label: "审批目标地址",
+    help: "目标渠道内的目的地标识（取决于提供商，可为渠道 ID、用户 ID 或话题根）。请逐个提供商核实语义，因为目的地格式在不同渠道集成间存在差异。",
+  },
+  "approvals.plugin.targets.*.accountId": {
+    label: "插件审批目标账号 ID",
+    help: "多账号渠道配置下的可选账号选择器，用于插件审批必须经由特定账号上下文路由的情况。",
+  },
+  "approvals.plugin.targets.*.channel": {
+    label: "插件审批目标渠道",
+    help: "用于转发插件审批投递的渠道/提供商 ID，例如 discord、slack 或某个插件渠道 id。",
+  },
+  "approvals.plugin.targets.*.threadId": {
+    label: "插件审批目标线程 ID",
+    help: "支持以话题线程形式投递转发插件审批的渠道的可选线程/话题目标。",
+  },
+  "approvals.plugin.targets.*.to": {
+    label: "插件审批目标地址",
+    help: "目标渠道内的目的地标识符（取决于提供商，可以是频道 ID、用户 ID 或话题根）。",
+  },
+  "approvals.plugin.targets[].accountId": {
+    label: "插件审批目标账号 ID",
+    help: "多账号渠道配置下的可选账号选择器，用于插件审批必须经由特定账号上下文路由的情况。",
+  },
+  "approvals.plugin.targets[].channel": {
+    label: "插件审批目标渠道",
+    help: "用于转发插件审批投递的渠道/提供商 ID，例如 discord、slack 或某个插件渠道 id。",
+  },
+  "approvals.plugin.targets[].threadId": {
+    label: "插件审批目标线程 ID",
+    help: "支持以话题线程形式投递转发插件审批的渠道的可选线程/话题目标。",
+  },
+  "approvals.plugin.targets[].to": {
+    label: "插件审批目标地址",
+    help: "目标渠道内的目的地标识符（取决于提供商，可以是频道 ID、用户 ID 或话题根）。",
+  },
+  "bindings.*.acp": {
+    label: "ACP 绑定覆盖",
+    help: "bindings[].type=acp 时的可选逐绑定 ACP 覆盖项。此层会为匹配的会话覆盖 agents.entries.*.runtime.acp 的默认值。",
+  },
+  "bindings.*.acp.backend": {
+    label: "ACP 绑定后端",
+    help: "此绑定的 ACP 后端覆盖项（回退到 Agent 运行时的 ACP 后端，再到全局 acp.backend）。",
+  },
+  "bindings.*.acp.cwd": {
+    label: "ACP 绑定工作目录",
+    help: "从此绑定创建的 ACP 会话的工作目录覆盖项。",
+  },
+  "bindings.*.acp.label": {
+    label: "ACP 绑定标签",
+    help: "此绑定会话中 ACP 状态/诊断的人类可读标签。",
+  },
+  "bindings.*.acp.mode": {
+    label: "ACP 绑定模式",
+    help: "此绑定的 ACP 会话模式覆盖项（persistent 或 oneshot）。",
+  },
+  "bindings.*.agentId": {
+    label: "绑定 Agent ID",
+    help: "当对应绑定匹配规则满足时接收流量的目标 Agent ID。仅使用有效的已配置 Agent ID，以免路由在运行时失败。",
+  },
+  "bindings.*.match": {
+    label: "绑定匹配规则",
+    help: "用于决定绑定何时生效的匹配规则对象，包括渠道和可选的账号/对端约束。规则应保持收窄，以避免跨上下文的意外 Agent 接管。",
+  },
+  "bindings.*.match.accountId": {
+    label: "绑定账号 ID",
+    help: "多账号渠道设置的可选账号选择器，使绑定仅应用于一个身份。当路由需要账号范围限定时使用，否则留空。",
+  },
+  "bindings.*.match.channel": {
+    label: "绑定渠道",
+    help: "此绑定适用的渠道/提供商标识，如 `telegram`、`discord` 或插件渠道 ID。请严格使用已配置的渠道键，以确保绑定求值可靠工作。",
+  },
+  "bindings.*.match.guildId": {
+    label: "绑定服务器 ID",
+    help: "可选的 Discord 风格服务器/社区 ID 约束，用于多服务器部署中的绑定求值。当相同的对端标识可能出现在不同服务器中时使用。",
+  },
+  "bindings.*.match.peer": {
+    label: "绑定对等匹配",
+    help: "特定会话的可选对端匹配器，包括对端类型和对端 ID。当只应将一个私聊/群组/频道目标固定到某个 Agent 时使用。",
+  },
+  "bindings.*.match.peer.id": {
+    label: "绑定对端 ID",
+    help: "与对端匹配配合使用的会话标识，如来自提供商的聊天 ID、频道 ID 或群组 ID。请保持精确，以避免静默不匹配。",
+  },
+  "bindings.*.match.peer.kind": {
+    label: "绑定对端类型",
+    help: '对端会话类型："direct"、"group"、"channel" 或旧式 "dm"（已弃用，是 direct 的别名）。新配置请优先使用 "direct"，并保持 kind 与渠道语义一致。',
+  },
+  "bindings.*.match.roles": {
+    label: "绑定角色",
+    help: "可选的基于角色的过滤列表，供在聊天上下文中附加角色的提供商使用。用于将特权或运维角色流量路由到专门的 Agent。",
+  },
+  "bindings.*.match.teamId": {
+    label: "绑定团队 ID",
+    help: "可选的团队/工作区 ID 约束，供将聊天归属于团队的提供商使用。当需要将绑定隔离到一个工作区上下文时添加。",
+  },
+  "bindings.*.session": {
+    label: "绑定会话",
+    help: "此绑定所匹配会话的可选路由会话覆盖项。当某个窄路由需要保持同一 Agent 但以不同方式隔离会话连续性时使用。",
+  },
+  "bindings.*.session.dmScope": {
+    label: "绑定会话私聊范围",
+    help: '此路由绑定的可选私聊会话范围覆盖项。例如，全局保持 session.dmScope="main"，同时对选定的直接对端使用 "per-account-channel-peer"。',
+  },
+  "bindings.*.session.groupScope": {
+    label: "绑定会话群组范围",
+    help: '此路由绑定的可选群组/频道会话范围覆盖项。"per-group" 使匹配的房间相互独立，且无论 dmScope 如何都由 Agent 主会话在后台持续监听；"main" 则将其上下文合并进主会话，无需监听。',
+  },
+  "bindings.*.type": {
+    label: "绑定类型",
+    help: '绑定类型。普通路由使用 "route"（旧式路由条目可省略），持久 ACP 会话绑定使用 "acp"。',
+  },
+  "bindings[].acp": {
+    label: "ACP 绑定覆盖",
+    help: "bindings[].type=acp 时的可选逐绑定 ACP 覆盖项。此层会为匹配的会话覆盖 agents.entries.*.runtime.acp 的默认值。",
+  },
+  "bindings[].acp.backend": {
+    label: "ACP 绑定后端",
+    help: "此绑定的 ACP 后端覆盖项（回退到 Agent 运行时的 ACP 后端，再到全局 acp.backend）。",
+  },
+  "bindings[].acp.cwd": {
+    label: "ACP 绑定工作目录",
+    help: "从此绑定创建的 ACP 会话的工作目录覆盖项。",
+  },
+  "bindings[].acp.label": {
+    label: "ACP 绑定标签",
+    help: "此绑定会话中 ACP 状态/诊断的人类可读标签。",
+  },
+  "bindings[].acp.mode": {
+    label: "ACP 绑定模式",
+    help: "此绑定的 ACP 会话模式覆盖项（persistent 或 oneshot）。",
+  },
+  "bindings[].session": {
+    label: "绑定会话",
+    help: "此绑定所匹配会话的可选路由会话覆盖项。当某个窄路由需要保持同一 Agent 但以不同方式隔离会话连续性时使用。",
+  },
+  "bindings[].session.dmScope": {
+    label: "绑定会话私聊范围",
+    help: '此路由绑定的可选私聊会话范围覆盖项。例如，全局保持 session.dmScope="main"，同时对选定的直接对端使用 "per-account-channel-peer"。',
+  },
+  "bindings[].session.groupScope": {
+    label: "绑定会话群组范围",
+    help: '此路由绑定的可选群组/频道会话范围覆盖项。"per-group" 使匹配的房间相互独立，且无论 dmScope 如何都由 Agent 主会话在后台持续监听；"main" 则将其上下文合并进主会话，无需监听。',
+  },
+  "bindings[].type": {
+    label: "绑定类型",
+    help: '绑定类型。普通路由使用 "route"（旧式路由条目可省略），持久 ACP 会话绑定使用 "acp"。',
+  },
+  "broadcast.*.agents": {
+    label: "Agent 群组参与者",
+    help: "来自 agents.entries 的参与者 Agent ID（最多 16 个）。每个参与者在此渠道、账号、对话和话题中均使用自己的会话。",
+  },
+  "broadcast.*.maxRounds": {
+    label: "Agent 群组最大轮数",
+    help: "每条入站消息的最大轮数，包括初始轮（整数：1–4，默认：1）。后续轮共享有界且带归属标记的同级回复，当所有参与者都跳过时停止。",
+  },
+  "broadcast.*.maxTurns": {
+    label: "Agent 群组最大对话轮次",
+    help: "每条入站消息在所有轮次中的参与者轮次上限（整数：1–32，默认：agents.length）。配额槽位在并行派发前预留；这限制的是 Agent 轮次，而非实际的消息分块或工具发送。预算在重启后不会恢复。",
+  },
+  "broadcast.*.mentionGating": {
+    label: "Agent 群组提及选择",
+    help: "当有任何匹配时仅选择被显式 @ 提及的参与者；否则运行所有参与者（默认：true）。仅裸名称或表情符号不会选择参与者。渠道白名单和准入规则仍然适用。",
+  },
+  "browser.profiles.*.executablePath": {
+    label: "浏览器可执行文件路径",
+    help: "本地启动的受管浏览器配置文件的浏览器可执行文件路径。覆盖 browser.executablePath，并接受以 ~ 开头的路径表示操作系统主目录。",
+  },
+  "browser.profiles.*.headless": {
+    label: "浏览器无头模式",
+    help: "本地启动的浏览器实例的按配置文件无头模式覆盖。当某个配置文件需要保持无头模式而又不想为其他所有配置文件强制设置 browser.headless 时使用。",
+  },
+  "browser.profiles.*.mcpArgs": {
+    label: "浏览器配置 Chrome MCP 参数",
+    help: "按配置文件设置的额外 Chrome DevTools MCP 参数，用于附加到已有会话，例如 --no-usage-statistics。此处设置的端点参数会覆盖内置自动连接或浏览器 URL 选择。",
+  },
+  "browser.profiles.*.mcpCommand": {
+    label: "浏览器配置 Chrome MCP 命令",
+    help: "按配置文件设置的 Chrome DevTools MCP 命令，用于附加到已有会话。默认为 npx。",
+  },
+  "browser.profiles.*.userDataDir": {
+    label: "浏览器配置用户数据目录",
+    help: "按配置文件设置的 Chromium 用户数据目录，用于通过 Chrome DevTools MCP 附加到已有会话。当内置自动连接路径在所选主机或浏览器节点上会选择错误的浏览器数据目录时，对 Brave、Edge、Chromium 或非默认 Chrome 配置文件使用此设置。以 ~ 开头的路径会展开为操作系统主目录。",
+  },
+  "channels.*.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.*.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.*.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.*.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.*.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.*.accounts.*.model": { help: "从此渠道发起的运行所使用的模型覆盖项。" },
+  "channels.*.accounts.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.*.accounts.*.webhookSecret": { help: "用于验证入站 webhook 请求的共享密钥。" },
+  "channels.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.*.groupAllowFrom": { help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。" },
+  "channels.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.*.model": { help: "从此渠道发起的运行所使用的模型覆盖项。" },
+  "channels.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.*.webhookSecret": { help: "用于验证入站 webhook 请求的共享密钥。" },
+  "channels.a2a.peers.*.outboundToken": { label: "出站 Bearer 令牌" },
+  "channels.a2a.peers.*.token": { label: "入站 Bearer 令牌" },
+  "channels.buzz.accounts.*.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.buzz.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.buzz.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.buzz.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.buzz.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.buzz.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.buzz.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.buzz.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.buzz.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.buzz.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.buzz.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.clickclack.accounts.*.agentId": { help: "将来自此渠道的入站消息固定到一个 Agent。" },
+  "channels.clickclack.accounts.*.allowBots": {
+    help: "接受其他机器人发送的消息。防循环保护仍然生效。",
+  },
+  "channels.clickclack.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.clickclack.accounts.*.botLoopProtection": {
+    help: "在接受机器人消息后防止机器人之间的回复循环。",
+  },
+  "channels.clickclack.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.clickclack.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.clickclack.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.clickclack.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.clickclack.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.clickclack.accounts.*.mentionPatterns": { help: "在群聊中视为提及 Agent 的额外模式。" },
+  "channels.clickclack.accounts.*.model": { help: "从此渠道发起的运行所使用的模型覆盖项。" },
+  "channels.clickclack.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.clickclack.accounts.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.clickclack.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.clickclack.accounts.*.systemPrompt": {
+    help: "应用于从此渠道启动的运行的额外系统提示词。",
+  },
+  "channels.clickclack.accounts.*.tokenFile": {
+    help: "从此文件读取令牌，而不是内联存储在配置中。",
+  },
+  "channels.discord.accounts.*.ackReaction": {
+    help: "Agent 处理入站消息时添加到该消息上的表情回应。",
+  },
+  "channels.discord.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.discord.accounts.*.allowBots": {
+    help: "接受其他机器人发送的消息。防循环保护仍然生效。",
+  },
+  "channels.discord.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.discord.accounts.*.botLoopProtection": {
+    help: "在接受机器人消息后防止机器人之间的回复循环。",
+  },
+  "channels.discord.accounts.*.capabilities": { help: "覆盖 OpenClaw 假定此账号支持的渠道能力。" },
+  "channels.discord.accounts.*.commands": {
+    help: "此渠道的原生命令界面，例如斜杠命令和命令菜单。",
+  },
+  "channels.discord.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.discord.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.discord.accounts.*.dangerouslyAllowNameMatching": {
+    help: "应急兼容开关：改用可变的显示名称而非稳定 ID 来匹配白名单条目。请保持关闭。",
+  },
+  "channels.discord.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.discord.accounts.*.dm": { help: "仅对此渠道私聊生效的设置。" },
+  "channels.discord.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.discord.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.discord.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.discord.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.discord.accounts.*.execApprovals": {
+    help: "需要运维人员签核的命令的审批提示，通过此渠道投递。",
+  },
+  "channels.discord.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.discord.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.discord.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.discord.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.discord.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.discord.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.discord.accounts.*.mentionPatterns": { help: "在群聊中视为提及 Agent 的额外模式。" },
+  "channels.discord.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.discord.accounts.*.proxy": { help: "此渠道外发连接使用的代理。" },
+  "channels.discord.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.discord.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.discord.accounts.*.streaming": { help: "Agent 仍在工作时，回复如何流式输出回此渠道。" },
+  "channels.discord.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.discord.accounts.*.threadBindings": {
+    help: "聊天线程如何绑定到 Agent 会话，包括空闲过期和会话派生。",
+  },
+  "channels.discord.guilds.*.presenceEvents": {
+    label: "Discord 在线状态事件",
+    help: "将选定真人的离线转在线状态变化作为 Agent 系统事件路由到已配置的服务器频道。需要 Guild Presences 特权意图，并启用 Agent 心跳。",
+  },
+  "channels.discord.guilds.*.presenceEvents.burstLimit": {
+    label: "Discord 在线状态突发上限",
+    help: "每个突发窗口内此服务器允许成功排队的在线状态事件上限；其余事件被抑制并只记录一次。默认：8。",
+  },
+  "channels.discord.guilds.*.presenceEvents.burstWindowSeconds": {
+    label: "Discord 在线状态突发窗口",
+    help: "用于突发检测的滑动窗口（秒）。默认：60。",
+  },
+  "channels.discord.guilds.*.presenceEvents.channelId": {
+    label: "Discord 在线状态目标渠道",
+    help: "数字 Discord 频道 ID，其路由的 Agent 会话接收在线状态事件和问候投递。",
+  },
+  "channels.discord.guilds.*.presenceEvents.enabled": {
+    label: "启用 Discord 在线状态事件",
+    help: "为此服务器启用在线状态 Agent 唤醒。配置了 presenceEvents 时默认为 true。",
+  },
+  "channels.discord.guilds.*.presenceEvents.reconnectSuppressSeconds": {
+    label: "Discord 在线状态重连抑制",
+    help: "新网关会话启动后在服务器在线状态重建期间，抑制在线状态事件的秒数。恢复的会话不受影响。0 表示禁用。默认：300。",
+  },
+  "channels.discord.guilds.*.presenceEvents.users": {
+    label: "Discord 在线状态用户 ID 列表",
+    help: "可选的不可变 Discord 用户 ID 白名单。省略则包含服务器中的所有真人成员。",
+  },
+  "channels.discord.streaming.preview.chunk.breakPreference": {
+    label: "Discord 草稿分块断行偏好",
+    help: "Discord 草稿分块的优先断行点（paragraph | newline | sentence）。默认：paragraph。",
+  },
+  "channels.discord.streaming.preview.chunk.maxChars": {
+    label: "Discord 草稿分块最大字符数",
+    help: '当 channels.discord.streaming.mode="block" 时，Discord 流式输出预览分块的目标最大大小（默认：800；会被钳制到 channels.discord.textChunkLimit）。',
+  },
+  "channels.discord.streaming.preview.chunk.minChars": {
+    label: "Discord 草稿分块最小字符数",
+    help: '当 channels.discord.streaming.mode="block" 时，发出 Discord 流式输出预览更新前所需的最小字符数（默认：200）。',
+  },
+  "channels.discord.voice.autoJoin.*.whenOccupied": {
+    label: "Discord 语音有人时自动加入",
+    help: "仅当至少有一名真人在线时，才加入并留在该自动管理的语音频道。OpenClaw 机器人和其他机器人不计入。默认：false。",
+  },
+  "channels.feishu.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.feishu.accounts.*.allowBots": {
+    help: "接受其他机器人发送的消息。防循环保护仍然生效。",
+  },
+  "channels.feishu.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.feishu.accounts.*.capabilities": { help: "覆盖 OpenClaw 假定此账号支持的渠道能力。" },
+  "channels.feishu.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.feishu.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.feishu.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.feishu.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.feishu.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.feishu.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.feishu.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.feishu.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.feishu.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.feishu.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.feishu.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.feishu.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.feishu.accounts.*.reactionNotifications": { help: "哪些入站表情回应可以到达 Agent。" },
+  "channels.feishu.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.feishu.accounts.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.feishu.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.feishu.accounts.*.streaming": { help: "Agent 仍在工作时，回复如何流式输出回此渠道。" },
+  "channels.feishu.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.feishu.accounts.*.typingIndicator": { help: "此渠道如何提示 Agent 正在工作中。" },
+  "channels.googlechat.accounts.*.allowBots": {
+    help: "接受其他机器人发送的消息。防循环保护仍然生效。",
+  },
+  "channels.googlechat.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.googlechat.accounts.*.botLoopProtection": {
+    help: "在接受机器人消息后防止机器人之间的回复循环。",
+  },
+  "channels.googlechat.accounts.*.capabilities": {
+    help: "覆盖 OpenClaw 假定此账号支持的渠道能力。",
+  },
+  "channels.googlechat.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.googlechat.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.googlechat.accounts.*.dangerouslyAllowNameMatching": {
+    help: "应急兼容开关：改用可变的显示名称而非稳定 ID 来匹配白名单条目。请保持关闭。",
+  },
+  "channels.googlechat.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.googlechat.accounts.*.dm": { help: "仅对此渠道私聊生效的设置。" },
+  "channels.googlechat.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.googlechat.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.googlechat.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.googlechat.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.googlechat.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.googlechat.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.googlechat.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.googlechat.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.googlechat.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.googlechat.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.googlechat.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.googlechat.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.googlechat.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.googlechat.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.googlechat.accounts.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.googlechat.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.googlechat.accounts.*.streaming": {
+    help: "Agent 仍在工作时，回复如何流式输出回此渠道。",
+  },
+  "channels.googlechat.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.googlechat.accounts.*.typingIndicator": { help: "此渠道如何提示 Agent 正在工作中。" },
+  "channels.googlechat.accounts.*.webhookPath": { help: "入站 webhook 监听器服务的路径。" },
+  "channels.googlechat.accounts.*.webhookUrl": { help: "提供商应向其投递 webhook 的公开 URL。" },
+  "channels.imessage.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.imessage.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.imessage.accounts.*.capabilities": { help: "覆盖 OpenClaw 假定此账号支持的渠道能力。" },
+  "channels.imessage.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.imessage.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.imessage.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.imessage.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.imessage.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.imessage.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.imessage.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.imessage.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.imessage.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.imessage.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.imessage.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.imessage.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.imessage.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.imessage.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.imessage.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.imessage.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.imessage.accounts.*.reactionNotifications": {
+    help: "哪些入站表情回应可以到达 Agent。",
+  },
+  "channels.imessage.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.imessage.accounts.*.sendReadReceipts": { help: "将此渠道上的入站消息标记为已读。" },
+  "channels.imessage.accounts.*.streaming": {
+    help: "Agent 仍在工作时，回复如何流式输出回此渠道。",
+  },
+  "channels.imessage.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.irc.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.irc.accounts.*.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.irc.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.irc.accounts.*.dangerouslyAllowNameMatching": {
+    help: "应急兼容开关：改用可变的显示名称而非稳定 ID 来匹配白名单条目。请保持关闭。",
+  },
+  "channels.irc.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.irc.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.irc.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.irc.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.irc.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.irc.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.irc.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.irc.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.irc.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.irc.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.irc.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.irc.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.irc.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.irc.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.irc.accounts.*.streaming": { help: "Agent 仍在工作时，回复如何流式输出回此渠道。" },
+  "channels.irc.accounts.*.textChunkLimit": { help: "OpenClaw 拆分前每条外发消息的最大字符数。" },
+  "channels.line.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.line.accounts.*.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.line.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.line.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.line.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.line.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.line.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.line.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.line.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.line.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.line.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.line.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.line.accounts.*.streaming": { help: "Agent 仍在工作时，回复如何流式输出回此渠道。" },
+  "channels.line.accounts.*.threadBindings": {
+    help: "聊天线程如何绑定到 Agent 会话，包括空闲过期和会话派生。",
+  },
+  "channels.line.accounts.*.tokenFile": { help: "从此文件读取令牌，而不是内联存储在配置中。" },
+  "channels.line.accounts.*.webhookPath": { help: "入站 webhook 监听器服务的路径。" },
+  "channels.mattermost.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.mattermost.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.mattermost.accounts.*.capabilities": {
+    help: "覆盖 OpenClaw 假定此账号支持的渠道能力。",
+  },
+  "channels.mattermost.accounts.*.commands": {
+    help: "此渠道的原生命令界面，例如斜杠命令和命令菜单。",
+  },
+  "channels.mattermost.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.mattermost.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.mattermost.accounts.*.dangerouslyAllowNameMatching": {
+    help: "应急兼容开关：改用可变的显示名称而非稳定 ID 来匹配白名单条目。请保持关闭。",
+  },
+  "channels.mattermost.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.mattermost.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.mattermost.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.mattermost.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.mattermost.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.mattermost.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.mattermost.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.mattermost.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.mattermost.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.mattermost.accounts.*.network": { help: "此渠道的外发网络设置，例如超时和重试。" },
+  "channels.mattermost.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.mattermost.accounts.*.replyToModeByChatType": { help: "按聊天类型覆盖 replyToMode。" },
+  "channels.mattermost.accounts.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.mattermost.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.mattermost.accounts.*.streaming": {
+    help: "Agent 仍在工作时，回复如何流式输出回此渠道。",
+  },
+  "channels.mattermost.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.nextcloud-talk.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.nextcloud-talk.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.nextcloud-talk.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.nextcloud-talk.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.nextcloud-talk.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.nextcloud-talk.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.nextcloud-talk.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.nextcloud-talk.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.nextcloud-talk.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.nextcloud-talk.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.nextcloud-talk.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.nextcloud-talk.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.nextcloud-talk.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.nextcloud-talk.accounts.*.network": { help: "此渠道的外发网络设置，例如超时和重试。" },
+  "channels.nextcloud-talk.accounts.*.replyToMode": {
+    help: "何时对触发本次运行的消息附加原生回复。",
+  },
+  "channels.nextcloud-talk.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.nextcloud-talk.accounts.*.streaming": {
+    help: "Agent 仍在工作时，回复如何流式输出回此渠道。",
+  },
+  "channels.nextcloud-talk.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.nextcloud-talk.accounts.*.webhookHost": { help: "入站 webhook 监听器绑定的网络接口。" },
+  "channels.nextcloud-talk.accounts.*.webhookPath": { help: "入站 webhook 监听器服务的路径。" },
+  "channels.nextcloud-talk.accounts.*.webhookPort": { help: "入站 webhook 监听器绑定的端口。" },
+  "channels.qa-channel.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.qa-channel.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.qa-channel.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.qa-channel.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.qa-channel.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.qa-channel.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.qa-channel.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.qa-channel.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.qa-channel.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.qa-channel.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.qa-channel.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.raft.accounts.*.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.raft.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.raft.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.signal.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.signal.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.signal.accounts.*.capabilities": { help: "覆盖 OpenClaw 假定此账号支持的渠道能力。" },
+  "channels.signal.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.signal.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.signal.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.signal.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.signal.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.signal.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.signal.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.signal.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.signal.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.signal.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.signal.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.signal.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.signal.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.signal.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.signal.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.signal.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.signal.accounts.*.reactionAllowlist": {
+    help: 'reactionNotifications 为 "allowlist" 时，其表情回应可以到达 Agent 的发送者 ID。',
+  },
+  "channels.signal.accounts.*.reactionLevel": { help: "Agent 对消息添加自身表情回应的自由程度。" },
+  "channels.signal.accounts.*.reactionNotifications": { help: "哪些入站表情回应可以到达 Agent。" },
+  "channels.signal.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.signal.accounts.*.replyToModeByChatType": { help: "按聊天类型覆盖 replyToMode。" },
+  "channels.signal.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.signal.accounts.*.sendReadReceipts": { help: "将此渠道上的入站消息标记为已读。" },
+  "channels.signal.accounts.*.streaming": { help: "Agent 仍在工作时，回复如何流式输出回此渠道。" },
+  "channels.signal.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.signal.transport.configPath": {
+    label: "Signal CLI 配置路径",
+    help: "可选目录，当服务需要非默认 signal-cli 数据路径时通过 --config 传给 signal-cli。",
+  },
+  "channels.signal.transport.kind": {
+    label: "Signal 传输方式",
+    help: "使用 managed-native 让 OpenClaw 启动 signal-cli，external-native 用于已有的原生守护进程，container 用于 signal-cli-rest-api。",
+  },
+  "channels.signal.transport.socketPath": {
+    label: "Signal UNIX 套接字路径",
+    help: "POSIX 上可选加入的 managed-native 传输方式。使用网关用户拥有的私有目录（mode 0700）中的绝对 socket 路径。启动时排除 url、httpHost、httpPort 和 receiveMode。HTTP 仍是默认方式；socket 失败绝不回退到 HTTP。",
+  },
+  "channels.signal.transport.url": {
+    label: "Signal 传输地址",
+    help: "external-native 或 container 传输的基础 URL，或 managed-native 守护进程与绑定地址不同时的连接端点。",
+  },
+  "channels.slack.accounts.*.ackReaction": {
+    help: "Agent 处理入站消息时添加到该消息上的表情回应。",
+  },
+  "channels.slack.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.slack.accounts.*.allowBots": { help: "接受其他机器人发送的消息。防循环保护仍然生效。" },
+  "channels.slack.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.slack.accounts.*.botLoopProtection": {
+    help: "在接受机器人消息后防止机器人之间的回复循环。",
+  },
+  "channels.slack.accounts.*.capabilities": { help: "覆盖 OpenClaw 假定此账号支持的渠道能力。" },
+  "channels.slack.accounts.*.commands": { help: "此渠道的原生命令界面，例如斜杠命令和命令菜单。" },
+  "channels.slack.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.slack.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.slack.accounts.*.dangerouslyAllowNameMatching": {
+    help: "应急兼容开关：改用可变的显示名称而非稳定 ID 来匹配白名单条目。请保持关闭。",
+  },
+  "channels.slack.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.slack.accounts.*.dm": { help: "仅对此渠道私聊生效的设置。" },
+  "channels.slack.accounts.*.dmHistoryLimit": {
+    help: "自动观察私聊上下文默认值为 0，最大值为 200 条消息；0 表示禁用该额外上下文。JSON 整数最大值会选择 0 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.slack.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.slack.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.slack.accounts.*.dms.*.historyLimit": {
+    help: "自动观察私聊上下文默认值为 0，最大值为 200 条消息；0 表示禁用该额外上下文。JSON 整数最大值会选择 0 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.slack.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.slack.accounts.*.execApprovals": {
+    help: "需要运维人员签核的命令的审批提示，通过此渠道投递。",
+  },
+  "channels.slack.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.slack.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.slack.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.slack.accounts.*.historyLimit": {
+    help: "自动观察消息上下文默认值为 50，最大值为 200 条消息；0 表示禁用自动注入。JSON 整数最大值会选择 50 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.slack.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.slack.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.slack.accounts.*.mentionPatterns": { help: "在群聊中视为提及 Agent 的额外模式。" },
+  "channels.slack.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.slack.accounts.*.reactionAllowlist": {
+    help: 'reactionNotifications 为 "allowlist" 时，其表情回应可以到达 Agent 的发送者 ID。',
+  },
+  "channels.slack.accounts.*.reactionNotifications": { help: "哪些入站表情回应可以到达 Agent。" },
+  "channels.slack.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.slack.accounts.*.replyToModeByChatType": { help: "按聊天类型覆盖 replyToMode。" },
+  "channels.slack.accounts.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.slack.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.slack.accounts.*.streaming": { help: "Agent 仍在工作时，回复如何流式输出回此渠道。" },
+  "channels.slack.accounts.*.textChunkLimit": { help: "OpenClaw 拆分前每条外发消息的最大字符数。" },
+  "channels.slack.accounts.*.webhookPath": { help: "入站 webhook 监听器服务的路径。" },
+  "channels.slack.channels.*.presenceEvents.mode": {
+    label: "Slack 渠道在线状态事件模式",
+    help: '为单个 Slack 频道覆盖在线状态事件。使用 "on" 可纳入大型话题或顶层频道会话。',
+  },
+  "channels.slack.channels.*.presenceEvents.prompt": {
+    label: "Slack 渠道在线状态事件提示词",
+    help: "为单个 Slack 频道覆盖账号级在线状态事件提示词。最大：20,000 字符。",
+  },
+  "channels.slack.dms.*.historyLimit": {
+    help: "自动观察私聊上下文默认值为 0，最大值为 200 条消息；0 表示禁用该额外上下文。JSON 整数最大值会选择 0 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.sms.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.sms.accounts.*.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.sms.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.sms.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.sms.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.sms.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.sms.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.sms.accounts.*.textChunkLimit": { help: "OpenClaw 拆分前每条外发消息的最大字符数。" },
+  "channels.sms.accounts.*.webhookPath": { help: "入站 webhook 监听器服务的路径。" },
+  "channels.synology-chat.accounts.*.webhookUrl": { help: "提供商应向其投递 webhook 的公开 URL。" },
+  "channels.telegram.accounts.*.ackReaction": {
+    help: "Agent 处理入站消息时添加到该消息上的表情回应。",
+  },
+  "channels.telegram.accounts.*.actions": {
+    help: "Agent 可以调用哪些渠道操作（消息、表情回应、话题线程、搜索）。",
+  },
+  "channels.telegram.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.telegram.accounts.*.capabilities": { help: "覆盖 OpenClaw 假定此账号支持的渠道能力。" },
+  "channels.telegram.accounts.*.commands": {
+    help: "此渠道的原生命令界面，例如斜杠命令和命令菜单。",
+  },
+  "channels.telegram.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.telegram.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.telegram.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.telegram.accounts.*.dmHistoryLimit": {
+    help: "自动观察私聊上下文默认值为 10，最大值为 200 条消息；0 表示禁用该额外上下文。JSON 整数最大值会选择 10 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.telegram.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.telegram.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.telegram.accounts.*.dms.*.historyLimit": {
+    help: "自动观察私聊上下文默认值为 10，最大值为 200 条消息；0 表示禁用该额外上下文。JSON 整数最大值会选择 10 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.telegram.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.telegram.accounts.*.execApprovals": {
+    help: "需要运维人员签核的命令的审批提示，通过此渠道投递。",
+  },
+  "channels.telegram.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.telegram.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.telegram.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.telegram.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.telegram.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.telegram.accounts.*.historyLimit": {
+    help: "自动观察消息上下文默认值为 50，最大值为 200 条消息；0 表示禁用自动注入。JSON 整数最大值会选择 50 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.telegram.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.telegram.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.telegram.accounts.*.mentionPatterns": { help: "在群聊中视为提及 Agent 的额外模式。" },
+  "channels.telegram.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.telegram.accounts.*.network": { help: "此渠道的外发网络设置，例如超时和重试。" },
+  "channels.telegram.accounts.*.proxy": { help: "此渠道外发连接使用的代理。" },
+  "channels.telegram.accounts.*.reactionLevel": {
+    help: "Agent 对消息添加自身表情回应的自由程度。",
+  },
+  "channels.telegram.accounts.*.reactionNotifications": {
+    help: "哪些入站表情回应可以到达 Agent。",
+  },
+  "channels.telegram.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.telegram.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.telegram.accounts.*.streaming": {
+    help: "Agent 仍在工作时，回复如何流式输出回此渠道。",
+  },
+  "channels.telegram.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.telegram.accounts.*.threadBindings": {
+    help: "聊天线程如何绑定到 Agent 会话，包括空闲过期和会话派生。",
+  },
+  "channels.telegram.accounts.*.tokenFile": { help: "从此文件读取令牌，而不是内联存储在配置中。" },
+  "channels.telegram.accounts.*.webhookHost": { help: "入站 webhook 监听器绑定的网络接口。" },
+  "channels.telegram.accounts.*.webhookPath": { help: "入站 webhook 监听器服务的路径。" },
+  "channels.telegram.accounts.*.webhookPort": { help: "入站 webhook 监听器绑定的端口。" },
+  "channels.telegram.accounts.*.webhookSecret": { help: "用于验证入站 webhook 请求的共享密钥。" },
+  "channels.telegram.accounts.*.webhookUrl": { help: "提供商应向其投递 webhook 的公开 URL。" },
+  "channels.telegram.autoTopicLabel.enabled": {
+    label: "启用 Telegram 自动话题命名",
+    help: "是否启用自动话题标注。默认：true。",
+  },
+  "channels.telegram.autoTopicLabel.prompt": {
+    label: "Telegram 自动话题命名提示词",
+    help: "基于 LLM 的话题命名的自定义提示词。用户消息会附加在提示词之后。",
+  },
+  "channels.telegram.dms.*.historyLimit": {
+    help: "自动观察私聊上下文默认值为 10，最大值为 200 条消息；0 表示禁用该额外上下文。JSON 整数最大值会选择 10 条消息的默认值。会话对话记录修剪单独统计用户轮次，0 表示不修剪。观察消息上限不会改写已保存的值。",
+  },
+  "channels.telegram.streaming.preview.chunk.breakPreference": {
+    label: "Telegram 草稿分块断行偏好",
+    help: "Telegram 草稿分块的优先断行点（paragraph | newline | sentence）。",
+  },
+  "channels.telegram.streaming.preview.chunk.maxChars": {
+    label: "Telegram 草稿分块最大字符数",
+    help: '当 channels.telegram.streaming.mode="block" 时，Telegram 块预览分块的目标最大大小。',
+  },
+  "channels.telegram.streaming.preview.chunk.minChars": {
+    label: "Telegram 草稿分块最小字符数",
+    help: '当 channels.telegram.streaming.mode="block" 时，发出 Telegram 块预览分块前所需的最小字符数。',
+  },
+  "channels.tlon.accounts.*.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.tlon.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.tlon.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.tlon.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.tlon.accounts.*.network": { help: "此渠道的外发网络设置，例如超时和重试。" },
+  "channels.tlon.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.twitch.accounts": { help: "此渠道的其他命名账号。每个账号使用相同的设置。" },
+  "channels.twitch.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.twitch.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.twitch.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.twitch.accounts.*.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.twitch.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.twitch.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.twitch.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.twitch.defaultAccount": { help: "出站请求未指定账号时使用的账号。" },
+  "channels.twitch.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.twitch.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.twitch.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.twitch.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.twitch.requireMention": { help: "仅在被提及（@）时才在群聊中响应。" },
+  "channels.twitch.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.whatsapp.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.whatsapp.accounts.*.capabilities": { help: "覆盖 OpenClaw 假定此账号支持的渠道能力。" },
+  "channels.whatsapp.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.whatsapp.accounts.*.contextVisibility": {
+    help: '其他发送者的引用上下文有多少能到达 Agent："all" 全部保留，白名单模式按发送者把关。',
+  },
+  "channels.whatsapp.accounts.*.defaultTo": { help: "调用方未指定目标时，外发消息使用的目标。" },
+  "channels.whatsapp.accounts.*.dmHistoryLimit": {
+    help: "渠道专属的私聊历史记录上限。消息窗口默认值和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.whatsapp.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.whatsapp.accounts.*.dms": { help: "按私聊 ID 索引的逐会话覆盖项。" },
+  "channels.whatsapp.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.whatsapp.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.whatsapp.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.whatsapp.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.whatsapp.accounts.*.healthMonitor": {
+    help: "针对健康监视器（用于重启停滞渠道）的逐渠道退出选项。",
+  },
+  "channels.whatsapp.accounts.*.heartbeatVisibility": { help: "此渠道显示哪些心跳结果。" },
+  "channels.whatsapp.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.whatsapp.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.whatsapp.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.whatsapp.accounts.*.mentionPatterns": { help: "在群聊中视为提及 Agent 的额外模式。" },
+  "channels.whatsapp.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.whatsapp.accounts.*.reactionLevel": {
+    help: "Agent 对消息添加自身表情回应的自由程度。",
+  },
+  "channels.whatsapp.accounts.*.replyToMode": { help: "何时对触发本次运行的消息附加原生回复。" },
+  "channels.whatsapp.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.whatsapp.accounts.*.sendReadReceipts": { help: "将此渠道上的入站消息标记为已读。" },
+  "channels.whatsapp.accounts.*.streaming": {
+    help: "Agent 仍在工作时，回复如何流式输出回此渠道。",
+  },
+  "channels.whatsapp.accounts.*.textChunkLimit": {
+    help: "OpenClaw 拆分前每条外发消息的最大字符数。",
+  },
+  "channels.zalo.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.zalo.accounts.*.configWrites": { help: "允许此渠道在响应自身的命令和事件时写入配置。" },
+  "channels.zalo.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.zalo.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.zalo.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.zalo.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.zalo.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.zalo.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.zalo.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.zalo.accounts.*.proxy": { help: "此渠道外发连接使用的代理。" },
+  "channels.zalo.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  "channels.zalo.accounts.*.tokenFile": { help: "从此文件读取令牌，而不是内联存储在配置中。" },
+  "channels.zalo.accounts.*.webhookPath": { help: "入站 webhook 监听器服务的路径。" },
+  "channels.zalo.accounts.*.webhookSecret": { help: "用于验证入站 webhook 请求的共享密钥。" },
+  "channels.zalo.accounts.*.webhookUrl": { help: "提供商应向其投递 webhook 的公开 URL。" },
+  "channels.zalouser.accounts.*.allowFrom": {
+    help: '允许触达 Agent 的发送者 ID。"allowlist" 模式必填；使用 ["*"] 可允许所有人。',
+  },
+  "channels.zalouser.accounts.*.configWrites": {
+    help: "允许此渠道在响应自身的命令和事件时写入配置。",
+  },
+  "channels.zalouser.accounts.*.dangerouslyAllowNameMatching": {
+    help: "应急兼容开关：改用可变的显示名称而非稳定 ID 来匹配白名单条目。请保持关闭。",
+  },
+  "channels.zalouser.accounts.*.dmPolicy": {
+    help: '谁可以私聊 Agent："pairing" 需逐个批准新发送者，"allowlist" 信任 allowFrom，"open" 允许任何人，"disabled" 关闭私聊。',
+  },
+  "channels.zalouser.accounts.*.enabled": { help: "开启或关闭此渠道，而不移除其配置。" },
+  "channels.zalouser.accounts.*.groupAllowFrom": {
+    help: "群聊中允许的发送者 ID。未设置时回退到 allowFrom。",
+  },
+  "channels.zalouser.accounts.*.groupPolicy": {
+    help: '谁可以在群组中使用 Agent："allowlist" 信任 groupAllowFrom，"open" 允许任何群组，"disabled" 关闭群聊。',
+  },
+  "channels.zalouser.accounts.*.groups": { help: "按群组 ID 索引的逐群组覆盖项。" },
+  "channels.zalouser.accounts.*.historyLimit": {
+    help: "渠道专属的历史记录上限。观察消息窗口和会话用户轮次修剪请查阅渠道指南；零值对这些消费方的含义各不相同。",
+  },
+  "channels.zalouser.accounts.*.markdown": { help: "此渠道的 Markdown 渲染覆盖项。" },
+  "channels.zalouser.accounts.*.mediaMaxMb": {
+    help: "单个附件的媒体大小上限（MiB）。渠道传输层限制仍然生效。",
+  },
+  "channels.zalouser.accounts.*.name": { help: "此账号在控制界面和日志中显示的名称。" },
+  "channels.zalouser.accounts.*.responsePrefix": { help: "添加到每条外发回复开头的文本。" },
+  cli: { label: "命令行界面（CLI）" },
+  "cloudWorkers.profiles.*": {
+    label: "云端工作节点配置文件",
+    help: "创建环境时按名称选择的云工作节点配置文件。提供商凭据应保存在受支持的引用中，而不是在此块中嵌入机密信息。",
+  },
+  "gateway.http.endpoints.chatCompletions.images.allowUrl": {
+    label: "OpenAI Chat Completions 允许图像 URL",
+    help: "允许对 `image_url` 部分进行服务端 URL 抓取（默认：false；data URI 仍受支持）。将此项设为 `false` 可完全禁用 URL 抓取。",
+  },
+  "gateway.http.endpoints.chatCompletions.images.allowedMimes": {
+    label: "OpenAI Chat Completions 图像 MIME 白名单",
+    help: "`image_url` 部分允许的 MIME 类型（不区分大小写的列表）。",
+  },
+  "gateway.http.endpoints.chatCompletions.images.maxBytes": {
+    label: "OpenAI Chat Completions 图像最大字节数",
+    help: "每个抓取/解码的 `image_url` 图片的最大字节数（默认：10MB）。",
+  },
+  "gateway.http.endpoints.chatCompletions.images.maxRedirects": {
+    label: "OpenAI Chat Completions 图像最大重定向次数",
+    help: "抓取 `image_url` URL 时允许的最大 HTTP 重定向次数（默认：3）。",
+  },
+  "gateway.http.endpoints.chatCompletions.images.timeoutMs": {
+    label: "OpenAI Chat Completions 图像超时（毫秒）",
+    help: "`image_url` URL 抓取的超时时间，单位为毫秒（默认：10000）。",
+  },
+  "gateway.http.endpoints.chatCompletions.images.urlAllowlist": {
+    label: "OpenAI Chat Completions 图像 URL 白名单",
+    help: "`image_url` URL 抓取的可选主机名白名单；支持精确主机和 `*.example.com` 通配符。列表为空或省略表示没有主机名白名单限制。",
+  },
+  "gateway.roles.definitions.*": {
+    label: "操作员角色定义",
+    help: "一个具名的操作员角色。每个定义都必须显式提供其会话共享策略、允许的会话与运行 Agent，以及操作员权限范围上限，还可以要求新建会话使用沙箱隔离并设置插件访问策略。",
+  },
+  "gateway.roles.definitions.*.accessPolicyPlugin": {
+    label: "操作员角色访问策略插件",
+    help: "可选的精确插件 ID，其网关访问策略必须授权此角色。当插件缺失、禁用、加载失败或未提供当前权限时，访问将被拒绝。不可用的插件 ID 仍是有效配置，以便独立的人员角色和网关所有者修复访问。省略此字段不会增加插件依赖。",
+  },
+  "gateway.roles.definitions.*.agents": {
+    label: "操作员角色可用 Agent",
+    help: '此角色创建会话或启动运行时可用的 Agent：设为 "*" 允许所有 Agent，列出 Agent ID 则仅允许这些 Agent，使用空列表则两者均禁用。',
+  },
+  "gateway.roles.definitions.*.sandbox": {
+    label: "操作员角色沙箱隔离",
+    help: '新建会话的执行隔离："inherit"（默认）使用 Agent 策略；"required" 永久要求沙箱，即使 Agent 沙箱模式关闭也是如此，若后端不可用则安全失败。',
+  },
+  "gateway.roles.definitions.*.scopes": {
+    label: "操作员角色权限范围上限",
+    help: "作为此角色最大连接权限授予的操作员权限范围的封闭列表。请求的、配对的、身份授予的以及升级的权限范围都会与此列表取交集。",
+  },
+  "gateway.roles.definitions.*.sessions": {
+    label: "操作员角色会话访问",
+    help: "授予此角色的会话共享权限，适用于其他已认证人员创建的会话；个人自己的会话仍仅所有者可访问。",
+  },
+  "gateway.roles.definitions.*.sessions.others": {
+    label: "操作员角色对他人会话的访问",
+    help: '对他人会话的访问权限："none" 隐藏会话，"view" 允许读取，"suggest" 允许使用建议流程，"write" 允许参与。显式的会话成员身份可以授予额外访问权限。',
+  },
+  "hooks.mappings.*.action": {
+    label: "钩子映射动作",
+    help: '映射动作类型："wake" 触发 Agent 唤醒流程，而 "agent" 直接发送给 Agent 处理。需要立即执行时使用 "agent"，偏好心跳驱动处理时使用 "wake"。',
+  },
+  "hooks.mappings.*.allowUnsafeExternalContent": {
+    label: "钩子映射允许不安全外部内容",
+    help: "为 true 时，映射内容在生成的消息中可能包含脱敏程度较低的外部负载数据。默认保持 false，仅对转换逻辑经过审查的可信来源启用。",
+  },
+  "hooks.mappings.*.channel": {
+    label: "钩子映射投递渠道",
+    help: '映射输出的投递渠道覆盖（例如 "last"、"telegram"、"discord"、"slack"、"signal"、"imessage" 或 "msteams"）。渠道覆盖应保持显式，以避免意外的跨渠道发送。',
+  },
+  "hooks.mappings.*.deliver": {
+    label: "钩子映射投递回复",
+    help: "控制映射执行结果是否回投到渠道目的地，还是静默处理。不应发布面向用户输出的后台自动化请禁用投递。",
+  },
+  "hooks.mappings.*.forEach": {
+    label: "钩子映射扇出键",
+    help: "映射进行扇出处理时使用的载荷顶层数组键：每个元素独立派发其动作，模板或转换看到的载荷数组中只包含当前元素。Gmail 预设使用 forEach: messages，因此批量推送会为每封邮件派发一次运行。",
+  },
+  "hooks.mappings.*.id": {
+    label: "钩子映射 ID",
+    help: "钩子映射条目的可选稳定标识，用于审计、排障和定向更新。使用唯一 ID，使日志和配置差异可以明确引用映射。",
+  },
+  "hooks.mappings.*.match": {
+    label: "钩子映射匹配条件",
+    help: "在应用动作路由之前，对映射匹配谓词（如 path 和 source）进行分组的对象。匹配条件应保持具体，以免无关 webhook 流量触发自动化。",
+  },
+  "hooks.mappings.*.match.path": {
+    label: "钩子映射匹配路径",
+    help: "钩子映射的路径匹配条件，通常与入站请求路径比较。用于按 webhook 端点路径族划分自动化行为。",
+  },
+  "hooks.mappings.*.match.source": {
+    label: "钩子映射匹配来源",
+    help: "钩子映射的来源匹配条件，通常由受信任的上游元数据或适配器逻辑设置。使用稳定的来源标识，以确保路由在重试间保持确定性。",
+  },
+  "hooks.mappings.*.messageTemplate": {
+    label: "钩子映射消息模板",
+    help: "用于将结构化映射输入合成为发送到目标动作路径的最终消息内容的模板。模板应保持确定性，以使下游解析和行为保持稳定。",
+  },
+  "hooks.mappings.*.name": {
+    label: "钩子映射名称",
+    help: "用于诊断和面向运维者配置 UI 的易读映射显示名称。名称应保持简洁且具描述性，以便在事件复盘时路由意图一目了然。",
+  },
+  "hooks.mappings.*.sessionKey": {
+    label: "钩子映射会话键",
+    help: "为映射投递的消息显式覆盖会话键，以控制话题连续性。使用稳定且带范围的键，使重复事件相互关联而不泄漏到无关会话。",
+  },
+  "hooks.mappings.*.sessionMode": {
+    label: "钩子映射会话模式",
+    help: '控制映射的会话连续性："isolated" 每次开启全新的运行会话，"persistent" 复用已解析的 sessionKey。除非集成确实需要持久上下文，否则请保持 isolated。',
+  },
+  "hooks.mappings.*.textTemplate": {
+    label: "钩子映射文本模板",
+    help: "当不需要或不支持富负载渲染时使用的纯文本回退模板。用于为聊天投递界面提供简洁一致的摘要字符串。",
+  },
+  "hooks.mappings.*.thinking": {
+    label: "钩子映射思考覆盖",
+    help: "映射触发的运行的可选思考力度覆盖，用于权衡延迟与推理深度。对高流量钩子保持 low 或 minimal，除非明确需要更深推理。",
+  },
+  "hooks.mappings.*.timeoutSeconds": {
+    label: "钩子映射超时（秒）",
+    help: "映射动作执行在应用超时处理前允许的最大运行时间。对高流量的 webhook 来源使用更紧的限制，以防队列堆积。",
+  },
+  "hooks.mappings.*.to": {
+    label: "钩子映射投递目标",
+    help: "当映射回复应路由到固定目标时，所选渠道内的目的地标识。启用生产映射前，请核实各提供商的目的地格式。",
+  },
+  "hooks.mappings.*.transform": {
+    label: "钩子映射转换",
+    help: "转换配置块，定义在映射动作处理之前的模块/导出预处理。仅使用来自经过审查代码路径的转换，并保持行为确定性以实现可重复的自动化。",
+  },
+  "hooks.mappings.*.transform.export": {
+    label: "钩子转换导出项",
+    help: "要从转换模块调用的具名导出；省略时默认为模块默认导出。当一个文件承载多个转换处理器时设置此项。",
+  },
+  "hooks.mappings.*.transform.module": {
+    label: "钩子转换模块",
+    help: "从 hooks.transformsDir 加载的相对转换模块路径，用于在投递前改写传入负载。模块应保持本地化、经过审查，且不含路径遍历模式。",
+  },
+  "hooks.mappings.*.wakeMode": {
+    label: "钩子映射唤醒模式",
+    help: '唤醒调度模式："now" 立即唤醒，而 "next-heartbeat" 推迟到下一个心跳周期。可容忍轻微延迟的低优先级自动化请使用延迟模式。',
+  },
+  "hooks.mappings[].forEach": {
+    label: "钩子映射扇出键",
+    help: "映射进行扇出处理时使用的载荷顶层数组键：每个元素独立派发其动作，模板或转换看到的载荷数组中只包含当前元素。Gmail 预设使用 forEach: messages，因此批量推送会为每封邮件派发一次运行。",
+  },
+  "hooks.mappings[].sessionMode": {
+    label: "钩子映射会话模式",
+    help: '控制映射的会话连续性："isolated" 每次开启全新的运行会话，"persistent" 复用已解析的 sessionKey。除非集成确实需要持久上下文，否则请保持 isolated。',
+  },
+  "mcp.servers.*.auth": { label: "MCP 服务器鉴权" },
+  "mcp.servers.*.clientCert": { label: "MCP 客户端证书" },
+  "mcp.servers.*.clientKey": { label: "MCP 客户端私钥" },
+  "mcp.servers.*.client_cert": { label: "MCP 客户端证书" },
+  "mcp.servers.*.client_key": { label: "MCP 客户端私钥" },
+  "mcp.servers.*.codex": {
+    label: "Codex MCP 投影",
+    help: "仅适用于 Codex app-server 线程的 OpenClaw 投影元数据。它不影响 ACP 会话或通用 Codex 宿主环境配置。省略此块可让该服务器对每个 Codex app-server Agent 保持可用，并采用 Codex 默认的 MCP 审批行为。",
+  },
+  "mcp.servers.*.codex.agents": {
+    label: "Codex MCP Agent 列表",
+    help: "可选的非空 OpenClaw Agent ID 列表，指定哪些 Agent 应在 Codex app-server 线程配置中接收此 MCP 服务器。空、空白或无效列表会直接失败；省略时，该服务器会投影给所有 Codex app-server Agent。",
+  },
+  "mcp.servers.*.codex.defaultToolsApprovalMode": {
+    label: "Codex MCP 工具审批",
+    help: '此服务器可选的 Codex MCP 工具审批模式："auto"、"prompt" 或 "approve"。仅用于你有意信任的 MCP 服务器。',
+  },
+  "mcp.servers.*.codex.default_tools_approval_mode": {
+    label: "Codex MCP 工具审批",
+    help: "同一按服务器 MCP 工具审批模式的 Codex 原生写法。在 OpenClaw 配置中请优先使用 defaultToolsApprovalMode。",
+  },
+  "mcp.servers.*.connectionTimeoutMs": { label: "MCP 连接超时（毫秒）" },
+  "mcp.servers.*.enabled": { label: "启用 MCP 服务器" },
+  "mcp.servers.*.oauth": { label: "MCP OAuth" },
+  "mcp.servers.*.oauth.authProfileId": {
+    label: "MCP OAuth 鉴权配置",
+    help: "具备刷新能力的认证配置档 ID，用于将当前 Bearer 令牌注入此远程 MCP 服务器。设置后，OpenClaw 会在运行时解析并刷新该配置档，且不会向下游投影刷新材料。",
+  },
+  "mcp.servers.*.oauth.clientMetadataUrl": { label: "MCP OAuth 客户端元数据 URL" },
+  "mcp.servers.*.oauth.identity": {
+    label: "MCP OAuth 身份",
+    help: '此服务器的 OAuth 凭据归属。省略此字段或使用 "shared" 表示由运维者管理的凭据；使用 "per-requester" 可让每个已认证的发送者连接自己的账号。',
+  },
+  "mcp.servers.*.oauth.redirectUrl": { label: "MCP OAuth 回调地址" },
+  "mcp.servers.*.oauth.scope": { label: "MCP OAuth 授权范围" },
+  "mcp.servers.*.requestTimeoutMs": { label: "MCP 请求超时（毫秒）" },
+  "mcp.servers.*.sslVerify": { label: "MCP TLS 校验" },
+  "mcp.servers.*.ssl_verify": { label: "MCP TLS 校验" },
+  "mcp.servers.*.supportsParallelToolCalls": { label: "MCP 并行工具调用" },
+  "mcp.servers.*.supports_parallel_tool_calls": { label: "MCP 并行工具调用" },
+  "mcp.servers.*.toolFilter": {
+    label: "MCP 工具选择",
+    help: "按服务器选择 MCP 工具。使用 include 仅暴露选定的 MCP 工具名称，或使用 exclude 隐藏选定的 MCP 工具名称。条目支持精确名称和简单的 '*' 通配符。",
+  },
+  "mcp.servers.*.toolFilter.exclude": {
+    label: "排除的 MCP 工具",
+    help: "要从此服务器隐藏的精确 MCP 工具名称或简单的 '*' 通配符。",
+  },
+  "mcp.servers.*.toolFilter.include": {
+    label: "包含的 MCP 工具",
+    help: "要从此服务器暴露的精确 MCP 工具名称或简单的 '*' 通配符。省略时，除非被排除，所有服务器工具均保持可用。",
+  },
+  "memory.search.extraPaths.*.path": {
+    label: "额外记忆路径",
+    help: "设置额外的记忆目录或文件。相对路径从 Agent 工作区解析；直接的文件条目按原样索引。",
+  },
+  "memory.search.extraPaths.*.pattern": {
+    label: "额外记忆路径模式",
+    help: '将目录条目限制为匹配此相对于根目录的 glob 的受支持文件，例如 "runbooks/**/*.md"。省略则递归扫描所有受支持文件。',
+  },
+  "models.providers.*.agentRuntime": {
+    label: "模型提供商运行时",
+    help: "此提供商可选的低层 Agent 运行时策略。请使用提供商/模型运行时策略而非 Agent 级运行时固定；省略或默认时由 OpenClaw 为所选提供商选择运行时。",
+  },
+  "models.providers.*.agentRuntime.id": {
+    label: "模型提供商运行时 ID",
+    help: '提供商 Agent 运行时 id："openclaw"、"auto"、已注册的插件宿主环境 id（如 "codex"），或受支持的 CLI 后端别名（如 "claude-cli"）。省略时，官方端点上的 OpenAI 默认使用 Codex 宿主环境。',
+  },
+  "models.providers.*.localService": {
+    label: "模型提供商本地服务",
+    help: "此提供商可选的按需本地模型服务器进程。OpenClaw 探测 healthUrl，在需要时启动命令，等待就绪，然后发送模型请求。",
+  },
+  "models.providers.*.localService.args": {
+    label: "本地服务启动参数",
+    help: "传递给本地模型服务器命令的参数列表，不经过 shell 展开。",
+  },
+  "models.providers.*.localService.command": {
+    label: "本地服务启动命令",
+    help: "本地模型服务器进程的可执行文件绝对路径。请显式指定该路径，使提供商启动具有确定性，不依赖 shell PATH 查找。",
+  },
+  "models.providers.*.localService.cwd": {
+    label: "本地服务工作目录",
+    help: "本地模型服务器进程的工作目录。",
+  },
+  "models.providers.*.localService.env": {
+    label: "本地服务环境变量",
+    help: "本地模型服务器进程的额外环境变量。看似机密的值会从配置快照中脱敏。",
+  },
+  "models.providers.*.localService.healthUrl": {
+    label: "本地服务健康检查 URL",
+    help: "在模型请求前探测的就绪 URL。省略时，OpenClaw 使用提供商 baseUrl 并附加 /models。",
+  },
+  "models.providers.*.localService.idleStopMs": {
+    label: "本地服务空闲自动停止",
+    help: "最后一个请求完成后，保持 OpenClaw 启动的本地模型服务器存活的毫秒数。设为 0 可让它一直存活到 OpenClaw 退出。",
+  },
+  "models.providers.*.localService.readyTimeoutMs": {
+    label: "本地服务就绪超时",
+    help: "启动进程后等待本地模型服务器就绪探测的最大毫秒数。",
+  },
+  "models.providers.*.maxTokens": {
+    label: "模型提供商最大 Token 数",
+    help: "当模型条目未设置 maxTokens 时，应用于此提供商下模型的默认最大输出令牌预算。",
+  },
+  "models.providers.*.models.*.agentRuntime": {
+    label: "模型运行时",
+    help: "此特定模型的可选底层 Agent 运行时策略。模型运行时策略优先于提供商运行时策略。",
+  },
+  "models.providers.*.models.*.agentRuntime.id": {
+    label: "模型运行时 ID",
+    help: '模型的 Agent 运行时 id："openclaw"、"auto"、已注册的插件宿主环境 id（如 "codex"），或受支持的 CLI 后端别名（如 "claude-cli"）。',
+  },
+  "models.providers.*.models.*.mediaInput": {
+    label: "模型媒体输入",
+    help: "可选的模型媒体能力元数据，供工具据此选择保守的图片压缩默认值。",
+  },
+  "models.providers.*.models.*.mediaInput.image": {
+    label: "模型图像输入",
+    help: "此模型的可选图片输入限制，例如最大边长、最大像素数和首选压缩边。",
+  },
+  "models.providers.*.models.*.mediaInput.image.maxBytes": {
+    label: "模型图像最大字节数",
+    help: "提供商为此模型接受的最大编码图片载荷大小。",
+  },
+  "models.providers.*.models.*.mediaInput.image.maxPixels": {
+    label: "模型图像最大像素数",
+    help: "提供商为此模型接受的最大图片像素数。",
+  },
+  "models.providers.*.models.*.mediaInput.image.maxSidePx": {
+    label: "模型图像最大边长",
+    help: "提供商为此模型接受的最大图片宽度或高度。",
+  },
+  "models.providers.*.models.*.mediaInput.image.preferredSidePx": {
+    label: "模型图像优选边长",
+    help: "为均衡压缩而首选的图片缩放边。留空则使用 OpenClaw 的保守默认值。",
+  },
+  "models.providers.*.models.*.mediaInput.image.tokenMode": {
+    label: "模型图像 Token 模式",
+    help: '提供商的图片令牌计算方式："tile"、"detail" 或 "provider"。',
+  },
+  "models.providers.*.models[].agentRuntime": {
+    label: "模型运行时",
+    help: "此特定模型的可选底层 Agent 运行时策略。模型运行时策略优先于提供商运行时策略。",
+  },
+  "models.providers.*.models[].agentRuntime.id": {
+    label: "模型运行时 ID",
+    help: '模型的 Agent 运行时 id："openclaw"、"auto"、已注册的插件宿主环境 id（如 "codex"），或受支持的 CLI 后端别名（如 "claude-cli"）。',
+  },
+  "models.providers.*.models[].mediaInput": {
+    label: "模型媒体输入",
+    help: "可选的模型媒体能力元数据，供工具据此选择保守的图片压缩默认值。",
+  },
+  "models.providers.*.models[].mediaInput.image": {
+    label: "模型图像输入",
+    help: "此模型的可选图片输入限制，例如最大边长、最大像素数和首选压缩边。",
+  },
+  "models.providers.*.models[].mediaInput.image.maxBytes": {
+    label: "模型图像最大字节数",
+    help: "提供商为此模型接受的最大编码图片载荷大小。",
+  },
+  "models.providers.*.models[].mediaInput.image.maxPixels": {
+    label: "模型图像最大像素数",
+    help: "提供商为此模型接受的最大图片像素数。",
+  },
+  "models.providers.*.models[].mediaInput.image.maxSidePx": {
+    label: "模型图像最大边长",
+    help: "提供商为此模型接受的最大图片宽度或高度。",
+  },
+  "models.providers.*.models[].mediaInput.image.preferredSidePx": {
+    label: "模型图像优选边长",
+    help: "为均衡压缩而首选的图片缩放边。留空则使用 OpenClaw 的保守默认值。",
+  },
+  "models.providers.*.models[].mediaInput.image.tokenMode": {
+    label: "模型图像 Token 模式",
+    help: '提供商的图片令牌计算方式："tile"、"detail" 或 "provider"。',
+  },
+  "models.providers.*.params": {
+    label: "模型提供商运行时参数",
+    help: "由提供商插件解释的提供商专属运行时参数。仅使用提供商文档中记载的键，并优先依据明确的提供商文档而非临时的共享假设。",
+  },
+  "models.providers.*.region": {
+    label: "模型提供商区域",
+    help: "可选的提供商部署/API 区域，由暴露区域端点的提供商解释。支持哪些值请参阅提供商文档；两者同时设置时 baseUrl 覆盖通常优先。",
+  },
+  "models.providers.*.request": {
+    label: "模型提供商请求覆盖",
+    help: "模型提供商请求的可选请求覆盖，包括额外请求头、认证覆盖、代理路由、TLS 客户端设置，以及面向受信任自托管端点的可选 allowPrivateNetwork。仅当上游或企业网络路径需要传输定制时才使用这些设置。",
+  },
+  "models.providers.*.request.allowPrivateNetwork": {
+    label: "模型提供商请求允许访问内网",
+    help: "设为 true 时，允许模型提供商 HTTP 请求通过提供商 HTTP 请求防护（fetchWithSsrFGuard）访问私有、CGNAT 或类似网段。自定义/本地提供商 baseUrl 已信任精确配置的源，但元数据、链路本地以及本地使用 NAT64（64:ff9b:1::/48）源除外；将此项设为 false 可退出该信任。OpenAI Responses WebSocket 复用 request 中的请求头/TLS 设置，但不走该请求 SSRF 路径。仅对必须访问所配置 baseUrl 源之外私有源的、由操作员控制的自托管端点设为 true。",
+  },
+  "models.providers.*.request.auth": {
+    label: "模型提供商请求鉴权覆盖",
+    help: "覆盖此提供商的请求认证行为。",
+  },
+  "models.providers.*.request.auth.headerName": {
+    label: "模型提供商鉴权头名称",
+    help: "认证模式为 header 时使用的自定义认证请求头名称。",
+  },
+  "models.providers.*.request.auth.mode": {
+    label: "模型提供商请求鉴权模式",
+    help: '认证覆盖模式："provider-default"、"authorization-bearer" 或 "header"。',
+  },
+  "models.providers.*.request.auth.prefix": {
+    label: "模型提供商鉴权头前缀",
+    help: "认证模式为 header 时添加到 request.auth.value 前面的可选前缀。",
+  },
+  "models.providers.*.request.auth.token": {
+    label: "模型提供商请求 Bearer 令牌",
+    help: "认证模式为 authorization-bearer 时使用的 Bearer 令牌。",
+  },
+  "models.providers.*.request.auth.value": {
+    label: "模型提供商鉴权头值",
+    help: "认证模式为 header 时使用的自定义认证请求头值。",
+  },
+  "models.providers.*.request.headers": {
+    label: "模型提供商请求头",
+    help: "在默认归属与认证解析之后合并进提供商请求的额外请求头。",
+  },
+  "models.providers.*.request.proxy": {
+    label: "模型提供商请求代理",
+    help: '模型提供商请求的可选代理覆盖。使用 "env-proxy" 遵循环境代理设置，或使用 "explicit-proxy" 通过指定的代理 URL 路由。',
+  },
+  "models.providers.*.request.proxy.mode": {
+    label: "模型提供商请求代理模式",
+    help: '模型提供商请求的代理覆盖模式："env-proxy" 或 "explicit-proxy"。',
+  },
+  "models.providers.*.request.proxy.tls": {
+    label: "模型提供商代理 TLS",
+    help: "连接到所配置代理时使用的可选 TLS 设置。",
+  },
+  "models.providers.*.request.proxy.tls.ca": {
+    label: "模型提供商代理 TLS CA 证书",
+    help: "用于验证代理 TLS 证书链的自定义 CA bundle。",
+  },
+  "models.providers.*.request.proxy.tls.cert": {
+    label: "模型提供商代理 TLS 证书",
+    help: "需要双向 TLS 时向代理出示的客户端 TLS 证书。",
+  },
+  "models.providers.*.request.proxy.tls.insecureSkipVerify": {
+    label: "模型提供商代理 TLS 跳过校验",
+    help: "跳过代理 TLS 证书验证。仅用于受控的开发环境。",
+  },
+  "models.providers.*.request.proxy.tls.key": {
+    label: "模型提供商代理 TLS 私钥",
+    help: "与 request.proxy.tls.cert 配对用于代理双向 TLS 的私钥。",
+  },
+  "models.providers.*.request.proxy.tls.passphrase": {
+    label: "模型提供商代理 TLS 私钥口令",
+    help: "用于解密 request.proxy.tls.key 的可选口令。",
+  },
+  "models.providers.*.request.proxy.tls.serverName": {
+    label: "模型提供商代理 TLS 服务器名称",
+    help: "与代理建立 TLS 时使用的可选 SNI/服务器名称覆盖。",
+  },
+  "models.providers.*.request.proxy.url": {
+    label: "模型提供商请求代理 URL",
+    help: "request.proxy.mode 为 explicit-proxy 时使用的显式代理 URL。URL 中内嵌的凭据被视为敏感信息，并从快照中脱敏。",
+  },
+  "models.providers.*.request.tls": {
+    label: "模型提供商请求 TLS",
+    help: "直连上游模型端点时使用的可选 TLS 设置。",
+  },
+  "models.providers.*.request.tls.ca": {
+    label: "模型提供商请求 TLS CA 证书",
+    help: "用于验证上游 TLS 证书链的自定义 CA bundle。",
+  },
+  "models.providers.*.request.tls.cert": {
+    label: "模型提供商请求 TLS 证书",
+    help: "需要双向 TLS 时向上游端点出示的客户端 TLS 证书。",
+  },
+  "models.providers.*.request.tls.insecureSkipVerify": {
+    label: "模型提供商请求 TLS 跳过校验",
+    help: "跳过上游 TLS 证书验证。仅用于受控的开发环境。",
+  },
+  "models.providers.*.request.tls.key": {
+    label: "模型提供商请求 TLS 私钥",
+    help: "与 request.tls.cert 配对用于上游双向 TLS 的私钥。",
+  },
+  "models.providers.*.request.tls.passphrase": {
+    label: "模型提供商请求 TLS 私钥口令",
+    help: "用于解密 request.tls.key 的可选口令。",
+  },
+  "models.providers.*.request.tls.serverName": {
+    label: "模型提供商请求 TLS 服务器名称",
+    help: "建立上游 TLS 时使用的可选 SNI/服务器名称覆盖。",
+  },
+  "models.providers.*.timeoutSeconds": {
+    label: "模型提供商请求超时",
+    help: "可选的按提供商模型请求超时时间（秒）。提供商级请求设置影响显式的提供商自有模型行；它们不会创建隐式模型。对于自定义提供商，请与提供商 baseUrl 和 models 一同设置。适用于提供商 HTTP 请求，包括连接、请求头、请求体和总请求中止处理，并会将此提供商的 LLM 空闲/流式输出看门狗上限提高到隐式 ~120s 默认值之上。适用于缓慢的本地或自托管模型服务器，或在传输中静默缓冲推理令牌的云提供商（Gemini 预览版、大工具负载的 Claude/Opus），而不是更改全局 Agent 超时。",
+  },
+  "plugins.entries.*.hooks": {
+    label: "插件钩子策略",
+    help: "针对核心强制安全闸门的按插件类型化钩子策略控制。用于约束高影响类别的钩子，而不必禁用整个插件。",
+  },
+  "plugins.entries.*.hooks.allowConversationAccess": {
+    label: "允许会话内容读取钩子",
+    help: "控制此插件是否可以从 `before_agent_run`、`before_model_resolve`、`before_agent_reply`、`llm_input`、`llm_output`、`before_agent_finalize` 和 `agent_end` 等类型化钩子中读取原始对话内容。非内置插件必须显式选择加入。",
+  },
+  "plugins.entries.*.hooks.allowPromptInjection": {
+    label: "允许提示词注入钩子",
+    help: "控制此插件是否可以通过类型化钩子修改提示词。设为 false 可阻止 `before_prompt_build`。",
+  },
+  "plugins.entries.*.hooks.timeoutMs": {
+    label: "插件钩子超时（毫秒）",
+    help: "此插件类型化钩子的默认超时时间（毫秒），上限 600000。未设置时，每个钩子使用插件声明的超时或网关的按钩子策略；不存在单一固定默认值。hooks.timeouts 中的按钩子值优先。",
+  },
+  "plugins.entries.*.hooks.timeouts": {
+    label: "插件钩子超时覆盖",
+    help: "以类型化钩子名称为键的按钩子超时覆盖（毫秒），上限 600000。对已知较慢的钩子（如 before_prompt_build 或 agent_end）使用精细覆盖，而不是提高所有钩子的超时。",
+  },
+  "plugins.entries.*.llm": {
+    label: "插件 LLM 策略",
+    help: "按插件的 api.runtime.llm.complete 控制，用于模型和 Agent 覆盖信任。除非插件必须显式引导宿主环境拥有的补全调用，否则保持未设置。",
+  },
+  "plugins.entries.*.llm.allowAgentIdOverride": {
+    label: "允许插件覆盖 LLM Agent",
+    help: "显式允许此插件针对非默认 Agent ID 请求 api.runtime.llm.complete。除非信任该插件进行跨 Agent 模型访问，否则保持 false。",
+  },
+  "plugins.entries.*.llm.allowAuthProfileOverride": {
+    label: "允许插件覆盖 LLM 鉴权配置",
+    help: "允许此插件为隔离的 Agent 运行时补全选择非默认认证配置档。除非信任该插件进行显式的隔离凭据路由，否则保持 false。",
+  },
+  "plugins.entries.*.llm.allowModelOverride": {
+    label: "允许插件覆盖 LLM 模型",
+    help: "显式允许此插件在 api.runtime.llm.complete 中请求模型覆盖。除非信任该插件引导模型选择，否则保持 false。",
+  },
+  "plugins.entries.*.llm.allowedCompletionModels": {
+    label: "插件 LLM 允许的补全模型",
+    help: '每个插件 LLM 补全允许的目标，以规范的 "provider/model" 引用表示，包括宿主环境解析的默认值和覆盖项。仅在有意允许任意模型时才使用 "*"。',
+  },
+  "plugins.entries.*.llm.allowedModels": {
+    label: "插件 LLM 允许的模型",
+    help: '受信任插件 LLM 调用允许的覆盖目标，以规范的 "provider/model" 引用表示。仅在有意允许任意模型覆盖时才使用 "*"。',
+  },
+  "plugins.entries.*.subagent": {
+    label: "插件子 Agent 策略",
+    help: "按插件的子 Agent 运行时控制，用于模型覆盖信任和白名单。除非插件必须显式引导子 Agent 模型选择，否则保持未设置。",
+  },
+  "plugins.entries.*.subagent.allowModelOverride": {
+    label: "允许插件覆盖子 Agent 模型",
+    help: "显式允许此插件在后台子 Agent 运行中请求提供商/模型覆盖。除非信任该插件引导模型选择，否则保持 false。",
+  },
+  "plugins.entries.*.subagent.allowedModels": {
+    label: "插件子 Agent 允许的模型",
+    help: '受信任插件子 Agent 运行允许的覆盖目标，以规范的 "provider/model" 引用表示。仅在有意允许任意模型时才使用 "*"。',
+  },
+  "plugins.entries.anthropic.config.sessionCatalog.enabled": {
+    label: "发现 Claude Code 会话",
+    help: "在侧边栏中列出此网关及符合条件的已配对节点的原生 Claude Code 会话。",
+  },
+  "plugins.entries.beam.config.mirror.endpoint": {
+    label: "镜像端点",
+    help: "Beam 接收器的最终 URL，例如 https://team.example.com/api/v1/beam/sessions。不跟随重定向；重试会暂停，直到服务重启或端点变更。",
+  },
+  "plugins.entries.beam.config.mirror.token": {
+    label: "镜像令牌",
+    help: "远程接收器的网关凭据，以 Bearer 令牌形式发送。",
+  },
+  "plugins.entries.canvas.config.host.enabled": { label: "启用小组件展示器" },
+  "plugins.entries.codex.config.appServer.approvalPolicy": {
+    label: "审批策略",
+    help: "在线程启动、恢复和轮次中发送的 Codex 原生审批策略。",
+  },
+  "plugins.entries.codex.config.appServer.approvalsReviewer": {
+    label: "审批审核者",
+    help: "原生 app-server 审批使用 user 审批或 Codex auto_review。为兼容起见仍接受 guardian_subagent。",
+  },
+  "plugins.entries.codex.config.appServer.args": {
+    label: "参数",
+    help: "stdio 传输使用的参数。默认为 app-server --listen stdio://。",
+  },
+  "plugins.entries.codex.config.appServer.authToken": {
+    label: "鉴权令牌",
+    help: "发送到 WebSocket app-server 的 Bearer 令牌。",
+  },
+  "plugins.entries.codex.config.appServer.clearEnv": {
+    label: "清空环境变量",
+    help: "在覆盖应用后从启动的 stdio app-server 进程中移除的环境变量名称。",
+  },
+  "plugins.entries.codex.config.appServer.codeModeOnly": {
+    label: "仅代码模式",
+    help: "暴露 Codex 仅限 code-mode 的工具面。OpenClaw 动态工具仍可通过 Codex 嵌套工具调用使用。",
+  },
+  "plugins.entries.codex.config.appServer.command": {
+    label: "命令",
+    help: "stdio 传输使用的可执行文件。留空则使用 OpenClaw 托管的 Codex 二进制文件。",
+  },
+  "plugins.entries.codex.config.appServer.defaultWorkspaceDir": {
+    label: "默认工作区",
+    help: "省略 --cwd 时 /codex bind 使用的工作区。",
+  },
+  "plugins.entries.codex.config.appServer.experimental": {
+    label: "实验特性",
+    help: "实验性的 Codex app-server 集成。",
+  },
+  "plugins.entries.codex.config.appServer.experimental.sandboxExecServer": {
+    label: "沙箱执行服务器",
+    help: "当 OpenClaw 沙箱处于活动状态时，将原生 Codex 执行通过基于沙箱的 OpenClaw exec-server 路由。",
+  },
+  "plugins.entries.codex.config.appServer.headers": {
+    label: "请求头",
+    help: "发送到 WebSocket app-server 的附加标头。",
+  },
+  "plugins.entries.codex.config.appServer.homeScope": {
+    label: "Codex 主目录范围",
+    help: "使用 agent 获得隔离的 Codex 状态，或使用 user 与 Codex Desktop 和 CLI 共享原生 Codex 线程、配置和身份验证。",
+  },
+  "plugins.entries.codex.config.appServer.loopDetectionPreToolUseRelay": {
+    label: "循环检测工具前置转发",
+    help: "安装仅用于 OpenClaw 循环检测的 Codex PreToolUse 子进程及其 no-policy 标记。禁用可减少每工具的进程扇出；before-tool 和受信任策略转发仍会强制执行。",
+  },
+  "plugins.entries.codex.config.appServer.mode": {
+    label: "执行模式",
+    help: "旧版 Codex app-server 预设。建议使用 tools.exec.mode=auto 以获得规范化的 Guardian 审查审批。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy": {
+    label: "网络代理",
+    help: "为 app-server 命令启用 Codex permissions-profile 网络。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.allowLocalBinding": {
+    label: "允许本地绑定",
+    help: "允许通过 Codex 沙箱网络进行更广泛的本地和私有网络访问。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.allowUpstreamProxy": {
+    label: "允许上游代理",
+    help: "允许 Codex 沙箱网络通过继承的 HTTP(S)_PROXY 或 ALL_PROXY 设置进行链式转发。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.baseProfile": {
+    label: "网络代理基址",
+    help: "生成的配置文件使用的文件系统访问权限。只读沙箱默认为 read-only，其他情况默认为 workspace。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.dangerouslyAllowAllUnixSockets": {
+    label: "允许所有 Unix 套接字",
+    help: "在严格受控的环境中绕过 Codex 的 Unix 套接字白名单。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.dangerouslyAllowNonLoopbackProxy": {
+    label: "允许非环回代理",
+    help: "允许 Codex 沙箱网络监听器使用非环回绑定地址。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.domains": {
+    label: "网络域名",
+    help: "Codex 沙箱网络的域名允许和拒绝规则。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.enableSocks5": {
+    label: "启用 SOCKS5",
+    help: "为生成的 Codex 权限配置文件暴露 SOCKS5 支持。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.enableSocks5Udp": {
+    label: "启用 SOCKS5 UDP",
+    help: "SOCKS5 启用时，允许通过 SOCKS5 监听器使用 UDP。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.enabled": {
+    label: "启用网络代理",
+    help: "启用后，OpenClaw 会定义一个 Codex 权限配置文件，并通过 default_permissions 而非 sandbox 字段来选择它。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.mode": {
+    label: "网络模式",
+    help: "子进程流量的 Codex 沙箱网络模式。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.profileName": {
+    label: "网络代理配置",
+    help: "可选的稳定 Codex 权限配置文件名称。留空则使用生成的 openclaw-network 指纹名称。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.proxyUrl": {
+    label: "HTTP 代理地址",
+    help: "Codex 沙箱网络使用的 HTTP 监听 URL。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.socksUrl": {
+    label: "SOCKS 代理地址",
+    help: "Codex 沙箱网络使用的 SOCKS 监听 URL。",
+  },
+  "plugins.entries.codex.config.appServer.networkProxy.unixSockets": {
+    label: "Unix 套接字",
+    help: "Codex 沙箱网络的 Unix 套接字允许和 none 规则。",
+  },
+  "plugins.entries.codex.config.appServer.remoteWorkspaceRoot": {
+    label: "远程工作区根目录",
+    help: "远程 Codex app-server 工作区根目录，用于在启动 Codex 线程前映射 OpenClaw 的 cwd 后缀。",
+  },
+  "plugins.entries.codex.config.appServer.requestTimeoutMs": {
+    label: "请求超时",
+    help: "等待 Codex app-server 控制面请求的最长时间。",
+  },
+  "plugins.entries.codex.config.appServer.sandbox": {
+    label: "沙箱",
+    help: "在线程启动和恢复中发送的 Codex 原生沙箱模式。",
+  },
+  "plugins.entries.codex.config.appServer.serviceTier": {
+    label: "服务层级",
+    help: "可选的 Codex app-server 服务层级。使用 priority、flex 或 null。旧值 fast 会作为 priority 接受。",
+  },
+  "plugins.entries.codex.config.appServer.transport": {
+    label: "传输方式",
+    help: "使用 stdio 在本地启动 Codex，或使用 unix 共享本地控制套接字。远程 websocket 传输是实验性的，且不受 Codex 支持。",
+  },
+  "plugins.entries.codex.config.appServer.url": {
+    label: "WebSocket 地址",
+    help: "transport 为 websocket 时 Codex app-server 的 WebSocket URL。",
+  },
+  "plugins.entries.codex.config.codexPlugins.allow_all_plugins": {
+    label: "允许所有已连接应用",
+    help: "当新 Codex 线程启动时，暴露已认证 Codex 账号连接的每个当前可访问应用。",
+  },
+  "plugins.entries.codex.config.codexPlugins.allow_destructive_actions": {
+    label: "允许插件执行破坏性操作",
+    help: "插件应用写入或破坏性操作 elicitation 的默认策略。true 表示无需提示即接受安全 schema；false 表示拒绝；auto 表示在 Codex 要求审批时通过插件审批进行询问；ask 表示对每次写入/破坏性操作都提示，且不进行持久审批。",
+  },
+  "plugins.entries.codex.config.codexPlugins.enabled": {
+    label: "启用原生插件",
+    help: "向 Codex 宿主环境轮次暴露显式的 Codex 插件条目。",
+  },
+  "plugins.entries.codex.config.codexPlugins.plugins": {
+    label: "插件条目",
+    help: "显式插件条目。不支持通配符键 *。",
+  },
+  "plugins.entries.codex.config.computerUse.autoInstall": {
+    label: "自动安装",
+    help: "在 Codex 模式轮次开始时安装所配置的 Computer Use 插件。",
+  },
+  "plugins.entries.codex.config.computerUse.autoRepair": {
+    label: "自动修复",
+    help: "为 true 时，Computer Use 实时测试失败会先重新加载 Codex 所有的 MCP 运行时，然后重试一次。",
+  },
+  "plugins.entries.codex.config.computerUse.enabled": {
+    label: "启用计算机操作",
+    help: "为 true 时，Codex 模式轮次要求所配置的 Computer Use MCP 服务器可用。",
+  },
+  "plugins.entries.codex.config.computerUse.healthCheckEnabled": {
+    label: "定期健康检查",
+    help: "为 true 时，按所配置的节奏定期运行 Computer Use 实时探测。",
+  },
+  "plugins.entries.codex.config.computerUse.healthCheckIntervalMinutes": {
+    label: "健康检查间隔",
+    help: "启用健康检查时，定期 Computer Use 健康检查的节奏。",
+  },
+  "plugins.entries.codex.config.computerUse.liveTestTimeoutMs": {
+    label: "在线测试超时",
+    help: "Computer Use list_apps 就绪探测的最长时间，超过后 status 和启动流程会将实测视为失败。",
+  },
+  "plugins.entries.codex.config.computerUse.marketplaceDiscoveryTimeoutMs": {
+    label: "插件市场发现超时",
+    help: "在 Computer Use 安装期间等待 Codex app-server 完成加载市场的最长时间。",
+  },
+  "plugins.entries.codex.config.computerUse.marketplaceName": {
+    label: "插件市场名称",
+    help: "可选的已注册 Codex 市场名称，需包含 Computer Use 插件。",
+  },
+  "plugins.entries.codex.config.computerUse.marketplacePath": {
+    label: "插件市场路径",
+    help: "可选的本地 Codex 市场文件路径，需包含 Computer Use 插件。",
+  },
+  "plugins.entries.codex.config.computerUse.marketplaceSource": {
+    label: "插件市场来源",
+    help: "可选的 Codex 市场来源，在安装 Computer Use 之前添加。",
+  },
+  "plugins.entries.codex.config.computerUse.mcpServerName": {
+    label: "MCP 服务器名称",
+    help: "Computer Use 插件暴露的 MCP 服务器名称。",
+  },
+  "plugins.entries.codex.config.computerUse.pluginCacheMode": {
+    label: "插件缓存模式",
+    help: "默认的 independent 模式让每个 Codex home 保持不受管理。选择 shared 可启用刷新后的可供 Codex 发现的缓存副本。",
+  },
+  "plugins.entries.codex.config.computerUse.pluginName": {
+    label: "插件名称",
+    help: "Computer Use 在 Codex 市场中的插件名称。",
+  },
+  "plugins.entries.codex.config.computerUse.strictReadiness": {
+    label: "严格就绪检查",
+    help: "为 true 时，Computer Use 实时探测失败会阻止 Codex 模式启动。默认值 false 通过继续执行并发出警告来保留已启用的现有配置。",
+  },
+  "plugins.entries.codex.config.computerUse.toolCallTimeoutMs": {
+    label: "工具调用超时",
+    help: "诸如 list_apps 之类的真实 Computer Use 工具调用的最长预期时间，超过后 OpenClaw 会将子运行时视为失效。",
+  },
+  "plugins.entries.codex.config.discovery.enabled": {
+    label: "启用发现",
+    help: "为 false 时，OpenClaw 保留 Codex 宿主环境可用，但使用内置的回退模型列表。",
+  },
+  "plugins.entries.codex.config.discovery.timeoutMs": {
+    label: "发现超时",
+    help: "等待 Codex app-server 模型发现的最长时间，超时后回退到内置模型列表。",
+  },
+  "plugins.entries.codex.config.sessionCatalog.enabled": {
+    label: "发现 Codex 会话",
+    help: "在侧边栏中列出此网关及符合条件的已配对节点的原生 Codex 会话。",
+  },
+  "plugins.entries.codex.config.sessionCatalog.homes": {
+    label: "额外 Codex 主目录",
+    help: "要纳入原生会话发现的现有本地 Codex home 目录。字符串路径使用规范化后的目录基名作为标签；对象条目可以用 label 覆盖。路径会被规范化并去重。需要 appServer.transport=stdio 并重启网关。",
+  },
+  "plugins.entries.codex.config.supervision.allowRawTranscripts": {
+    label: "允许原始对话记录工具",
+    help: "允许监督 Agent 工具（包括包含轮次的 codex_threads 读取）暴露完整对话记录及对话记录预览。",
+  },
+  "plugins.entries.codex.config.supervision.allowWriteControls": {
+    label: "允许写入控制工具",
+    help: "允许监督 Agent 工具控制轮次，并让 codex_threads 分叉、重命名、归档或取消归档原生线程。",
+  },
+  "plugins.entries.codex.config.supervision.enabled": {
+    label: "启用 Codex 监督",
+    help: "启用面向 Agent 的 Codex 监督工具。只要插件处于活动状态，操作员会话目录就保持可用。",
+  },
+  "plugins.entries.codex.config.supervision.endpoints": {
+    label: "旧版监督端点",
+    help: "供已迁移的 Codex Supervisor Agent 工具使用的高级兼容端点。",
+  },
+  "plugins.entries.google.config.webSearch.apiKey": {
+    label: "Gemini 搜索 API 密钥",
+    help: "用于 Google Search grounding 的 Gemini API 密钥（回退：GEMINI_API_KEY 环境变量）。",
+  },
+  "plugins.entries.google.config.webSearch.baseUrl": {
+    label: "Gemini 搜索基础 URL",
+    help: "可选的 Gemini API 基础 URL，用于网页搜索 grounding 代理。",
+  },
+  "plugins.entries.google.config.webSearch.headers": {
+    label: "Gemini 搜索请求头",
+    help: "可选的标头，会合并到 Gemini 网页搜索请求中。标头包含机密时请使用 SecretRef 值。",
+  },
+  "plugins.entries.google.config.webSearch.model": {
+    label: "Gemini 搜索模型",
+    help: "用于网页搜索 grounding 的 Gemini 模型覆盖。",
+  },
+  "plugins.entries.huggingface.config.discovery.enabled": {
+    label: "启用发现",
+    help: "为 false 时，OpenClaw 保留 Hugging Face 插件可用，但跳过从环境 Hugging Face 凭据进行的隐式启动发现。",
+  },
+  "plugins.entries.imap.config.accounts.*.agentId": { label: "受限读取 Agent" },
+  "plugins.entries.imap.config.accounts.*.allowedSenders": {
+    label: "允许的发件人",
+    help: "允许触发 reader Agent 的邮箱地址或 @domain 条目。",
+  },
+  "plugins.entries.imap.config.accounts.*.password": { label: "IMAP 密码" },
+  "plugins.entries.imap.config.accounts.*.senderAuth.min": { label: "最低发件人鉴权要求" },
+  "plugins.entries.linux-node.config.camera.enabled": {
+    label: "摄像头",
+    help: "安装了 FFmpeg 时暴露相机命令。需要重启节点服务。",
+  },
+  "plugins.entries.linux-node.config.location.enabled": {
+    label: "位置",
+    help: "安装了 GeoClue where-am-i 演示时暴露 location.get。需要重启节点服务。",
+  },
+  "plugins.entries.linux-node.config.notify.enabled": {
+    label: "桌面通知",
+    help: "安装了 notify-send 时暴露 system.notify。默认启用。",
+  },
+  "plugins.entries.memory-core.config.dreaming.enabled": {
+    label: "启用梦境整理",
+    help: "运行默认的后台记忆整理扫描。禁用可停止托管计划。",
+  },
+  "plugins.entries.memory-core.config.dreaming.frequency": {
+    label: "梦境整理频率",
+    help: "完整做梦扫描（浅层、REM，然后深层）的可选 cron 节奏。",
+  },
+  "plugins.entries.memory-core.config.dreaming.model": {
+    label: "梦境整理模型",
+    help: "Dream Diary 叙事子 Agent 运行的可选提供商/模型覆盖。需要 plugins.entries.memory-core.subagent.allowModelOverride。",
+  },
+  "plugins.entries.memory-core.config.dreaming.phases.deep.maxPriorEntryLossFraction": {
+    label: "历史条目最大丢失率",
+    help: "一次被接受的整理重写可移除的先前 MEMORY.md 条目的最大比例。",
+  },
+  "plugins.entries.memory-wiki.config.bridge.enabled": {
+    label: "启用桥接模式",
+    help: "在桥接模式下从活动记忆插件读取公开的记忆产物和事件。",
+  },
+  "plugins.entries.memory-wiki.config.bridge.readMemoryArtifacts": {
+    label: "读取记忆产物",
+    help: "启用从活动记忆插件的公开产物导出进行桥接读取。",
+  },
+  "plugins.entries.memory-wiki.config.context.includeCompiledDigestPrompt": {
+    label: "在提示词中包含编译摘要",
+    help: "为上下文引擎和旧版提示词组装，向记忆提示词部分追加一个紧凑的已编译 wiki 摘要快照。",
+  },
+  "plugins.entries.memory-wiki.config.obsidian.useOfficialCli": {
+    label: "使用 Obsidian CLI",
+    help: "在可用时探测并使用官方 Obsidian CLI。",
+  },
+  "plugins.entries.memory-wiki.config.unsafeLocal.allowPrivateMemoryCoreAccess": {
+    label: "允许访问私密记忆",
+    help: "实验性的同仓库逃生通道，用于读取 memory-core 私有路径。",
+  },
+  "plugins.entries.memory-wiki.config.vault.path": {
+    label: "Vault 路径",
+    help: "全局范围下的确切 Vault 路径，或每个 Agent 的 Vault 的父目录。",
+  },
+  "plugins.entries.memory-wiki.config.vault.renderMode": {
+    label: "渲染模式",
+    help: "以原生 OpenClaw 格式或 Obsidian 友好格式渲染 markdown。",
+  },
+  "plugins.entries.memory-wiki.config.vault.scope": {
+    label: "Vault 范围",
+    help: "使用一个全局 Vault，或为每个 Agent 使用单独的子 Vault。",
+  },
+  "plugins.entries.minimax.config.webSearch.apiKey": {
+    label: "MiniMax Token Plan 密钥",
+    help: "MiniMax Token Plan 密钥或 OAuth 令牌（回退：MINIMAX_CODE_PLAN_KEY、MINIMAX_CODING_API_KEY、MINIMAX_OAUTH_TOKEN，或已指向 token-plan 凭据的 MINIMAX_API_KEY）。",
+  },
+  "plugins.entries.minimax.config.webSearch.region": {
+    label: "MiniMax 搜索区域",
+    help: "搜索端点区域覆盖。留空则复用所配置的 MiniMax 主机或 MINIMAX_API_HOST。",
+  },
+  "plugins.entries.ollama.config.discovery.enabled": {
+    label: "启用发现",
+    help: "为 false 时，OpenClaw 保留 Ollama 插件可用，但跳过对环境中的本地或远程 Ollama 模型的隐式启动发现。",
+  },
+  "plugins.entries.ollama.config.nodeInference.enabled": {
+    label: "启用节点推理",
+    help: "为 false 时，此节点主机不播报也不接受 Ollama 节点推理命令。",
+  },
+  "plugins.entries.ollama.config.webSearch.baseUrl": {
+    label: "网页搜索基础 URL",
+    help: "仅用于网页搜索的可选 Ollama 主机覆盖。",
+  },
+  "plugins.entries.session-share.config.nodes.*.linkGitHubIdentities": {
+    label: "关联 GitHub 身份",
+    help: "信任此已配对节点的数字 GitHub 账号声明，用于本地 profile 显示归属。默认关闭。",
+  },
+  "plugins.entries.session-share.config.nodes.*.owner": {
+    label: "默认所有者",
+    help: "未归属会话的本地显示所有者：github:<login> 或 profile:<profileId>。",
+  },
+  "plugins.entries.session-share.config.share.groups": {
+    label: "共享会话群组",
+    help: "只有处于这些确切群组名称中的会话才会发布。子 Agent、隐身、草稿和已采纳目录会话永远不会共享。",
+  },
+  "plugins.entries.xai.config.codeExecution.enabled": {
+    label: "启用代码执行",
+    help: "在活跃的 xAI 模型上暴露 code_execution；当活跃提供商已知为非 xAI 时，true 表示选择启用，false 表示禁用，缺少提供商信息时保守禁用。需要 xAI 认证；xAI 按 1,000 次调用 5 美元外加模型令牌计费。",
+  },
+  "plugins.entries.xai.config.codeExecution.maxTurns": {
+    label: "代码执行最大轮次",
+    help: "xAI 在 code_execution 中可使用的内部工具轮次上限（可选）。",
+  },
+  "plugins.entries.xai.config.codeExecution.model": {
+    label: "代码执行模型",
+    help: "用于 code_execution 的 xAI 模型覆盖。",
+  },
+  "plugins.entries.xai.config.codeExecution.timeoutSeconds": {
+    label: "代码执行超时",
+    help: "code_execution 请求的超时时间（秒）。",
+  },
+  "plugins.entries.xai.config.webSearch.apiKey": {
+    label: "Grok 搜索 API 密钥",
+    help: "用于 Grok 网页搜索的可选 xAI API 密钥；xAI OAuth 或 XAI_API_KEY 可满足此要求。",
+  },
+  "plugins.entries.xai.config.webSearch.baseUrl": {
+    label: "Grok 搜索基础 URL",
+    help: "可选的 xAI Responses API 基础 URL，用于 Grok web_search 和 x_search 回退。",
+  },
+  "plugins.entries.xai.config.webSearch.inlineCitations": {
+    label: "内联引用来源",
+    help: "在 Grok 响应中包含内联 markdown 引用。",
+  },
+  "plugins.entries.xai.config.webSearch.model": {
+    label: "Grok 搜索模型",
+    help: "用于网页搜索的 Grok 模型覆盖。",
+  },
+  "plugins.entries.xai.config.xSearch.baseUrl": {
+    label: "X 搜索基础 URL",
+    help: "可选的 xAI Responses API 基础 URL，用于 x_search 请求。",
+  },
+  "plugins.entries.xai.config.xSearch.cacheTtlMinutes": {
+    label: "X 搜索缓存有效期",
+    help: "x_search 结果的缓存有效期（分钟）。",
+  },
+  "plugins.entries.xai.config.xSearch.enabled": {
+    label: "启用 X 搜索",
+    help: "在活跃的 xAI 模型上暴露 x_search；当活跃提供商已知为非 xAI 时，true 表示选择启用，false 表示禁用，缺少提供商信息时保守禁用。需要 xAI 认证；xAI 按 1,000 次调用 5 美元外加模型令牌计费。",
+  },
+  "plugins.entries.xai.config.xSearch.inlineCitations": {
+    label: "X 搜索内联引用",
+    help: "在可用时，于 x_search 响应中保留来自 xAI 的内联 markdown 引用。",
+  },
+  "plugins.entries.xai.config.xSearch.maxTurns": {
+    label: "X 搜索最大轮次",
+    help: "xAI 在每次 x_search 请求中可使用的内部工具轮次上限（可选）。",
+  },
+  "plugins.entries.xai.config.xSearch.model": {
+    label: "X 搜索模型",
+    help: "用于 x_search 的 xAI 模型覆盖。",
+  },
+  "plugins.entries.xai.config.xSearch.timeoutSeconds": {
+    label: "X 搜索超时",
+    help: "x_search 请求的超时时间（秒）。",
+  },
+  presence: { label: "在线状态" },
+  "session.sendPolicy.rules.*.action": {
+    label: "会话发送规则动作",
+    help: '当对应匹配条件满足时，将规则判定定义为 "allow" 或 "deny"。在强制严格边界并附带显式允许例外时，使用 deny 优先的排序。',
+  },
+  "session.sendPolicy.rules.*.match": {
+    label: "会话发送规则匹配条件",
+    help: "定义可选的规则匹配条件，可组合渠道、chatType 和键前缀约束。匹配应保持收窄，以使策略意图保持可读、调试保持简单。",
+  },
+  "session.sendPolicy.rules.*.match.channel": {
+    label: "会话发送规则渠道",
+    help: "将规则应用匹配到特定渠道/提供商 ID（例如 discord、telegram、slack）。当某个渠道需要独立于其他渠道允许或拒绝投递时使用。",
+  },
+  "session.sendPolicy.rules.*.match.chatType": {
+    label: "会话发送规则聊天类型",
+    help: "将规则应用匹配到聊天类型（direct、group、thread），使行为因会话形式而异。当私聊和群组目的地需要不同的安全边界时使用。",
+  },
+  "session.sendPolicy.rules.*.match.keyPrefix": {
+    label: "会话发送规则键前缀",
+    help: "在策略消费方内部键规范化步骤之后，匹配规范化会话键前缀。用于一般前缀控制；需要精确全键匹配时优先使用 rawKeyPrefix。",
+  },
+  "session.sendPolicy.rules.*.match.rawKeyPrefix": {
+    label: "会话发送规则原始键前缀",
+    help: "匹配原始未规范化的会话键前缀，实现精确的全键策略定位。当规范化 keyPrefix 过于宽泛、需要 Agent 前缀或传输特定的精确性时使用。",
+  },
+  "surfaces.*.silentReply": {
+    label: "界面静默回复策略",
+    help: "为单个已解析的投递面覆盖静默回复策略。未设置的字段继承 agents.defaults.silentReply；请使用窄化的投递面 id，以免内部或群组专属行为波及其他目的地。",
+  },
+  "talk.providers.*": {
+    label: "语音对话提供商配置",
+    help: "与对应提供商 ID 匹配的、由提供商拥有的 Talk 配置字段。",
+  },
+  "talk.realtime.providers.*": {
+    label: "语音对话实时提供商配置",
+    help: "与对应提供商 ID 匹配的、由提供商拥有的实时语音配置。",
+  },
+  "talk.realtime.providers.*.apiKey": {
+    label: "语音对话实时提供商 API 密钥",
+    help: "实时 Talk 使用的提供商 API 密钥。",
+  },
+  "tools.codeMode.enabled": {
+    label: "启用代码模式",
+    help: '全局 OpenClaw Code Mode 激活。全局设置完全缺失时默认为 `"auto"`；已编写的对象若没有 `enabled` 则保持关闭。`"auto"` 启用偏好目录的模型，`true` 启用具备工具能力的运行。Agent 和模型激活覆盖优先。已启用的运行在运行时不可用时安全失败，而不是暴露完整工具列表。',
+  },
+  "tools.codeMode.executor": {
+    label: "代码模式执行器",
+    help: 'JavaScript 执行器："node"（默认）使用 Node vm 运行受信任的代码，不是安全沙箱；"quickjs" 使用内置的 QuickJS WASM 插件进行加固的访客执行。工具权限对两者都适用。所选执行器缺失时安全失败。',
+  },
+  "tools.codeMode.maxOutputBytes": {
+    label: "代码模式输出限制",
+    help: "通过 code-mode 输出返回的最大序列化字节数。",
+  },
+  "tools.codeMode.maxPendingToolCalls": {
+    label: "代码模式待处理工具上限",
+    help: "code-mode VM 在必须稍后恢复之前可启动的最大并发嵌套工具调用数。",
+  },
+  "tools.codeMode.maxSearchLimit": {
+    label: "代码模式最大搜索结果数",
+    help: "code-mode 程序可请求的隐藏目录搜索结果最大数量。",
+  },
+  "tools.codeMode.maxSnapshotBytes": {
+    label: "代码模式快照上限",
+    help: "单个挂起的 QuickJS 快照保留的最大序列化字节数。",
+  },
+  "tools.codeMode.memoryLimitBytes": {
+    label: "代码模式内存限制",
+    help: "QuickJS 访客堆限制或尽力而为的 Node 工作节点 V8 堆预算（字节）。Node 运行时开销和最小引擎分配会影响有效预算；外部缓冲区和进程 RSS 不计算在内。这不是安全保证。",
+  },
+  "tools.codeMode.mode": {
+    label: "代码模式呈现方式",
+    help: '面向模型的界面。仅支持 "only"：暴露 code-mode 的 `exec` 和 `wait`，并隐藏常规工具。',
+  },
+  "tools.codeMode.searchDefaultLimit": {
+    label: "代码模式默认搜索结果数",
+    help: "code mode 内 `catalog.search` 返回的隐藏目录搜索结果的默认数量。",
+  },
+  "tools.codeMode.snapshotTtlSeconds": {
+    label: "代码模式快照有效期",
+    help: "挂起的 Code Mode 运行在过期前可通过 `wait` 恢复的时长。",
+  },
+  "tools.codeMode.timeoutMs": {
+    label: "代码模式超时",
+    help: "单次 code-mode `exec` 或 `wait` 调用的最大毫秒数。",
+  },
+  "tools.swarm.defaultAgentId": {
+    label: "集群默认 Agent",
+    help: "省略 agentId 的 swarm 派生的默认目标 Agent。子 Agent 白名单仍然适用。",
+  },
+  "tools.swarm.enabled": {
+    label: "启用集群（Swarm）",
+    help: "启用 collector 模式的子 Agent 和 agents_wait。默认开启；设为 false 可退出。",
+  },
+  "tools.swarm.maxChildrenPerGroup": {
+    label: "每群组活跃子任务数",
+    help: "每个 swarm 群组中存活的 collector 子任务最大数量。",
+  },
+  "tools.swarm.maxConcurrent": {
+    label: "集群并发子任务数",
+    help: "每个 swarm 群组中并发运行的 collector 子任务最大数量。",
+  },
+  "tools.swarm.maxTotalPerGroup": {
+    label: "每群组子任务总数",
+    help: "每个 swarm 群组整个生命周期内的 collector 派生次数上限。",
+  },
+  "tools.swarm.waitTimeoutSecondsMax": {
+    label: "集群最大等待超时",
+    help: "agents_wait 接受的最大超时时间（秒）。",
+  },
+  "tools.toolSearch.codeTimeoutMs": {
+    label: "工具搜索代码执行超时",
+    help: "单次 `tool_search_code` 执行的最大毫秒数。运行时会将值钳制到支持的 1s..60s 范围内。",
+  },
+  "tools.toolSearch.enabled": {
+    label: "启用工具搜索",
+    help: "启用 Tool Search。开启后，OpenClaw 在嵌入式运行时运行期间将大型工具目录隐藏在 `tool_search_code` 或结构化的 search/describe/call 工具之后。",
+  },
+  "tools.toolSearch.maxSearchLimit": {
+    label: "工具搜索最大结果数",
+    help: "模型可请求的 Tool Search 结果最大数量。运行时会将值钳制到支持的 1..50 范围内。",
+  },
+  "tools.toolSearch.mode": {
+    label: "工具搜索呈现方式",
+    help: '选择面向模型的界面："code" 暴露 `tool_search_code`；"tools" 暴露结构化的 search/describe/call 回退工具；"directory" 保持一个有界的工具目录可见，暴露一组有界的可能或必需 schema，并将其余部分延迟到 search/describe/call 之后。',
+  },
+  "tools.toolSearch.searchDefaultLimit": {
+    label: "工具搜索默认结果数",
+    help: "模型未指定限制时返回的 Tool Search 结果默认数量。运行时会将其钳制到 `maxSearchLimit`。",
+  },
+  "tools.web.search.openaiCodex.userLocation.city": {
+    label: "Codex 用户所在城市",
+    help: "发送到 Codex 原生网页搜索的近似城市。",
+  },
+  "tools.web.search.openaiCodex.userLocation.country": {
+    label: "Codex 用户所在国家",
+    help: "发送到 Codex 原生网页搜索的近似国家。",
+  },
+  "tools.web.search.openaiCodex.userLocation.region": {
+    label: "Codex 用户所在地区",
+    help: "发送到 Codex 原生网页搜索的近似地区/州。",
+  },
+  "tools.web.search.openaiCodex.userLocation.timezone": {
+    label: "Codex 用户时区",
+    help: "发送到 Codex 原生网页搜索的近似时区。",
+  },
+  "transcripts.autoStart.*.accountId": {
+    label: "对话记录账号 ID",
+    help: "需要区分账号的对话记录源的可选提供商账号或工作区标识符。请使用提供商文档中说明的账号 id 格式。",
+  },
+  "transcripts.autoStart.*.channelId": {
+    label: "对话记录渠道 ID",
+    help: "实时对话记录源的提供商频道 id，例如 Discord 语音频道或 Slack huddle 频道。启用自动启动前请先确认该提供商特有的 id 语义。",
+  },
+  "transcripts.autoStart.*.guildId": {
+    label: "Discord 服务器 ID",
+    help: "Discord 语音对话记录源的可选 Discord 服务器 ID。当提供商需要按服务器范围查找语音频道时，请与对应的 channelId 一起配置。",
+  },
+  "transcripts.autoStart.*.meetingUrl": {
+    label: "对话记录会议链接",
+    help: "对于通过 URL 而非频道 id 加入的提供商，此为可选的会议 URL。请只使用可信的会议链接，因为自动启动可能会加入并采集该会议。",
+  },
+  "transcripts.autoStart.*.providerId": {
+    label: "对话记录来源提供方 ID",
+    help: "对话记录源的提供商 id，例如 Discord 语音或未来的 Slack huddle 提供商。请使用提供商插件暴露的准确 id。",
+  },
+  "transcripts.autoStart.*.sessionId": {
+    label: "对话记录会话 ID",
+    help: "此自动启动源的可选固定对话记录会话 id。whenOccupied 为 true 时忽略。除非需要稳定的按日选择器且能避免同日冲突，否则请留空以使用自动生成的 id。",
+  },
+  "transcripts.autoStart.*.title": {
+    label: "对话记录标题",
+    help: "后续对话记录采集的可选标题。仅更改标题会让当前采集继续运行，且不会重命名已登记的标题或已保存的笔记。其他源更改仍按正常的重启逻辑处理。",
+  },
+  "transcripts.autoStart.*.whenOccupied": {
+    label: "对话记录占用时捕获",
+    help: "每当源中有人出现时就开启新的对话记录会话，并在最后一人离开后停止（同时生成笔记）。需要能报告占用状态的提供商，例如 discord-voice。默认：false（从网关启动起持续采集）。",
+  },
+  "transcripts.autoStart[].accountId": {
+    label: "对话记录账号 ID",
+    help: "需要区分账号的对话记录源的可选提供商账号或工作区标识符。请使用提供商文档中说明的账号 id 格式。",
+  },
+  "transcripts.autoStart[].channelId": {
+    label: "对话记录渠道 ID",
+    help: "实时对话记录源的提供商频道 id，例如 Discord 语音频道或 Slack huddle 频道。启用自动启动前请先确认该提供商特有的 id 语义。",
+  },
+  "transcripts.autoStart[].guildId": {
+    label: "Discord 服务器 ID",
+    help: "Discord 语音对话记录源的可选 Discord 服务器 ID。当提供商需要按服务器范围查找语音频道时，请与对应的 channelId 一起配置。",
+  },
+  "transcripts.autoStart[].meetingUrl": {
+    label: "对话记录会议链接",
+    help: "对于通过 URL 而非频道 id 加入的提供商，此为可选的会议 URL。请只使用可信的会议链接，因为自动启动可能会加入并采集该会议。",
+  },
+  "transcripts.autoStart[].providerId": {
+    label: "对话记录来源提供方 ID",
+    help: "对话记录源的提供商 id，例如 Discord 语音或未来的 Slack huddle 提供商。请使用提供商插件暴露的准确 id。",
+  },
+  "transcripts.autoStart[].sessionId": {
+    label: "对话记录会话 ID",
+    help: "此自动启动源的可选固定对话记录会话 id。whenOccupied 为 true 时忽略。除非需要稳定的按日选择器且能避免同日冲突，否则请留空以使用自动生成的 id。",
+  },
+  "transcripts.autoStart[].title": {
+    label: "对话记录标题",
+    help: "后续对话记录采集的可选标题。仅更改标题会让当前采集继续运行，且不会重命名已登记的标题或已保存的笔记。其他源更改仍按正常的重启逻辑处理。",
+  },
+  "transcripts.autoStart[].whenOccupied": {
+    label: "对话记录占用时捕获",
+    help: "每当源中有人出现时就开启新的对话记录会话，并在最后一人离开后停止（同时生成笔记）。需要能报告占用状态的提供商，例如 discord-voice。默认：false（从网关启动起持续采集）。",
+  },
+  "tts.personas.*": {
+    label: "TTS 人设",
+    help: "一个 TTS 人设。使用按提供商的绑定来指定确切的语音/模型和提示词模板。",
+  },
+  "tts.personas.*.providers": {
+    label: "TTS 人设提供商绑定",
+    help: "以语音提供商 ID 为键的按提供商 TTS 人设绑定。它们会为活动人设合并到 tts.providers 之上。",
+  },
+  "tts.providers.*": {
+    label: "TTS 提供商配置",
+    help: "单个语音提供商 ID 的按提供商 TTS 配置。字段范围应限于拥有该提供商的插件。",
+  },
+  "tts.providers.*.apiKey": {
+    label: "TTS 提供商 API 密钥",
+    help: "当该语音提供商的插件需要经过认证的 TTS 访问时使用的提供商 API 密钥。",
+  },
+  tui: {
+    label: "终端界面",
+    help: "终端 UI 显示设置。此节用于仅影响终端呈现的偏好设置，不改变网关或其他 UI 行为。",
+  },
+  "tui.footer": {
+    label: "终端界面底栏",
+    help: "终端 UI 底栏显示设置。保持可选上下文紧凑，使会话、模型、目标和令牌信息保持可读。",
+  },
+  voicewake: { label: "语音唤醒" },
 };
