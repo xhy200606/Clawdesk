@@ -41,12 +41,21 @@ export class OcDefaultModelConfig extends LitElement {
   @property({ type: Array }) allModels: AllowlistModel[] = [];
   @property({ attribute: false }) allowedModels: Set<string> = new Set();
   @property({ type: String }) modelsMode = "merge";
+  @property({ type: String }) currentUtilityModel = "";
+  @property({ type: String }) currentDecisionModel = "";
+  @property({ type: Array }) currentFallbacks: string[] = [];
 
   // ── Internal state (managed here → no parent re-render) ──
   @state() private _defOpen = false;
   @state() private _defExpanded = new Set<string>();
   @state() private _imgOpen = false;
   @state() private _imgExpanded = new Set<string>();
+  @state() private _utilOpen = false;
+  @state() private _utilExpanded = new Set<string>();
+  @state() private _decOpen = false;
+  @state() private _decExpanded = new Set<string>();
+  @state() private _fbOpen = false;
+  @state() private _fbExpanded = new Set<string>();
 
   createRenderRoot() {
     return this;
@@ -87,6 +96,67 @@ export class OcDefaultModelConfig extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private _dispatch(name: string, detail: unknown) {
+    this.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
+  }
+
+  private _addFallback(value: string) {
+    if (!value || this.currentFallbacks.includes(value)) return;
+    this._dispatch("fallbacks-change", { fallbacks: [...this.currentFallbacks, value] });
+  }
+
+  private _removeFallback(index: number) {
+    const next = this.currentFallbacks.filter((_, i) => i !== index);
+    this._dispatch("fallbacks-change", { fallbacks: next });
+  }
+
+  // 通用「可选模型」下拉（带 — 关闭 — 项），供辅助/决策/备用模型复用
+  private _renderOptionalModelDropdown(opts: {
+    value: string;
+    groups: DropdownGroup[];
+    open: boolean;
+    expanded: Set<string>;
+    set: (patch: { open?: boolean; expanded?: Set<string> }) => void;
+    onSelect: (value: string) => void;
+  }) {
+    const disabledItem: DropdownItem = {
+      value: "",
+      label: t("defaultModelConfig.disabled") ?? "— 关闭 —",
+    };
+    return renderDropdown({
+      value: opts.value || null,
+      placeholder: t("defaultModelConfig.disabled") ?? "— 关闭 —",
+      items: [disabledItem],
+      groups: opts.groups,
+      open: opts.open,
+      disabled: this.saving,
+      expandedGroups: opts.expanded,
+      onToggle: () => {
+        const nextOpen = !opts.open;
+        opts.set({ open: nextOpen });
+        if (nextOpen) {
+          const close = () => {
+            opts.set({ open: false });
+          };
+          requestAnimationFrame(() => document.addEventListener("click", close, { once: true }));
+        }
+      },
+      onSelect: (value: string) => {
+        opts.set({ open: false });
+        opts.onSelect(value);
+      },
+      onGroupToggle: (label: string) => {
+        const s = new Set(opts.expanded);
+        if (s.has(label)) {
+          s.delete(label);
+        } else {
+          s.add(label);
+        }
+        opts.set({ expanded: s });
+      },
+    });
   }
 
   render() {
@@ -249,6 +319,88 @@ export class OcDefaultModelConfig extends LitElement {
                     ${t("defaultModelConfig.imageModelHint") ?? "用于自动识别用户发送的图片内容"}
                   </span>
                 `}
+          </div>
+
+          <!-- 辅助模型（utilityModel） -->
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 500;">辅助模型</span>
+            ${this._renderOptionalModelDropdown({
+              value: this.currentUtilityModel,
+              groups: this.modelGroups,
+              open: this._utilOpen,
+              expanded: this._utilExpanded,
+              set: (p) => {
+                if (p.open !== undefined) this._utilOpen = p.open;
+                if (p.expanded !== undefined) this._utilExpanded = p.expanded;
+              },
+              onSelect: (value: string) => this._dispatch("utility-model-change", { model: value }),
+            })}
+            <span class="muted" style="font-size: 11px;">
+              用于生成标题、进度播报等短任务的低成本模型；留空则自动沿用主模型
+            </span>
+          </div>
+
+          <!-- 决策模型（decisionModel） -->
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 500;">决策模型</span>
+            ${this._renderOptionalModelDropdown({
+              value: this.currentDecisionModel,
+              groups: this.modelGroups,
+              open: this._decOpen,
+              expanded: this._decExpanded,
+              set: (p) => {
+                if (p.open !== undefined) this._decOpen = p.open;
+                if (p.expanded !== undefined) this._decExpanded = p.expanded;
+              },
+              onSelect: (value: string) =>
+                this._dispatch("decision-model-change", { model: value }),
+            })}
+            <span class="muted" style="font-size: 11px;">
+              用于类型化选择、评分与布尔判定的模型；留空则禁用决策调用
+            </span>
+          </div>
+
+          <!-- 备用模型（model.fallbacks） -->
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 500;">备用模型</span>
+            ${this._renderOptionalModelDropdown({
+              value: "",
+              groups: this.modelGroups,
+              open: this._fbOpen,
+              expanded: this._fbExpanded,
+              set: (p) => {
+                if (p.open !== undefined) this._fbOpen = p.open;
+                if (p.expanded !== undefined) this._fbExpanded = p.expanded;
+              },
+              onSelect: (value: string) => {
+                this._fbOpen = false;
+                this._addFallback(value);
+              },
+            })}
+            ${this.currentFallbacks.length > 0
+              ? html`
+                  <div class="model-fallbacks__list">
+                    ${this.currentFallbacks.map(
+                      (fb, i) => html`
+                        <span class="model-fallbacks__item">
+                          <span class="model-fallbacks__order">${i + 1}</span>
+                          <span class="model-fallbacks__value">${fb}</span>
+                          <button
+                            type="button"
+                            class="model-fallbacks__remove"
+                            ?disabled=${this.saving}
+                            title="移除"
+                            @click=${() => this._removeFallback(i)}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      `,
+                    )}
+                  </div>
+                `
+              : nothing}
+            <span class="muted" style="font-size: 11px;"> 主模型失败时按顺序依次尝试这些模型 </span>
           </div>
 
           <!-- Sección de allowlist de modelos -->

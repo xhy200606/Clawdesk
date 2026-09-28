@@ -242,11 +242,17 @@ export function ChannelsView() {
       const accountId = f.accountId.trim();
 
       if (channel === "telegram") {
+        // streaming 必须是对象（schema: streaming.mode = off|partial|block|progress）；
+        // 「启用流媒体输出」→ partial，「启用块流」→ block，两者互斥（UI 开关已保证）。
+        const telegramStreamingMode = f.telegramStreaming
+          ? "partial"
+          : f.telegramBlockStreaming
+            ? "block"
+            : "off";
         const accountObj: Record<string, unknown> = {
           dmPolicy: "pairing",
           botToken: f.botToken.trim(),
           groupPolicy: "allowlist",
-          streaming: "off",
         };
         updateConfigFormValue(reactive, ["channels", "telegram", "enabled"], true);
         updateConfigFormValue(
@@ -254,12 +260,9 @@ export function ChannelsView() {
           ["channels", "telegram", "accounts", accountId],
           accountObj,
         );
-        updateConfigFormValue(reactive, ["channels", "telegram", "streaming"], f.telegramStreaming);
-        updateConfigFormValue(
-          reactive,
-          ["channels", "telegram", "blockStreaming"],
-          f.telegramBlockStreaming,
-        );
+        updateConfigFormValue(reactive, ["channels", "telegram", "streaming"], {
+          mode: telegramStreamingMode,
+        });
       } else if (channel === "feishu") {
         const accountObj: Record<string, unknown> = {
           appId: f.appId.trim(),
@@ -273,7 +276,10 @@ export function ChannelsView() {
           ["channels", "feishu", "groups", "*", "requireMention"],
           f.feishuRequireMention,
         );
-        updateConfigFormValue(reactive, ["channels", "feishu", "streaming"], f.feishuStreaming);
+        // streaming 必须是对象（schema: streaming.mode = off|partial）
+        updateConfigFormValue(reactive, ["channels", "feishu", "streaming"], {
+          mode: f.feishuStreaming ? "partial" : "off",
+        });
       } else if (channel === "discord") {
         updateConfigFormValue(reactive, ["channels", "discord", "enabled"], true);
         updateConfigFormValue(reactive, ["channels", "discord", "token"], f.discordToken.trim());

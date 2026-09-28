@@ -1604,3 +1604,134 @@
 :root[data-theme="dark"] .ov-card--access select {
     border-color: #3a6848 !important;
 }
+
+/* ─── 牛马档案 · 编辑按钮 ─────────────────────────── */
+.agent-card-pixel__edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: auto;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted, #888);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.agent-card-pixel__edit:hover {
+    background: rgba(127, 127, 127, 0.18);
+    color: var(--text, #222);
+}
+
+/* ─── 牛马档案 · 编辑弹窗 ─────────────────────────── */
+.agent-edit-dialog {
+    min-width: 340px;
+    max-width: 420px;
+}
+
+.agent-edit-dialog__form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 12px 0 4px;
+}
+
+.agent-edit-dialog__row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.agent-edit-dialog__label {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.agent-edit-dialog__avatar-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.agent-edit-dialog__avatar-cell input {
+    flex: 1;
+}
+
+.agent-edit-dialog__upload {
+    white-space: nowrap;
+}
+
+.agent-edit-dialog__error {
+    font-size: 12px;
+    color: #c0392b;
+}
+
+/* ─── 模型提供商 · 测试连接结果 ───────────────────── */
+.quick-add__probe-result {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    background: rgba(192, 57, 43, 0.1);
+    color: #c0392b;
+    word-break: break-all;
+}
+
+.quick-add__probe-result--ok {
+    background: rgba(74, 152, 88, 0.12);
+    color: #2e7d43;
+}
+
+/* ─── 备用模型列表 ────────────────────────────────── */
+.model-fallbacks__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.model-fallbacks__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(127, 127, 127, 0.1);
+    font-size: 12px;
+}
+
+.model-fallbacks__order {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(74, 152, 88, 0.25);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.model-fallbacks__value {
+    font-family: var(--mono, monospace);
+}
+
+.model-fallbacks__remove {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.model-fallbacks__remove:hover {
+    opacity: 1;
+}
+
+.quick-add__actions .quick-add__test {
+    margin-left: 8px;
+}

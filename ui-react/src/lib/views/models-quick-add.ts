@@ -29,6 +29,9 @@ export interface ModelsQuickAddProps {
   onAddModel: () => void;
   onRemoveModel: (index: number) => void;
   onSubmit: () => void;
+  onTest?: () => void;
+  testBusy?: boolean;
+  testResult?: { status: string; error?: string; summary: string } | null;
 }
 
 // ── Available Model Catalog ──
@@ -564,7 +567,34 @@ export function renderModelsQuickAdd(props: ModelsQuickAddProps) {
         >
           ${busy ? t("modelsQuickAdd.adding") : t("modelsQuickAdd.addAndApply")}
         </button>
+        ${props.onTest
+          ? html`
+              <button
+                class="btn quick-add__test"
+                ?disabled=${!canSubmit || props.busy || props.testBusy === true}
+                @click=${props.onTest}
+                title="保存当前提供商配置并测试模型连通性"
+              >
+                ${props.testBusy ? "测试中…" : "测试连接"}
+              </button>
+            `
+          : nothing}
       </div>
+      ${props.testResult || props.testBusy
+        ? html`
+            <div
+              class="quick-add__probe-result${props.testResult?.status === "ok"
+                ? " quick-add__probe-result--ok"
+                : ""}"
+            >
+              ${props.testBusy
+                ? html`<span>⏳ 正在保存并探测模型连通性（最长约 20 秒）…</span>`
+                : props.testResult
+                  ? html`<span>${props.testResult.summary}</span>`
+                  : nothing}
+            </div>
+          `
+        : nothing}
     </div>
   `;
 }

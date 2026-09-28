@@ -175,6 +175,8 @@ export type AppState = {
   modelsQuickAddError: string | null;
   modelsQuickAddPreset: string;
   modelsQuickAddSelectedIds: string[];
+  modelsProbeBusy: boolean;
+  modelsProbeResult: { status: string; error?: string; summary: string } | null;
 
   channelQuickAddExpanded: boolean;
   channelQuickAddBusy: boolean;
@@ -509,6 +511,8 @@ function makeInitialState(): AppState {
     modelsQuickAddError: null,
     modelsQuickAddPreset: "",
     modelsQuickAddSelectedIds: [],
+    modelsProbeBusy: false,
+    modelsProbeResult: null,
 
     channelQuickAddExpanded: false,
     channelQuickAddBusy: false,

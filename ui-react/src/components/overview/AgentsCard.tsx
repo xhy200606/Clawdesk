@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { formatRelativeTimestamp } from "../../lib/format.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
 import { resolveAgentAvatarSrc } from "../../lib/views/agents-utils.ts";
+import { AgentEditDialog } from "./AgentEditDialog.tsx";
 import { OverviewIcons } from "./SnapshotCard.tsx";
 
 // ─── Free Drag Handle (no data-swapy-handle — entire card is draggable) ──
@@ -64,6 +65,7 @@ export type AgentsCardProps = {
 // ─── Main Component ──────────────────────────────────────────
 
 export function AgentsCard({ agents, sessionActivity, channelBindings }: AgentsCardProps) {
+  const [editingAgent, setEditingAgent] = useState<GatewayAgentRow | null>(null);
   return (
     <div data-swapy-slot="agents">
       <div data-swapy-item="agents">
@@ -115,6 +117,25 @@ export function AgentsCard({ agents, sessionActivity, channelBindings }: AgentsC
                       >
                         <AgentStateLabel state={agentState} />
                       </span>
+                      <button
+                        type="button"
+                        className="agent-card-pixel__edit"
+                        title="编辑牛马资料"
+                        onClick={() => setEditingAgent(agent)}
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        </svg>
+                      </button>
                     </div>
                     <div className="agent-card-pixel__id">{agent.id}</div>
                   </div>
@@ -214,6 +235,11 @@ export function AgentsCard({ agents, sessionActivity, channelBindings }: AgentsC
           </div>
         </div>
       </div>
+      <AgentEditDialog
+        open={editingAgent !== null}
+        agent={editingAgent}
+        onClose={() => setEditingAgent(null)}
+      />
     </div>
   );
 }
