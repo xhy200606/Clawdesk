@@ -1736,28 +1736,38 @@
     margin-left: 8px;
 }
 
-/* ─── 主窗口 · 右侧 Workspace 文件管理器 ─────────────── */
-.content-split {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    gap: 0;
+/* ─── Shell 级右侧文件管理器（占满整个右侧栏） ─────────── */
+.shell--explorer {
+    --shell-explorer-width: clamp(280px, 22vw, 380px);
+    grid-template-columns: var(--shell-nav-width) minmax(0, 1fr) var(--shell-explorer-width);
+    grid-template-areas:
+        "nav content explorer";
 }
 
-.content-split>*:first-child {
-    flex: 1;
-    min-width: 0;
+.shell--nav-collapsed.shell--explorer,
+.shell--chat-focus.shell--explorer {
+    grid-template-columns: 0px minmax(0, 1fr) var(--shell-explorer-width);
+}
+
+/* 顶栏止步于文件管理器左侧，右栏从屏幕顶端到访到底 */
+.shell--explorer .topbar {
+    right: var(--shell-explorer-width);
+}
+
+@media (max-width: 900px) {
+    .shell--explorer {
+        --shell-explorer-width: 240px;
+    }
 }
 
 .file-explorer {
+    grid-area: explorer;
     display: flex;
     flex-direction: column;
-    flex-shrink: 0;
-    width: 320px;
+    min-width: 0;
     min-height: 0;
-    margin-left: 12px;
-    border: 1px solid var(--border, rgba(127, 127, 127, 0.25));
-    border-radius: 10px;
+    height: 100%;
+    border-left: 1px solid var(--border, rgba(127, 127, 127, 0.25));
     background: var(--panel, rgba(127, 127, 127, 0.06));
     overflow: hidden;
 }
@@ -2022,37 +2032,6 @@
 .topbar-restart-btn--active {
     background: rgba(74, 152, 88, 0.16);
     color: #2e7d43;
-}
-
-@media (max-width: 900px) {
-    .file-explorer {
-        width: 240px;
-    }
-}
-
-/* ─── 文件管理器：占满右侧完整一列 ─────────────────── */
-.content--chat .content-split {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: 100%;
-}
-
-.content-split .card.chat {
-    height: 100%;
-    min-height: 0;
-}
-
-.file-explorer {
-    height: 100%;
-    max-height: 100%;
-    align-self: stretch;
-}
-
-.file-explorer__hint {
-    padding: 8px 12px 12px;
-    font-size: 11px;
-    opacity: 0.5;
-    line-height: 1.5;
 }
 
 /* ─── 牛马档案 · 编辑弹窗文件 Tab ─────────────────── */

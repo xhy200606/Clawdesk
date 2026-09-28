@@ -22,7 +22,6 @@ import { OverviewView } from "../../views/Overview.tsx";
 import { SessionsView } from "../../views/Sessions.tsx";
 import { SkillsView } from "../../views/Skills.tsx";
 import { UsageView } from "../../views/Usage.tsx";
-import { FileExplorerPanel } from "../chat/FileExplorerPanel.tsx";
 import { SetupWizard } from "../onboarding/SetupWizard.tsx";
 
 const VIEW_MAP: Record<string, React.ComponentType> = {
@@ -168,8 +167,6 @@ export function MainContent() {
   const tab = useAppStore((s) => s.tab);
   const lastError = useAppStore((s) => s.lastError);
   const onboarding = useAppStore((s) => s.onboarding);
-  const feOpen = useAppStore((s) => s.settings.fileExplorerOpen === true);
-  const isChat = tab === "chat";
 
   const ViewComponent = VIEW_MAP[tab] ?? ChatView;
 
@@ -177,7 +174,7 @@ export function MainContent() {
   const hideHeader = tab === "overview" || tab === "usage";
 
   return (
-    <main className={`content${isChat ? " content--chat" : ""}`}>
+    <main className={`content${tab === "chat" ? " content--chat" : ""}`}>
       {/* Setup wizard overlay durante onboarding */}
       {onboarding && <SetupWizard />}
 
@@ -185,9 +182,9 @@ export function MainContent() {
       {!onboarding && (
         <section className="content-header">
           <div>
-            {!hideHeader && isChat && <ChatSessionTitle />}
-            {!hideHeader && !isChat && <div className="page-title">{titleForTab(tab)}</div>}
-            {!hideHeader && !isChat && <div className="page-sub">{subtitleForTab(tab)}</div>}
+            {!hideHeader && tab === "chat" && <ChatSessionTitle />}
+            {!hideHeader && tab !== "chat" && <div className="page-title">{titleForTab(tab)}</div>}
+            {!hideHeader && tab !== "chat" && <div className="page-sub">{subtitleForTab(tab)}</div>}
           </div>
           <div className="page-meta">
             {lastError && <div className="pill danger">{translateError(lastError)}</div>}
@@ -195,14 +192,8 @@ export function MainContent() {
         </section>
       )}
 
-      {/* View content */}
-      {!onboarding && isChat && feOpen && (
-        <div className="content-split">
-          <ViewComponent />
-          <FileExplorerPanel />
-        </div>
-      )}
-      {!onboarding && !(isChat && feOpen) && <ViewComponent />}
+      {/* View content（文件管理器已上移为 Shell 级右侧栏，不再挂在 chat 内） */}
+      {!onboarding && <ViewComponent />}
     </main>
   );
 }

@@ -393,7 +393,7 @@ export function FileExplorerPanel() {
   // 面包屑：OpenClaw 根 → … → 当前目录
   const crumbs: Array<{ label: string; absPath: string }> = [];
   if (openclawRoot) {
-    crumbs.push({ label: "OpenClaw 根目录", absPath: openclawRoot });
+    crumbs.push({ label: "根目录", absPath: openclawRoot });
     if (dir && dir !== openclawRoot && dir.startsWith(openclawRoot)) {
       const rel = dir.slice(openclawRoot.length).replace(/^\//, "");
       const segs = rel.split("/").filter(Boolean);
@@ -413,13 +413,12 @@ export function FileExplorerPanel() {
   });
 
   return (
-    <aside className="file-explorer" aria-label="OpenClaw 文件管理器">
+    <aside className="file-explorer" aria-label="Op文件管理">
       {/* 标题栏 */}
       <div className="file-explorer__head">
-        <span className="file-explorer__agent" title={`Agent: ${agentId}`}>
+        <span className="file-explorer__agent">
           <FolderIcon />
-          <span>OpenClaw 文件</span>
-          <span className="file-explorer__agent-id">{agentId}</span>
+          <span>Op文件管理</span>
         </span>
         <span className="file-explorer__head-actions">
           <button
@@ -555,11 +554,6 @@ export function FileExplorerPanel() {
               </ul>
             )}
             {viewerLoading && <div className="file-explorer__state">读取文件中…</div>}
-            {openclawRoot && dir === openclawRoot && !error && (
-              <div className="file-explorer__hint">
-                提示：网关限制，根目录仅显示子目录；进入 workspace 后可浏览并预览文件。
-              </div>
-            )}
           </>
         )}
       </div>
