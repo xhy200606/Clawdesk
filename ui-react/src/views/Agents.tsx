@@ -3,6 +3,11 @@ import { createPortal } from "react-dom";
 import { Dropdown, MultiDropdown } from "../components/common/Dropdown.tsx";
 import { LitBridge } from "../components/LitBridge.tsx";
 import { t } from "../i18n/index.ts";
+import {
+  readAgentConfigEntries,
+  setAgentEntryValue,
+  removeAgentEntryValue,
+} from "../lib/agents-config.ts";
 import { loadCron } from "../lib/app-settings.ts";
 import {
   loadAgentFiles,
@@ -291,24 +296,13 @@ export function AgentsView() {
           if (!rs.configForm) {
             return;
           }
-          const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-          if (!Array.isArray(list)) {
-            return;
-          }
-          const index = list.findIndex(
-            (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agentId,
-          );
-          if (index < 0) {
-            return;
-          }
-          const basePath = ["agents", "list", index, "tools"];
           if (profile) {
-            updateConfigFormValue(rs as never, [...basePath, "profile"], profile);
+            setAgentEntryValue(rs as never, agentId, ["tools", "profile"], profile);
           } else {
-            removeConfigFormValue(rs as never, [...basePath, "profile"]);
+            removeAgentEntryValue(rs as never, agentId, ["tools", "profile"]);
           }
           if (clearAllow) {
-            removeConfigFormValue(rs as never, [...basePath, "allow"]);
+            removeAgentEntryValue(rs as never, agentId, ["tools", "allow"]);
           }
         },
         onToolsOverridesChange: (agentId: string, alsoAllow: string[], deny: string[]) => {
@@ -316,26 +310,15 @@ export function AgentsView() {
           if (!rs.configForm) {
             return;
           }
-          const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-          if (!Array.isArray(list)) {
-            return;
-          }
-          const index = list.findIndex(
-            (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agentId,
-          );
-          if (index < 0) {
-            return;
-          }
-          const basePath = ["agents", "list", index, "tools"];
           if (alsoAllow.length > 0) {
-            updateConfigFormValue(rs as never, [...basePath, "alsoAllow"], alsoAllow);
+            setAgentEntryValue(rs as never, agentId, ["tools", "alsoAllow"], alsoAllow);
           } else {
-            removeConfigFormValue(rs as never, [...basePath, "alsoAllow"]);
+            removeAgentEntryValue(rs as never, agentId, ["tools", "alsoAllow"]);
           }
           if (deny.length > 0) {
-            updateConfigFormValue(rs as never, [...basePath, "deny"], deny);
+            setAgentEntryValue(rs as never, agentId, ["tools", "deny"], deny);
           } else {
-            removeConfigFormValue(rs as never, [...basePath, "deny"]);
+            removeAgentEntryValue(rs as never, agentId, ["tools", "deny"]);
           }
         },
         // Habilidades callbacks
@@ -351,25 +334,16 @@ export function AgentsView() {
           if (!rs.configForm) {
             return;
           }
-          const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-          if (!Array.isArray(list)) {
-            return;
-          }
-          const index = list.findIndex(
-            (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agentId,
-          );
-          if (index < 0) {
-            return;
-          }
-          const entry = list[index] as { skills?: unknown };
           const normalizedSkill = skillName.trim();
           if (!normalizedSkill) {
             return;
           }
           const allSkills =
             rs.agentSkillsReport?.skills?.map((sk) => sk.name).filter(Boolean) ?? [];
-          const existing = Array.isArray(entry.skills)
-            ? entry.skills.map((n) => String(n).trim()).filter(Boolean)
+          const entries = readAgentConfigEntries(rs.configForm);
+          const entry = entries[agentId] as { skills?: unknown } | undefined;
+          const existing = Array.isArray(entry?.skills)
+            ? (entry?.skills as unknown[]).map((n) => String(n).trim()).filter(Boolean)
             : undefined;
           const base = existing ?? allSkills;
           const next = new Set(base);
@@ -378,41 +352,21 @@ export function AgentsView() {
           } else {
             next.delete(normalizedSkill);
           }
-          updateConfigFormValue(rs as never, ["agents", "list", index, "skills"], [...next]);
+          setAgentEntryValue(rs as never, agentId, ["skills"], [...next]);
         },
         onAgentSkillsClear: (agentId: string) => {
           const rs = getReactiveState();
           if (!rs.configForm) {
             return;
           }
-          const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-          if (!Array.isArray(list)) {
-            return;
-          }
-          const index = list.findIndex(
-            (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agentId,
-          );
-          if (index < 0) {
-            return;
-          }
-          removeConfigFormValue(rs as never, ["agents", "list", index, "skills"]);
+          removeAgentEntryValue(rs as never, agentId, ["skills"]);
         },
         onAgentSkillsDisableAll: (agentId: string) => {
           const rs = getReactiveState();
           if (!rs.configForm) {
             return;
           }
-          const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-          if (!Array.isArray(list)) {
-            return;
-          }
-          const index = list.findIndex(
-            (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agentId,
-          );
-          if (index < 0) {
-            return;
-          }
-          updateConfigFormValue(rs as never, ["agents", "list", index, "skills"], []);
+          setAgentEntryValue(rs as never, agentId, ["skills"], []);
         },
         // Canales callbacks
         onChannelsRefresh: () => void loadChannels(getReactiveState() as never, true),
@@ -429,21 +383,11 @@ export function AgentsView() {
           if (!rs.configForm) {
             return;
           }
-          const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-          if (!Array.isArray(list)) {
+          const entries = readAgentConfigEntries(rs.configForm);
+          if (!Object.prototype.hasOwnProperty.call(entries, agentId)) {
             return;
           }
-          const index = list.findIndex(
-            (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agentId,
-          );
-          if (index < 0) {
-            return;
-          }
-          updateConfigFormValue(
-            rs as never,
-            ["agents", "list", index, "identity", "avatar"],
-            url || null,
-          );
+          setAgentEntryValue(rs as never, agentId, ["identity", "avatar"], url || null);
         },
         // Global settings (defaults drawer)
         onGlobalSettings: () => {
@@ -603,29 +547,18 @@ function AgentModelSection() {
       if (!rs.configForm) {
         return;
       }
-      const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-      if (!Array.isArray(list)) {
-        return;
-      }
-      const index = list.findIndex(
-        (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agent.id,
-      );
-      if (index < 0) {
-        return;
-      }
-      const basePath = ["agents", "list", index, "model"];
       if (!modelId) {
-        removeConfigFormValue(rs as never, basePath);
+        removeAgentEntryValue(rs as never, agent.id, ["model"]);
         return;
       }
-      const entry = list[index] as { model?: unknown };
-      const existing = entry?.model;
+      const entries = readAgentConfigEntries(rs.configForm);
+      const existing = (entries[agent.id] as { model?: unknown } | undefined)?.model;
       if (existing && typeof existing === "object" && !Array.isArray(existing)) {
         const fallbacks = (existing as { fallbacks?: unknown }).fallbacks;
         const next = { primary: modelId, ...(Array.isArray(fallbacks) ? { fallbacks } : {}) };
-        updateConfigFormValue(rs as never, basePath, next);
+        setAgentEntryValue(rs as never, agent.id, ["model"], next);
       } else {
-        updateConfigFormValue(rs as never, basePath, modelId);
+        setAgentEntryValue(rs as never, agent.id, ["model"], modelId);
       }
     },
     [agent],
@@ -640,24 +573,13 @@ function AgentModelSection() {
       if (!rs.configForm) {
         return;
       }
-      const list = (rs.configForm as { agents?: { list?: unknown[] } }).agents?.list;
-      if (!Array.isArray(list)) {
-        return;
-      }
-      const index = list.findIndex(
-        (e) => e && typeof e === "object" && "id" in e && (e as { id?: string }).id === agent.id,
-      );
-      if (index < 0) {
-        return;
-      }
-      const basePath = ["agents", "list", index, "model"];
-      const entry = list[index] as { model?: unknown };
+      const entries = readAgentConfigEntries(rs.configForm);
+      const existing = (entries[agent.id] as { model?: unknown } | undefined)?.model;
       const current = modelFallbacks ?? [];
       const next = current.includes(value)
         ? current.filter((v) => v !== value)
         : [...current, value];
       const normalized = next.map((n) => n.trim()).filter(Boolean);
-      const existing = entry.model;
       const resolvePrimary = () => {
         if (typeof existing === "string") {
           return existing.trim() || null;
@@ -673,14 +595,14 @@ function AgentModelSection() {
       const primary = resolvePrimary();
       if (normalized.length === 0) {
         if (primary) {
-          updateConfigFormValue(rs as never, basePath, primary);
+          setAgentEntryValue(rs as never, agent.id, ["model"], primary);
         } else {
-          removeConfigFormValue(rs as never, basePath);
+          removeAgentEntryValue(rs as never, agent.id, ["model"]);
         }
         return;
       }
       const obj = primary ? { primary, fallbacks: normalized } : { fallbacks: normalized };
-      updateConfigFormValue(rs as never, basePath, obj);
+      setAgentEntryValue(rs as never, agent.id, ["model"], obj);
     },
     [agent, modelFallbacks],
   );

@@ -14,6 +14,7 @@ import type { SkillMessage } from "../lib/controllers/skills.ts";
 import type { GatewayBrowserClient, GatewayHelloOk } from "../lib/gateway.ts";
 // NOTE: applySettings is imported lazily to avoid pulling in the Lit-dependent module tree at evaluation time
 import type { Tab } from "../lib/navigation.ts";
+import type { AgentRunTrace } from "../lib/orchestration-traces.ts";
 import { loadSettings, saveSettings, type UiSettings } from "../lib/storage.ts";
 import type { ResolvedTheme, ThemeMode } from "../lib/theme.ts";
 import type {
@@ -75,6 +76,8 @@ export type AppState = {
   password: string;
 
   connected: boolean;
+  sessionsSubscribed: boolean;
+  agentRunTraces: AgentRunTrace[];
   hello: GatewayHelloOk | null;
   lastError: string | null;
   lastErrorCode: string | null;
@@ -415,6 +418,8 @@ function makeInitialState(): AppState {
     password: "",
 
     connected: false,
+    sessionsSubscribed: false,
+    agentRunTraces: [],
     hello: null,
     lastError: null,
     lastErrorCode: null,

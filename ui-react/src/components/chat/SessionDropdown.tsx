@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { t } from "../../i18n/index.ts";
+import { OverviewIcons } from "../overview/SnapshotCard.tsx";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -134,8 +135,12 @@ export function SessionDropdown({
                 onClick={() => handleSelect(item.value)}
               >
                 <span className="oc-dropdown__check">{active ? "✓" : ""}</span>
+                <span
+                  className={`oc-session-state${item.running ? " oc-session-state--running" : ""}`}
+                >
+                  {item.running ? OverviewIcons.running(12) : OverviewIcons.moon(12)}
+                </span>
                 <span>{item.label}</span>
-                {item.running && <span className="oc-session-running" />}
               </button>
             );
           })}
@@ -169,8 +174,12 @@ export function SessionDropdown({
                         onClick={() => handleSelect(item.value)}
                       >
                         <span className="oc-dropdown__check">{active ? "✓" : ""}</span>
+                        <span
+                          className={`oc-session-state${item.running ? " oc-session-state--running" : ""}`}
+                        >
+                          {item.running ? OverviewIcons.running(12) : OverviewIcons.moon(12)}
+                        </span>
                         <span>{item.label}</span>
-                        {item.running && <span className="oc-session-running" />}
                       </button>
                     );
                   })}

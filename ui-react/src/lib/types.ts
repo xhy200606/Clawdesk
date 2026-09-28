@@ -413,6 +413,17 @@ export type AgentsFilesSetResult = {
 export type GatewaySessionRow = {
   key: string;
   kind: "direct" | "group" | "global" | "unknown";
+  agentId?: string;
+  parentSessionKey?: string;
+  spawnedBy?: string;
+  childSessions?: string[];
+  spawnDepth?: number;
+  subagentRunState?: string;
+  hasActiveRun?: boolean;
+  activeRunIds?: string[];
+  startedAt?: number;
+  endedAt?: number;
+  runtimeMs?: number;
   label?: string;
   displayName?: string;
   surface?: string;

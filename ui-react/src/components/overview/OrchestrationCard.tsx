@@ -1,17 +1,25 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { t } from "../../i18n/index.ts";
-import type { SessionActivityResult, SessionActivityEntry } from "../../lib/types.ts";
+import type { AgentRunTrace } from "../../lib/orchestration-traces.ts";
+import type {
+  SessionActivityResult,
+  SessionActivityEntry,
+  GatewaySessionRow,
+  GatewayAgentRow,
+} from "../../lib/types.ts";
 
 // ── Tree Data Structure ────────────────────────────────────────
 
 type TreeNode = {
   key: string;
   label: string;
-  agentId: string;
   session: SessionActivityEntry;
+  details?: GatewaySessionRow;
   children: TreeNode[];
   depth: number;
 };
+
+type ViewMode = "teams" | "workflow" | "traces";
 
 // ── Layout constants ───────────────────────────────────────────
 
@@ -22,28 +30,47 @@ const V_GAP = 50;
 
 // ── Session key parsing ────────────────────────────────────────
 
-// Segmentos que indican relación padre-hijo en session keys
-const CHILD_SEGMENTS = [":subagent:", ":acp:"] as const;
-
-function buildSessionTree(sessions: SessionActivityEntry[]): TreeNode[] {
+function buildSessionTree(
+  sessions: SessionActivityEntry[],
+  details: GatewaySessionRow[],
+): TreeNode[] {
   const nodeMap = new Map<string, TreeNode>();
+  const detailsByKey = new Map(details.map((row) => [row.key, row]));
 
   for (const session of sessions) {
     const { key } = session;
     nodeMap.set(key, {
       key,
-      label: extractLabel(key),
-      agentId: extractAgentId(key),
+      label:
+        detailsByKey.get(key)?.label || detailsByKey.get(key)?.displayName || extractLabel(key),
       session,
+      details: detailsByKey.get(key),
       children: [],
-      depth: countDepth(key),
+      depth: 0,
     });
   }
 
+  const childToParent = new Map<string, string>();
+  for (const row of details) {
+    for (const childKey of row.childSessions ?? []) childToParent.set(childKey, row.key);
+  }
+  const parentOf = new Map<string, string>();
+  for (const node of nodeMap.values()) {
+    const parentKey =
+      node.details?.parentSessionKey ?? node.details?.spawnedBy ?? childToParent.get(node.key);
+    if (parentKey && parentKey !== node.key && nodeMap.has(parentKey))
+      parentOf.set(node.key, parentKey);
+  }
   const roots: TreeNode[] = [];
   for (const node of nodeMap.values()) {
-    const parentKey = findParentKey(node.key);
-    if (parentKey && nodeMap.has(parentKey)) {
+    const parentKey = parentOf.get(node.key);
+    const ancestry = new Set([node.key]);
+    let ancestor = parentKey;
+    while (ancestor && !ancestry.has(ancestor)) {
+      ancestry.add(ancestor);
+      ancestor = parentOf.get(ancestor);
+    }
+    if (parentKey && !ancestor) {
       nodeMap.get(parentKey)!.children.push(node);
     } else {
       roots.push(node);
@@ -56,11 +83,16 @@ function buildSessionTree(sessions: SessionActivityEntry[]): TreeNode[] {
   roots.sort(sortFn);
   for (const node of nodeMap.values()) node.children.sort(sortFn);
 
-  return roots;
-}
+  const setDepth = (node: TreeNode, depth: number, seen: Set<string>) => {
+    if (seen.has(node.key)) return;
+    seen.add(node.key);
+    node.depth = depth;
+    for (const child of node.children) setDepth(child, depth + 1, seen);
+  };
+  const seen = new Set<string>();
+  for (const root of roots) setDepth(root, 0, seen);
 
-function extractAgentId(key: string): string {
-  return key.match(/^agent:([^:]+)/)?.[1] ?? key;
+  return roots;
 }
 
 /**
@@ -97,30 +129,33 @@ function extractLabel(key: string): string {
   return key;
 }
 
-function countDepth(key: string): number {
-  let d = 0;
-  for (const seg of CHILD_SEGMENTS) {
-    const matches = key.match(new RegExp(seg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"));
-    d += matches?.length ?? 0;
-  }
-  return d;
-}
-
-function findParentKey(key: string): string | null {
-  // Encontrar el último segmento hijo (:subagent: o :acp:)
-  let lastIdx = -1;
-  for (const seg of CHILD_SEGMENTS) {
-    const idx = key.lastIndexOf(seg);
-    if (idx > lastIdx) lastIdx = idx;
-  }
-  return lastIdx === -1 ? null : key.slice(0, lastIdx);
-}
-
 function fmtTokens(n: number | undefined): string {
-  if (!n) return "0";
+  if (n === undefined) return "—";
+  if (n === 0) return "0";
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
   return String(n);
+}
+
+function formatWorkflowState(node: TreeNode): string {
+  const state = node.details?.subagentRunState || node.details?.status;
+  if (state === "done" || state === "completed") return t("orchestration.completed");
+  if (state === "error" || state === "failed") return t("orchestration.failed");
+  if (state === "aborted") return t("orchestration.aborted");
+  if (state === "running") return t("orchestration.running");
+  return state || t(`orchestration.${node.session.state}`);
+}
+
+function fmtActivityAge(ms: number | undefined): string {
+  if (ms === undefined || !Number.isFinite(ms)) return "—";
+  if (ms < 60_000) return "<1m";
+  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m`;
+  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h`;
+  return `${Math.floor(ms / 86_400_000)}d`;
+}
+
+function fmtDuration(ms: number): string {
+  return ms < 1000 ? `${Math.max(0, Math.round(ms))}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
 // ── Layout algorithm ───────────────────────────────────────────
@@ -254,7 +289,6 @@ function renderNodes(layout: LayoutNode): React.ReactNode[] {
   const { session } = node;
   const stateColor = STATE_COLORS[session.state] ?? STATE_COLORS.idle;
   const isProcessing = session.state === "processing";
-  const isSubagent = node.depth > 0;
 
   const elements: React.ReactNode[] = [];
 
@@ -372,13 +406,37 @@ function renderNodes(layout: LayoutNode): React.ReactNode[] {
 
 interface OrchestrationCardProps {
   sessionActivity: SessionActivityResult | null;
+  sessions?: GatewaySessionRow[];
+  traces?: AgentRunTrace[];
+  agents?: GatewayAgentRow[];
+  onStartTask?: (agentId: string, task: string) => Promise<void>;
+  onStopRun?: (sessionKey: string, runId: string) => Promise<void>;
+  onOpenSession?: (sessionKey: string) => void;
 }
 
-export function OrchestrationCard({ sessionActivity }: OrchestrationCardProps) {
+export function OrchestrationCard({
+  sessionActivity,
+  sessions = [],
+  traces = [],
+  agents = [],
+  onStartTask,
+  onStopRun,
+  onOpenSession,
+}: OrchestrationCardProps) {
+  const [view, setView] = useState<ViewMode>("teams");
+  const [targetAgentId, setTargetAgentId] = useState("");
+  const [taskDraft, setTaskDraft] = useState("");
+  const [taskSubmitting, setTaskSubmitting] = useState(false);
+  const [taskNotice, setTaskNotice] = useState("");
+  const [actionNotice, setActionNotice] = useState("");
+  const [stoppingRunId, setStoppingRunId] = useState("");
+  const selectedAgentId = agents.some((agent) => agent.id === targetAgentId)
+    ? targetAgentId
+    : (agents[0]?.id ?? "");
   const tree = useMemo(() => {
     if (!sessionActivity?.sessions?.length) return [];
-    return buildSessionTree(sessionActivity.sessions);
-  }, [sessionActivity]);
+    return buildSessionTree(sessionActivity.sessions, sessions);
+  }, [sessionActivity, sessions]);
 
   const layout = useMemo(() => layoutTree(tree), [tree]);
 
@@ -389,6 +447,22 @@ export function OrchestrationCard({ sessionActivity }: OrchestrationCardProps) {
         idle: sessionActivity.idle,
       }
     : null;
+
+  const flatNodes = useMemo(() => {
+    const result: TreeNode[] = [];
+    const visit = (nodes: TreeNode[]) => {
+      for (const node of nodes) {
+        result.push(node);
+        visit(node.children);
+      }
+    };
+    visit(tree);
+    return result;
+  }, [tree]);
+  const sessionsByKey = useMemo(
+    () => new Map(sessions.map((session) => [session.key, session])),
+    [sessions],
+  );
 
   const PADDING = 20;
   const svgW = Math.max(layout.width + PADDING * 2, 300);
@@ -426,17 +500,243 @@ export function OrchestrationCard({ sessionActivity }: OrchestrationCardProps) {
           </div>
         )}
       </div>
+      <div className="orch-card__toolbar" aria-label={t("orchestration.views")}>
+        {(["teams", "workflow", "traces"] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            aria-pressed={view === mode}
+            className={`orch-tab${view === mode ? " orch-tab--active" : ""}`}
+            onClick={() => setView(mode)}
+          >
+            {t(`orchestration.${mode}`)}
+          </button>
+        ))}
+        <span className="orch-card__summary">
+          {flatNodes.length} {t("orchestration.agents")}
+          <span>
+            {" "}
+            · {fmtTokens(
+              flatNodes.reduce((sum, node) => sum + (node.session.totalTokens ?? 0), 0),
+            )}{" "}
+            tok
+          </span>
+        </span>
+      </div>
+      {onStartTask && agents.length > 0 && (
+        <form
+          className="orch-task-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const agentId = selectedAgentId;
+            const task = taskDraft.trim();
+            if (!agentId || !task || taskSubmitting) return;
+            setTaskSubmitting(true);
+            setTaskNotice("");
+            void onStartTask(agentId, task)
+              .then(() => {
+                setTaskDraft("");
+                setTaskNotice(t("orchestration.taskSubmitted"));
+              })
+              .catch((error: unknown) => {
+                setTaskNotice(error instanceof Error ? error.message : String(error));
+              })
+              .finally(() => setTaskSubmitting(false));
+          }}
+        >
+          <select
+            aria-label={t("orchestration.targetAgent")}
+            value={selectedAgentId}
+            onChange={(event) => setTargetAgentId(event.target.value)}
+          >
+            {agents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name || agent.identity?.name || agent.id}
+              </option>
+            ))}
+          </select>
+          <input
+            aria-label={t("orchestration.taskPlaceholder")}
+            placeholder={t("orchestration.taskPlaceholder")}
+            value={taskDraft}
+            onChange={(event) => setTaskDraft(event.target.value)}
+          />
+          <button type="submit" disabled={taskSubmitting || !taskDraft.trim()}>
+            {taskSubmitting ? t("orchestration.submitting") : t("orchestration.startTask")}
+          </button>
+          {taskNotice && (
+            <span className="orch-task-form__notice" role="status">
+              {taskNotice}
+            </span>
+          )}
+        </form>
+      )}
       <div className="orch-card__body">
-        {tree.length === 0 ? (
+        {tree.length === 0 && !(view === "traces" && traces.length > 0) ? (
           <div className="orch-card__empty">{t("orchestration.empty")}</div>
+        ) : view === "teams" ? (
+          <>
+            <div className="orch-svg-container">
+              <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="orch-svg">
+                <g transform={`translate(${PADDING}, ${PADDING})`}>
+                  {layout.nodes.map((l) => renderConnections(l))}
+                  {layout.nodes.map((l) => renderNodes(l))}
+                </g>
+              </svg>
+            </div>
+            {onOpenSession && (
+              <div className="orch-session-actions">
+                {flatNodes.map((node) => (
+                  <button key={node.key} type="button" onClick={() => onOpenSession(node.key)}>
+                    {node.label} <span>↗</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        ) : view === "workflow" ? (
+          <div className="orch-workflow">
+            {flatNodes.map((node) => (
+              <div
+                className="orch-workflow__step"
+                key={node.key}
+                style={{ marginLeft: Math.min(node.depth, 5) * 20 }}
+              >
+                <span
+                  className={`orch-workflow__number orch-workflow__number--${node.session.state}`}
+                >
+                  {node.depth > 0 ? "↳" : "●"}
+                </span>
+                <div className="orch-workflow__content">
+                  <strong>{node.label}</strong>
+                  <span>
+                    {formatWorkflowState(node)} ·{" "}
+                    {node.session.queueDepth > 0
+                      ? `${node.session.queueDepth} ${t("orchestration.queued")}`
+                      : t("orchestration.ready")}
+                  </span>
+                </div>
+                <code>
+                  {node.details?.parentSessionKey ||
+                  node.details?.spawnedBy ||
+                  node.key.includes(":subagent:")
+                    ? t("orchestration.subagent")
+                    : t("orchestration.agent")}
+                </code>
+                {onStopRun &&
+                  (node.details?.parentSessionKey ||
+                    node.details?.spawnedBy ||
+                    node.key.includes(":subagent:")) &&
+                  node.details?.hasActiveRun &&
+                  node.details.activeRunIds?.[0] && (
+                    <button
+                      className="orch-workflow__stop"
+                      type="button"
+                      disabled={stoppingRunId === node.details.activeRunIds[0]}
+                      onClick={() => {
+                        const runId = node.details?.activeRunIds?.[0];
+                        if (!runId) return;
+                        setStoppingRunId(runId);
+                        void onStopRun(node.key, runId)
+                          .then(() => setActionNotice(t("orchestration.stopSubmitted")))
+                          .catch((error: unknown) =>
+                            setActionNotice(error instanceof Error ? error.message : String(error)),
+                          )
+                          .finally(() => setStoppingRunId(""));
+                      }}
+                    >
+                      {t("orchestration.stop")}
+                    </button>
+                  )}
+              </div>
+            ))}
+            {actionNotice && (
+              <p role="status" className="orch-traces__note">
+                {actionNotice}
+              </p>
+            )}
+          </div>
         ) : (
-          <div className="orch-svg-container">
-            <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="orch-svg">
-              <g transform={`translate(${PADDING}, ${PADDING})`}>
-                {layout.nodes.map((l) => renderConnections(l))}
-                {layout.nodes.map((l) => renderNodes(l))}
-              </g>
-            </svg>
+          <div className="orch-traces">
+            {traces.map((trace) => {
+              const session = trace.sessionKey ? sessionsByKey.get(trace.sessionKey) : undefined;
+              const model = trace.model ?? session?.model;
+              const provider = trace.provider ?? session?.modelProvider;
+              return (
+                <div className="orch-trace" key={trace.runId}>
+                  <span
+                    className={`orch-trace__dot orch-trace__dot--${trace.status === "running" ? "processing" : trace.status === "failed" ? "waiting" : "idle"}`}
+                  />
+                  <div className="orch-trace__main">
+                    <strong>{session?.label || trace.sessionKey || trace.runId.slice(0, 8)}</strong>
+                    <code>{trace.runId}</code>
+                  </div>
+                  <div className="orch-trace__model">
+                    <span>
+                      {provider && model
+                        ? `${provider} / ${model}`
+                        : model || t("orchestration.modelUnknown")}
+                    </span>
+                    <small>
+                      {t(`orchestration.${trace.status}`)} ·{" "}
+                      {fmtDuration((trace.endedAt ?? Date.now()) - trace.startedAt)}
+                    </small>
+                  </div>
+                  {onOpenSession && session && (
+                    <button
+                      className="orch-trace__open"
+                      type="button"
+                      onClick={() => onOpenSession(session.key)}
+                    >
+                      {t("orchestration.open")}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {traces.length > 0 && (
+              <p className="orch-traces__note">{t("orchestration.runTraceNote")}</p>
+            )}
+            {flatNodes.length > 0 && (
+              <p className="orch-traces__note">{t("orchestration.sessionSnapshot")}</p>
+            )}
+            {flatNodes.map((node) => (
+              <div className="orch-trace" key={node.key}>
+                <span className={`orch-trace__dot orch-trace__dot--${node.session.state}`} />
+                <div className="orch-trace__main">
+                  <strong>{node.label}</strong>
+                  <code>{node.key}</code>
+                </div>
+                <div className="orch-trace__model">
+                  <span>
+                    {sessionsByKey.get(node.key)?.modelProvider &&
+                    sessionsByKey.get(node.key)?.model
+                      ? `${sessionsByKey.get(node.key)?.modelProvider} / ${sessionsByKey.get(node.key)?.model}`
+                      : node.session.state === "processing"
+                        ? t("orchestration.requestActive")
+                        : t("orchestration.requestIdle")}
+                  </span>
+                  <small>
+                    {fmtTokens(sessionsByKey.get(node.key)?.inputTokens)} in ·{" "}
+                    {fmtTokens(sessionsByKey.get(node.key)?.outputTokens)} out ·{" "}
+                    {t("orchestration.context")}: {fmtTokens(node.session.contextTokens)} ·{" "}
+                    {fmtActivityAge(node.session.lastActivityAgo)}
+                  </small>
+                </div>
+                {onOpenSession && (
+                  <button
+                    className="orch-trace__open"
+                    type="button"
+                    onClick={() => onOpenSession(node.key)}
+                  >
+                    {t("orchestration.open")}
+                  </button>
+                )}
+              </div>
+            ))}
+            {flatNodes.length > 0 && (
+              <p className="orch-traces__note">{t("orchestration.traceNote")}</p>
+            )}
           </div>
         )}
       </div>

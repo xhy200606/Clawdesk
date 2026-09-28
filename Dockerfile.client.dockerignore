@@ -1,0 +1,6 @@
+**
+!ui-react/
+!ui-react/**
+ui-react/node_modules/
+ui-react/**/node_modules/
+ui-react/dist/

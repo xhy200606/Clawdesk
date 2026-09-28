@@ -6,11 +6,11 @@ import { AgentAnimal } from "./AgentAnimal.tsx";
 import { AgentEditDialog } from "./AgentEditDialog.tsx";
 import { OverviewIcons } from "./SnapshotCard.tsx";
 
-// ─── Free Drag Handle (no data-swapy-handle — entire card is draggable) ──
+// ─── Drag Handle（仅允许通过手柄拖拽，卡片其它区域正常交互）──
 
 function DragHandleFree() {
   return (
-    <button className="swapy-handle" title="拖拽交换位置">
+    <button className="swapy-handle" data-swapy-handle title="拖拽交换位置">
       <svg
         width="16"
         height="16"

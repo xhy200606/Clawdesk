@@ -320,7 +320,6 @@ export function ChannelsView() {
           }
         }
         const newAgent: Record<string, unknown> = {
-          id: accountId,
           identity: { name: f.agentName.trim() || accountId, avatar: avatarValue },
         };
         const agentDefaults = (
@@ -340,10 +339,14 @@ export function ChannelsView() {
         }
         updateConfigFormValue(reactive, ["agents", "defaults", "blockStreamingDefault"], "on");
         updateConfigFormValue(reactive, ["agents", "defaults", "blockStreamingBreak"], "text_end");
-        const currentAgents = ((
+        // 网关 schema：agents.entries 按 agentId 为键的 record（条目不可带 id 字段）
+        const currentEntries = ((
           (reactive.configForm as Record<string, unknown>)?.agents as Record<string, unknown>
-        )?.list ?? []) as unknown[];
-        updateConfigFormValue(reactive, ["agents", "list"], [...currentAgents, newAgent]);
+        )?.entries ?? {}) as Record<string, unknown>;
+        updateConfigFormValue(reactive, ["agents", "entries"], {
+          ...currentEntries,
+          [accountId]: newAgent,
+        });
       }
 
       if (f.createAgent && agentIdToUse) {

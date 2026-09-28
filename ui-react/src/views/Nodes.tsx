@@ -1,5 +1,6 @@
 import React from "react";
 import { LitBridge } from "../components/LitBridge.tsx";
+import { setAgentEntryValue, removeAgentEntryValue } from "../lib/agents-config.ts";
 import { approveChannelPairing, loadChannelPairings } from "../lib/controllers/channel-pairing.ts";
 import {
   loadConfig,
@@ -105,13 +106,17 @@ export function NodesView() {
         },
         onBindAgent: (agentIndex: number, nodeId: string | null) => {
           const rs = getReactiveState();
-          const basePath = ["agents", "list", agentIndex, "tools", "exec", "node"] as Array<
-            string | number
-          >;
+          // 网关 schema：agent 配置走 agents.entries（按 agentId 为键），旧 agents.list 已废弃
+          const agents = (rs.agentsList as { agents?: Array<{ id?: string }> } | null | undefined)
+            ?.agents;
+          const agentId = agents?.[agentIndex]?.id;
+          if (!agentId) {
+            return;
+          }
           if (nodeId) {
-            updateConfigFormValue(rs as never, basePath, nodeId);
+            setAgentEntryValue(rs as never, agentId, ["tools", "exec", "node"], nodeId);
           } else {
-            removeConfigFormValue(rs as never, basePath);
+            removeAgentEntryValue(rs as never, agentId, ["tools", "exec", "node"]);
           }
         },
         onSaveBindings: () => void saveConfig(getReactiveState() as never),

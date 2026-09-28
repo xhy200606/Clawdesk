@@ -2,13 +2,15 @@ import type { OpenClawApp } from "./app.ts";
 import { loadDebug } from "./controllers/debug.ts";
 import { loadLogs } from "./controllers/logs.ts";
 import { loadNodes } from "./controllers/nodes.ts";
-import { loadSessionActivity } from "./controllers/sessions.ts";
+import { loadSessionActivity, loadSessions } from "./controllers/sessions.ts";
+import { gatewaySupportsMethod } from "./gateway.ts";
 
 type PollingHost = {
   nodesPollInterval: number | null;
   logsPollInterval: number | null;
   debugPollInterval: number | null;
   activityPollInterval: number | null;
+  sessionsSubscribed?: boolean;
   tab: string;
 };
 
@@ -77,6 +79,11 @@ export function startActivityPolling(host: PollingHost) {
   host.activityPollInterval = window.setInterval(() => {
     if (host.tab !== "overview") {
       return;
+    }
+    // Older gateways have no session change subscription. Refresh the roster
+    // there so the overview does not freeze after its initial load.
+    if (!host.sessionsSubscribed || !gatewaySupportsMethod("sessions.subscribe")) {
+      void loadSessions(host as unknown as OpenClawApp);
     }
     void loadSessionActivity(host as unknown as OpenClawApp);
   }, 5000);

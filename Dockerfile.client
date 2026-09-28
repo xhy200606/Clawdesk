@@ -1,0 +1,12 @@
+# Build the updated UI on top of the current WebUI runtime image. The existing
+# nginx template, login page, proxy headers, and environment contract stay intact.
+ARG WEBUI_RUNTIME_IMAGE=openclaw-webui:client
+FROM node:24-alpine AS build
+WORKDIR /app/ui-react
+COPY ui-react/package.json ui-react/package-lock.json ui-react/.npmrc ./
+RUN npm ci --ignore-scripts
+COPY ui-react/ ./
+RUN npm run build
+
+FROM ${WEBUI_RUNTIME_IMAGE}
+COPY --from=build /app/dist/control-ui-react/ /usr/share/nginx/html/

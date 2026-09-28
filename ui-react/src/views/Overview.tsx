@@ -143,19 +143,33 @@ export function OverviewView() {
 
   // [ranch-fix] 网关 2026.9.x 无 sessions.activity RPC（恒 null → 牧场永远摸鱼中）。
   // 用 sessions.list 派生等价的 activity 数据，供 RanchScene2D/3D 与 OrchestrationCard 使用。
+  // [orch-tok-fix] 同一 agent 的多个会话折叠到 agent:<id>:main 时按 agent 聚合：
+  // token 求和、contextTokens/queueDepth 取最大、lastActivityAgo 取最小、
+  // 状态任一 running 即 processing（否则有排队为 waiting），避免 Map 去重时被 0 token 行覆盖。
   const derivedActivity = React.useMemo<SessionActivityResult | null>(() => {
     if (!sessionsResult) return null;
-    const rows = allSessions.map((x) => {
-      const row = x as {
-        agentId?: string;
-        status?: string;
-        state?: string;
-        lastActivityAgo?: number;
-        queueDepth?: number;
-        updatedAt?: number | null;
+    type Row = {
+      agentId?: string;
+      status?: string;
+      lastActivityAgo?: number;
+      queueDepth?: number;
+      updatedAt?: number | null;
+      totalTokens?: number;
+      contextTokens?: number;
+    };
+    const merged = new Map<
+      string,
+      {
+        key: string;
+        state: "processing" | "waiting" | "idle";
+        lastActivityAgo: number;
+        queueDepth: number;
         totalTokens?: number;
         contextTokens?: number;
-      };
+      }
+    >();
+    for (const x of allSessions) {
+      const row = x as Row;
       const running = row.status === "running";
       const lastAgo =
         typeof row.lastActivityAgo === "number"
@@ -163,20 +177,30 @@ export function OverviewView() {
           : row.updatedAt
             ? Math.max(0, Date.now() - row.updatedAt)
             : 999999;
-      return {
-        key: row.agentId ? `agent:${row.agentId}:main` : x.key,
-        state: (running ? "processing" : "idle") as "processing" | "idle",
-        lastActivityAgo: lastAgo,
-        queueDepth: row.queueDepth ?? 0,
-        totalTokens: row.totalTokens ?? undefined,
-        contextTokens: row.contextTokens ?? undefined,
-      };
-    });
+      const key = row.agentId ? `agent:${row.agentId}:main` : x.key;
+      const prev = merged.get(key);
+      const sumTokens = (a?: number, b?: number) =>
+        (a ?? 0) + (b ?? 0) > 0 ? (a ?? 0) + (b ?? 0) : undefined;
+      merged.set(key, {
+        key,
+        state:
+          prev?.state === "processing" || running
+            ? "processing"
+            : (prev?.queueDepth ?? row.queueDepth ?? 0) > 0 || (row.queueDepth ?? 0) > 0
+              ? "waiting"
+              : "idle",
+        lastActivityAgo: Math.min(prev?.lastActivityAgo ?? lastAgo, lastAgo),
+        queueDepth: Math.max(prev?.queueDepth ?? 0, row.queueDepth ?? 0),
+        totalTokens: sumTokens(prev?.totalTokens, row.totalTokens),
+        contextTokens: Math.max(prev?.contextTokens ?? 0, row.contextTokens ?? 0) || undefined,
+      });
+    }
+    const rows = [...merged.values()];
     return {
       ts: Date.now(),
       processing: rows.filter((r) => r.state === "processing").length,
-      waiting: 0,
-      idle: rows.filter((r) => r.state !== "processing").length,
+      waiting: rows.filter((r) => r.state === "waiting").length,
+      idle: rows.filter((r) => r.state === "idle").length,
       sessions: rows,
     };
   }, [sessionsResult, allSessions]);

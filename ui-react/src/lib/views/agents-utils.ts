@@ -39,7 +39,10 @@ type AgentConfigEntry = {
 type ConfigSnapshot = {
   agents?: {
     defaults?: { workspace?: string; model?: unknown; models?: Record<string, { alias?: string }> };
+    /** 旧形状（已废弃）：网关 schema 现使用 entries record */
     list?: AgentConfigEntry[];
+    /** 网关合法形状：按 agentId 为键的条目 record */
+    entries?: Record<string, AgentConfigEntry>;
   };
   tools?: {
     profile?: string;
@@ -172,8 +175,9 @@ export function formatBytes(bytes?: number) {
 
 export function resolveAgentConfig(config: Record<string, unknown> | null, agentId: string) {
   const cfg = config as ConfigSnapshot | null;
-  const list = cfg?.agents?.list ?? [];
-  const entry = list.find((agent) => agent?.id === agentId);
+  // 网关 schema：agents.entries 是按 agentId 为键的 record（旧 agents.list 已废弃，兼容回退）
+  const entry =
+    cfg?.agents?.entries?.[agentId] ?? cfg?.agents?.list?.find((agent) => agent?.id === agentId);
   return {
     entry,
     defaults: cfg?.agents?.defaults,

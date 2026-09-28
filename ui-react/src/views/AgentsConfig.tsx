@@ -116,6 +116,8 @@ export function AgentConfigDrawer({
   const identity = (agent?.identity ?? {}) as Record<string, unknown>;
   const name = String(identity.name ?? agent?.id ?? "");
   const emoji = String(identity.emoji ?? "");
+  // 网关 schema：agent 配置写入 agents.entries（按 agentId 为键），旧 agents.list 已废弃
+  const agentId = String(agent?.id ?? "");
 
   return (
     <>
@@ -155,7 +157,7 @@ export function AgentConfigDrawer({
                 ? Object.entries(itemSchema.properties).map(([key, subSchema]) => (
                     <SchemaField
                       key={key}
-                      path={["agents", "list", agentIndex, key]}
+                      path={["agents", "entries", agentId, key]}
                       fieldSchema={subSchema}
                       value={agent[key]}
                       uiHints={uiHints}
@@ -177,7 +179,7 @@ export function AgentConfigDrawer({
                             } catch {
                               /* keep string */
                             }
-                            onPatch(["agents", "list", agentIndex, key], parsed);
+                            onPatch(["agents", "entries", agentId, key], parsed);
                           }}
                         />
                       </div>

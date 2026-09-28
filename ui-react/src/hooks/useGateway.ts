@@ -25,10 +25,12 @@ import { loadNodes } from "../lib/controllers/nodes.ts";
 import { loadSessions } from "../lib/controllers/sessions.ts";
 import {
   GatewayBrowserClient,
+  gatewaySupportsMethod,
   resolveGatewayErrorDetailCode,
   type GatewayEventFrame,
   type GatewayHelloOk,
 } from "../lib/gateway.ts";
+import { applyAgentRunEvent } from "../lib/orchestration-traces.ts";
 import { generateUUID } from "../lib/uuid.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
@@ -37,12 +39,27 @@ export function useGateway() {
   const clientInstanceId = useRef(generateUUID());
 
   useEffect(() => {
+    let sessionsRefreshTimer: number | null = null;
+    const refreshSessionsSoon = () => {
+      if (sessionsRefreshTimer !== null) return;
+      sessionsRefreshTimer = window.setTimeout(() => {
+        sessionsRefreshTimer = null;
+        if (useAppStore.getState().client !== client) return;
+        if (useAppStore.getState().sessionsLoading) {
+          refreshSessionsSoon();
+          return;
+        }
+        void loadSessions(getReactiveState() as never);
+      }, 150);
+    };
     const s = useAppStore.getState();
     s.set({
       lastError: null,
       lastErrorCode: null,
       hello: null,
       connected: false,
+      sessionsSubscribed: false,
+      agentRunTraces: [],
       execApprovalQueue: [],
       execApprovalError: null,
     });
@@ -67,6 +84,8 @@ export function useGateway() {
           | undefined;
         const patch: Partial<import("../store/appStore.ts").AppState> = {
           connected: true,
+          sessionsSubscribed: false,
+          agentRunTraces: [],
           lastError: null,
           lastErrorCode: null,
           hello,
@@ -92,6 +111,20 @@ export function useGateway() {
         void loadNodes(rs as never, { quiet: true });
         void loadDevices(rs as never, { quiet: true });
         void loadSessions(rs as never);
+        if (gatewaySupportsMethod("sessions.subscribe")) {
+          // Subscribe first, then refresh: notifications may arrive during bootstrap.
+          void client
+            .request("sessions.subscribe", {})
+            .then(() => {
+              if (useAppStore.getState().client !== client) return;
+              useAppStore.getState().set({ sessionsSubscribed: true });
+              refreshSessionsSoon();
+            })
+            .catch(() => {
+              // Older gateways continue using the overview roster poll.
+              useAppStore.getState().set({ sessionsSubscribed: false });
+            });
+        }
         void refreshActiveTab(rs as never);
       },
 
@@ -110,21 +143,29 @@ export function useGateway() {
         if (code !== 1012) {
           useAppStore.getState().set({
             connected: false,
+            sessionsSubscribed: false,
             lastErrorCode,
             lastError: error?.message ?? `disconnected (${code})`,
           });
         } else {
-          useAppStore.getState().set({ connected: false, lastError: null, lastErrorCode: null });
+          useAppStore.getState().set({
+            connected: false,
+            sessionsSubscribed: false,
+            lastError: null,
+            lastErrorCode: null,
+          });
         }
       },
 
       onEvent: (evt: GatewayEventFrame) => {
         if (useAppStore.getState().client !== client) return;
+        if (evt.event === "sessions.changed") refreshSessionsSoon();
         handleGatewayEvent(evt);
       },
 
       onGap: ({ expected, received }: { expected: number; received: number }) => {
         if (useAppStore.getState().client !== client) return;
+        refreshSessionsSoon();
         useAppStore.getState().set({
           lastError: `event gap (expected ${expected}, got ${received}); refresh recommended`,
           lastErrorCode: null,
@@ -136,8 +177,9 @@ export function useGateway() {
     client.start();
 
     return () => {
+      if (sessionsRefreshTimer !== null) window.clearTimeout(sessionsRefreshTimer);
       client.stop();
-      useAppStore.getState().set({ client: null, connected: false });
+      useAppStore.getState().set({ client: null, connected: false, sessionsSubscribed: false });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -160,6 +202,11 @@ function handleGatewayEvent(evt: GatewayEventFrame) {
 
   if (evt.event === "agent") {
     if (s.onboarding) return;
+    const agentRunTraces = applyAgentRunEvent(
+      s.agentRunTraces,
+      evt.payload as AgentEventPayload | undefined,
+    );
+    if (agentRunTraces !== s.agentRunTraces) s.set({ agentRunTraces });
     handleAgentEvent(s as never, evt.payload as AgentEventPayload | undefined);
     return;
   }

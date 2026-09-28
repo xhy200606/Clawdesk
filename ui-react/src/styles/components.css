@@ -2944,6 +2944,41 @@ pre.code-block {
   }
 }
 
+/* 会话下拉：左侧运行状态图标（🏃 运行中 / 🌙 空闲） */
+.oc-session-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex: 0 0 16px;
+  color: var(--muted);
+}
+
+.oc-session-state--running {
+  color: var(--color-success, #22c55e);
+}
+
+.oc-session-state--running svg {
+  animation: oc-session-run-bounce 0.9s ease-in-out infinite;
+}
+
+@keyframes oc-session-run-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-session-state--running svg {
+    animation: none;
+  }
+}
+
 .oc-dropdown__trigger .oc-session-running {
   width: 7px;
   height: 7px;

@@ -5,6 +5,7 @@ import {
   applyConfig,
   saveConfig,
   updateConfigFormValue,
+  removeConfigFormValue,
   type ConfigState,
 } from "../../lib/controllers/config.ts";
 import type { GatewayAgentRow } from "../../lib/types.ts";
@@ -12,9 +13,12 @@ import { getReactiveState } from "../../store/appStore.ts";
 
 // ─── 牛马档案 · Agent 信息编辑/新增弹窗 ──────────────────────────
 // 「资料」页编辑 identity.name / identity.avatar / identity.emoji（动物形象）/ model.primary，
-// 写回 configForm.agents.list 对应条目，经 saveConfig + applyConfig 持久化。
+// 写回 configForm.agents.entries.<agentId>（网关 schema：agents 是 strict 对象，
+// 合法键为 ownership / defaults / entries，entries 是按 agentId 为键的 record，
+// 条目不可携带 id 字段），经 saveConfig + applyConfig 持久化。
 // 新建模式：输入新 agentId + 选择动物形象，保存后网关会创建对应 agent。
-// 删除：从 agents.list 移除条目（main 等默认 agent 不允许删除）。
+// 删除：从 agents.entries 移除键（main 等默认 agent 不允许删除；entries 清空时整键移除，
+// 避免 "entries must contain at least one configured agent" 校验失败）。
 // 文件页编辑 workspace 内的 SOUL.md / AGENTS.md / USER.md / IDENTITY.md，
 // 走网关 agents.files.get / agents.files.set RPC 直接读写。
 
@@ -28,13 +32,18 @@ type AgentEditDialogProps = {
   onClose: () => void;
 };
 
+/** agents.entries 条目：按 agentId 为键，不含 id 字段；保留其余透传字段 */
 type AgentFormEntry = {
-  id: string;
-  name?: string;
-  identity?: { name?: string; avatar?: string; emoji?: string };
+  identity?: { name?: string; avatar?: string; emoji?: string; theme?: string };
   model?: { primary?: string };
-  workspace?: string;
+  [key: string]: unknown;
 };
+
+/** 读取 config.agents.entries record（网关合法形状） */
+function readAgentEntries(configForm: Record<string, unknown> | null) {
+  const agentsObj = configForm?.agents as Record<string, unknown> | undefined;
+  return { ...((agentsObj?.entries ?? {}) as Record<string, AgentFormEntry>) };
+}
 
 /** 可直接编辑的 workspace 文件 */
 const EDITABLE_FILES = ["SOUL.md", "AGENTS.md", "USER.md", "IDENTITY.md"] as const;
@@ -114,11 +123,8 @@ export function AgentEditDialog({
     const reactive = getReactiveState() as unknown as {
       configForm: Record<string, unknown> | null;
     };
-    const agentsObj = (reactive.configForm as Record<string, unknown> | null)?.agents as
-      | Record<string, unknown>
-      | undefined;
-    const list = (agentsObj?.list ?? []) as AgentFormEntry[];
-    const entry = list.find((a) => a.id === agent.id);
+    const entries = readAgentEntries(reactive.configForm);
+    const entry = entries[agent.id];
     setName(entry?.identity?.name ?? agent.identity?.name ?? agent.id);
     setAvatar(entry?.identity?.avatar ?? agent.identity?.avatar ?? "");
     setEmoji(entry?.identity?.emoji ?? agent.identity?.emoji ?? "");
@@ -183,13 +189,6 @@ export function AgentEditDialog({
     [agent, fileBusy, fileText],
   );
 
-  const listAgentsFromForm = (reactive: ConfigState): AgentFormEntry[] => {
-    const agentsObj = (reactive.configForm as Record<string, unknown> | null)?.agents as
-      | Record<string, unknown>
-      | undefined;
-    return [...((agentsObj?.list ?? []) as AgentFormEntry[])];
-  };
-
   const onSave = useCallback(async () => {
     if (busy) return;
     const targetId = (isCreate ? newId : agent?.id) ?? "";
@@ -227,12 +226,10 @@ export function AgentEditDialog({
         }
       }
 
-      const list = listAgentsFromForm(reactive);
-      const idx = list.findIndex((a) => a.id === targetId.trim());
-      const entry: AgentFormEntry =
-        idx >= 0
-          ? { ...list[idx], identity: { ...(list[idx].identity ?? {}) } }
-          : { id: targetId.trim(), identity: {} };
+      // 网关 schema：agents.entries 是按 agentId 为键的 record，条目不可携带 id 字段
+      const entries = readAgentEntries(reactive.configForm as Record<string, unknown> | null);
+      const prev = entries[targetId.trim()] ?? {};
+      const entry: AgentFormEntry = { ...prev, identity: { ...(prev.identity ?? {}) } };
       entry.identity = {
         ...entry.identity,
         name: name.trim() || targetId.trim(),
@@ -241,14 +238,13 @@ export function AgentEditDialog({
       };
       const trimmedModel = model.trim();
       if (trimmedModel) {
-        entry.model = { ...(entry.model ?? {}), primary: trimmedModel };
+        entry.model = { ...((prev.model as AgentFormEntry["model"]) ?? {}), primary: trimmedModel };
       } else {
         delete entry.model;
       }
-      if (idx >= 0) list[idx] = entry;
-      else list.push(entry);
+      entries[targetId.trim()] = entry;
 
-      updateConfigFormValue(reactive, ["agents", "list"], list);
+      updateConfigFormValue(reactive, ["agents", "entries"], entries);
       await new Promise((r) => setTimeout(r, 50));
       await saveConfig(reactive);
       await applyConfig(reactive);
@@ -270,8 +266,15 @@ export function AgentEditDialog({
         client: { request: (method: string, params: unknown) => Promise<unknown> } | null;
       };
       if (!reactive.client) throw new Error("网关未连接");
-      const list = listAgentsFromForm(reactive).filter((a) => a.id !== agent.id);
-      updateConfigFormValue(reactive, ["agents", "list"], list);
+      // 从 agents.entries record 移除该键；清空时整键移除（entries 空对象会触发
+      // "must contain at least one configured agent" 校验失败）
+      const entries = readAgentEntries(reactive.configForm as Record<string, unknown> | null);
+      delete entries[agent.id];
+      if (Object.keys(entries).length === 0) {
+        removeConfigFormValue(reactive, ["agents", "entries"]);
+      } else {
+        updateConfigFormValue(reactive, ["agents", "entries"], entries);
+      }
       await new Promise((r) => setTimeout(r, 50));
       await saveConfig(reactive);
       await applyConfig(reactive);
@@ -484,7 +487,7 @@ export function AgentEditDialog({
             <div className="confirm-dialog">
               <div className="confirm-dialog__title">确认删除牛马「{agent.id}」？</div>
               <p className="agent-edit-dialog__confirm-text">
-                将从配置中移除该牛马（agents.list）。其 workspace 文件保留在磁盘上，可手动清理。
+                将从配置中移除该牛马（agents.entries）。其 workspace 文件保留在磁盘上，可手动清理。
               </p>
               <div className="confirm-dialog__actions">
                 <button
