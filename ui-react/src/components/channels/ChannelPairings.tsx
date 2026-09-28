@@ -8,7 +8,7 @@ export type ChannelPairingsProps = {
   pairings: ChannelPairingGroup[];
   error: string | null;
   onRefresh: () => void;
-  onApprove: (channel: string, code: string) => void;
+  onApprove: (channel: string, requestId: string, accountId?: string) => void;
 };
 
 // ─── Component ───────────────────────────────────────────────
@@ -52,18 +52,24 @@ export function ChannelPairings({
                 <span style={{ opacity: 0.6 }}> ({group.requests.length})</span>
               </div>
               {group.requests.map((req) => (
-                <div className="list-item" key={req.code}>
+                <div className="list-item" key={req.id}>
                   <div className="list-main">
-                    <div className="list-title">用户 ID: {req.id}</div>
+                    <div className="list-title">
+                      用户: {req.senderId ?? req.id}
+                      {req.senderLabel ? (
+                        <span style={{ opacity: 0.6 }}> ({req.senderLabel})</span>
+                      ) : null}
+                    </div>
                     <div className="list-sub">
-                      配对码: {req.code} · 时间: {req.createdAt}
+                      账号: {req.accountId || "—"} · 时间: {req.createdAt}
+                      {req.expiresAt ? ` · 过期: ${req.expiresAt}` : ""}
                       {req.meta ? ` · ${JSON.stringify(req.meta)}` : ""}
                     </div>
                   </div>
                   <div className="list-meta">
                     <button
                       className="btn btn--sm primary"
-                      onClick={() => onApprove(group.channel, req.code)}
+                      onClick={() => onApprove(group.channel, req.id, req.accountId)}
                     >
                       批准
                     </button>

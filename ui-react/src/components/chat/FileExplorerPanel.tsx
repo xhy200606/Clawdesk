@@ -34,6 +34,13 @@ type WsGetResult = {
   };
 };
 
+type FsListResult = {
+  path: string;
+  parent?: string | null;
+  home?: string;
+  entries: Array<{ name: string; path: string; hidden?: boolean }>;
+};
+
 type ViewerState = {
   path: string;
   name: string;
@@ -71,6 +78,11 @@ function formatDate(ms?: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function dirname(p: string): string {
+  const idx = p.replace(/\/+$/, "").lastIndexOf("/");
+  return idx <= 0 ? "/" : p.slice(0, idx);
+}
+
 const TEXT_EXTENSIONS =
   /\.(md|txt|json|ya?ml|toml|ini|cfg|conf|sh|bash|zsh|py|js|ts|tsx|jsx|mjs|cjs|css|html?|xml|csv|log|env|gitignore|dockerfile|makefile|sql|rb|go|rs|java|c|cpp|h|hpp|php|lua|pl|swift|kt|r|dat)$/i;
 
@@ -89,15 +101,6 @@ function isLikelyText(mime: string, name: string): boolean {
     return false;
   }
   return TEXT_EXTENSIONS.test(name) || mime === "application/octet-stream" || !mime;
-}
-
-function sortEntries(entries: WsEntry[]): WsEntry[] {
-  return [...entries].sort((a, b) => {
-    if (a.kind !== b.kind) {
-      return a.kind === "directory" ? -1 : 1;
-    }
-    return a.name.localeCompare(b.name, "zh-Hans-CN", { numeric: true });
-  });
 }
 
 // ─── 图标 ───────────────────────────────────────────────────
@@ -180,6 +183,18 @@ const ChevronIcon = () => (
   </svg>
 );
 
+// ─── 面板条目（统一目录/文件两种来源） ──────────────────────
+
+type PanelEntry = {
+  absPath: string;
+  name: string;
+  isDir: boolean;
+  size?: number;
+  updatedAtMs?: number;
+  /** workspace 相对路径（仅 workspace 内条目） */
+  wsPath?: string;
+};
+
 // ─── 主组件 ─────────────────────────────────────────────────
 
 export function FileExplorerPanel() {
@@ -189,36 +204,85 @@ export function FileExplorerPanel() {
 
   const agentId = parseAgentSessionKey(sessionKey)?.agentId ?? "main";
 
-  const [path, setPath] = useState("");
-  const [list, setList] = useState<WsListResult | null>(null);
+  // workspace 绝对路径（由 agents.files.list 获得）
+  const [workspacePath, setWorkspacePath] = useState<string | null>(null);
+  // 当前目录绝对路径；"" = 尚未初始化
+  const [dir, setDir] = useState("");
+  const [entries, setEntries] = useState<PanelEntry[]>([]);
+  const [parentDir, setParentDir] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
   const [viewerLoading, setViewerLoading] = useState(false);
   const reqSeq = useRef(0);
 
+  const openclawRoot = workspacePath ? dirname(workspacePath) : null;
+
   const fetchList = useCallback(
-    async (targetPath: string) => {
-      if (!client || !connected) {
+    async (targetDir: string) => {
+      if (!client || !connected || !workspacePath) {
         return;
       }
       const seq = ++reqSeq.current;
       setLoading(true);
       setError(null);
       try {
-        const params: Record<string, unknown> = { agentId };
-        if (targetPath) {
-          params.path = targetPath;
+        const inWorkspace =
+          targetDir === workspacePath || targetDir.startsWith(workspacePath + "/");
+
+        if (inWorkspace) {
+          // workspace 内：用 agents.workspace.list（目录+文件、大小、时间）
+          const rel = targetDir === workspacePath ? "" : targetDir.slice(workspacePath.length + 1);
+          const params: Record<string, unknown> = { agentId };
+          if (rel) {
+            params.path = rel;
+          }
+          const res = await client.request<WsListResult | null>("agents.workspace.list", params);
+          if (seq !== reqSeq.current) {
+            return;
+          }
+          const list = res?.entries ?? [];
+          const mapped: PanelEntry[] = list.map((e) => {
+            const abs =
+              e.path.startsWith("/") && e.path.startsWith(workspacePath)
+                ? e.path
+                : `${workspacePath}/${e.path.replace(/^\//, "")}`;
+            return {
+              absPath: abs,
+              name: e.name,
+              isDir: e.kind === "directory",
+              size: e.size,
+              updatedAtMs: e.updatedAtMs,
+              wsPath:
+                e.path.startsWith("/") && e.path.startsWith(workspacePath)
+                  ? e.path.slice(workspacePath.length).replace(/^\//, "")
+                  : e.path,
+            };
+          });
+          setEntries(mapped);
+          setParentDir(targetDir === workspacePath ? openclawRoot : dirname(targetDir));
+        } else {
+          // OpenClaw 根目录及其它区域：fs.listDir（仅目录）
+          const res = await client.request<FsListResult | null>("fs.listDir", {
+            path: targetDir,
+          });
+          if (seq !== reqSeq.current) {
+            return;
+          }
+          const list = res?.entries ?? [];
+          const mapped: PanelEntry[] = list.map((e) => ({
+            absPath: e.path,
+            name: e.name,
+            isDir: true,
+          }));
+          mapped.sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN", { numeric: true }));
+          setEntries(mapped);
+          setParentDir(res?.parent ?? dirname(targetDir));
         }
-        const res = await client.request<WsListResult | null>("agents.workspace.list", params);
-        if (seq !== reqSeq.current) {
-          return; // 过期响应
-        }
-        setList(res);
       } catch (err) {
         if (seq === reqSeq.current) {
           setError(String(err instanceof Error ? err.message : err));
-          setList(null);
+          setEntries([]);
         }
       } finally {
         if (seq === reqSeq.current) {
@@ -226,20 +290,56 @@ export function FileExplorerPanel() {
         }
       }
     },
-    [client, connected, agentId],
+    [client, connected, agentId, workspacePath, openclawRoot],
   );
 
-  // 打开面板或切换 agent 时加载根目录
+  // 初始化：取 workspace 绝对路径 → 定位到 OpenClaw 根目录
   useEffect(() => {
-    setPath("");
+    let alive = true;
+    setWorkspacePath(null);
+    setDir("");
+    setEntries([]);
     setViewer(null);
-    setList(null);
-    void fetchList("");
-  }, [fetchList]);
+    setError(null);
+    (async () => {
+      if (!client || !connected) {
+        return;
+      }
+      try {
+        const res = await client.request<{ workspace?: string } | null>("agents.files.list", {
+          agentId,
+        });
+        if (!alive) {
+          return;
+        }
+        const ws = res?.workspace ?? "";
+        if (ws) {
+          setWorkspacePath(ws.replace(/\/+$/, ""));
+        } else {
+          setError("无法获取 workspace 路径");
+        }
+      } catch (err) {
+        if (alive) {
+          setError(String(err instanceof Error ? err.message : err));
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [client, connected, agentId]);
+
+  // workspace 就绪后首次列出 OpenClaw 根目录
+  useEffect(() => {
+    if (openclawRoot) {
+      setDir(openclawRoot);
+      void fetchList(openclawRoot);
+    }
+  }, [openclawRoot, fetchList]);
 
   const openFile = useCallback(
-    async (entry: WsEntry) => {
-      if (!client || !connected) {
+    async (entry: PanelEntry) => {
+      if (!client || !connected || !entry.wsPath) {
         return;
       }
       setViewerLoading(true);
@@ -247,7 +347,7 @@ export function FileExplorerPanel() {
       try {
         const res = await client.request<WsGetResult | null>("agents.workspace.get", {
           agentId,
-          path: entry.path,
+          path: entry.wsPath,
         });
         const file = res?.file;
         if (!file) {
@@ -274,32 +374,58 @@ export function FileExplorerPanel() {
   );
 
   const openDir = useCallback(
-    (entry: WsEntry) => {
+    (entry: PanelEntry) => {
       setViewer(null);
-      setPath(entry.path);
-      void fetchList(entry.path);
+      setDir(entry.absPath);
+      void fetchList(entry.absPath);
     },
     [fetchList],
   );
 
-  const crumbs = path ? path.split("/") : [];
-  const parentPath = list?.parentPath ?? null;
-  const entries = list ? sortEntries(list.entries) : [];
+  const goUp = useCallback(() => {
+    if (parentDir) {
+      setViewer(null);
+      setDir(parentDir);
+      void fetchList(parentDir);
+    }
+  }, [parentDir, fetchList]);
+
+  // 面包屑：OpenClaw 根 → … → 当前目录
+  const crumbs: Array<{ label: string; absPath: string }> = [];
+  if (openclawRoot) {
+    crumbs.push({ label: "OpenClaw 根目录", absPath: openclawRoot });
+    if (dir && dir !== openclawRoot && dir.startsWith(openclawRoot)) {
+      const rel = dir.slice(openclawRoot.length).replace(/^\//, "");
+      const segs = rel.split("/").filter(Boolean);
+      let acc = openclawRoot;
+      for (const seg of segs) {
+        acc = `${acc}/${seg}`;
+        crumbs.push({ label: seg, absPath: acc });
+      }
+    }
+  }
+
+  const sorted = [...entries].sort((a, b) => {
+    if (a.isDir !== b.isDir) {
+      return a.isDir ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name, "zh-Hans-CN", { numeric: true });
+  });
 
   return (
-    <aside className="file-explorer" aria-label="Workspace 文件管理器">
+    <aside className="file-explorer" aria-label="OpenClaw 文件管理器">
       {/* 标题栏 */}
       <div className="file-explorer__head">
         <span className="file-explorer__agent" title={`Agent: ${agentId}`}>
           <FolderIcon />
-          <span>Workspace</span>
+          <span>OpenClaw 文件</span>
           <span className="file-explorer__agent-id">{agentId}</span>
         </span>
         <span className="file-explorer__head-actions">
           <button
             className="file-explorer__icon-btn"
-            onClick={() => void fetchList(path)}
-            disabled={!connected || loading}
+            onClick={() => void fetchList(dir)}
+            disabled={!connected || loading || !openclawRoot}
             title="刷新"
             aria-label="刷新"
           >
@@ -310,38 +436,26 @@ export function FileExplorerPanel() {
 
       {/* 面包屑 */}
       <div className="file-explorer__crumbs">
-        <button
-          className="file-explorer__crumb"
-          onClick={() => {
-            setViewer(null);
-            setPath("");
-            void fetchList("");
-          }}
-          disabled={loading}
-        >
-          根目录
-        </button>
-        {crumbs.map((seg, i) => {
-          const target = crumbs.slice(0, i + 1).join("/");
-          return (
-            <React.Fragment key={target}>
+        {crumbs.map((crumb, i) => (
+          <React.Fragment key={crumb.absPath}>
+            {i > 0 && (
               <span className="file-explorer__crumb-sep">
                 <ChevronIcon />
               </span>
-              <button
-                className={`file-explorer__crumb${i === crumbs.length - 1 ? " file-explorer__crumb--current" : ""}`}
-                onClick={() => {
-                  setViewer(null);
-                  setPath(target);
-                  void fetchList(target);
-                }}
-                disabled={loading}
-              >
-                {seg}
-              </button>
-            </React.Fragment>
-          );
-        })}
+            )}
+            <button
+              className={`file-explorer__crumb${i === crumbs.length - 1 ? " file-explorer__crumb--current" : ""}`}
+              onClick={() => {
+                setViewer(null);
+                setDir(crumb.absPath);
+                void fetchList(crumb.absPath);
+              }}
+              disabled={loading}
+            >
+              {crumb.label}
+            </button>
+          </React.Fragment>
+        ))}
       </div>
 
       {/* 内容区 */}
@@ -389,24 +503,21 @@ export function FileExplorerPanel() {
         ) : (
           /* ── 目录列表 ── */
           <>
+            {!openclawRoot && !error && <div className="file-explorer__state">加载中…</div>}
             {loading && entries.length === 0 && <div className="file-explorer__state">加载中…</div>}
             {!loading && error && (
               <div className="file-explorer__state file-explorer__state--error">{error}</div>
             )}
-            {!loading && !error && entries.length === 0 && (
+            {!loading && !error && openclawRoot && entries.length === 0 && (
               <div className="file-explorer__state">此目录为空</div>
             )}
             {!error && entries.length > 0 && (
               <ul className="file-explorer__list">
-                {parentPath !== null && (
+                {dir !== openclawRoot && parentDir && (
                   <li>
                     <button
                       className="file-explorer__item file-explorer__item--parent"
-                      onClick={() => {
-                        setViewer(null);
-                        setPath(parentPath);
-                        void fetchList(parentPath);
-                      }}
+                      onClick={goUp}
                       disabled={loading}
                     >
                       <span className="file-explorer__item-icon file-explorer__item-icon--parent">
@@ -416,24 +527,22 @@ export function FileExplorerPanel() {
                     </button>
                   </li>
                 )}
-                {entries.map((entry) => (
-                  <li key={entry.path}>
+                {sorted.map((entry) => (
+                  <li key={entry.absPath}>
                     <button
                       className="file-explorer__item"
-                      onClick={() =>
-                        entry.kind === "directory" ? openDir(entry) : void openFile(entry)
-                      }
+                      onClick={() => (entry.isDir ? openDir(entry) : void openFile(entry))}
                       disabled={loading || viewerLoading}
-                      title={entry.path}
+                      title={entry.absPath}
                     >
                       <span
-                        className={`file-explorer__item-icon${entry.kind === "directory" ? " file-explorer__item-icon--dir" : ""}`}
+                        className={`file-explorer__item-icon${entry.isDir ? " file-explorer__item-icon--dir" : ""}`}
                       >
-                        {entry.kind === "directory" ? <FolderIcon /> : <FileIcon />}
+                        {entry.isDir ? <FolderIcon /> : <FileIcon />}
                       </span>
                       <span className="file-explorer__item-name">{entry.name}</span>
                       <span className="file-explorer__item-meta">
-                        {entry.kind === "file" ? formatSize(entry.size) : ""}
+                        {!entry.isDir && entry.size != null ? formatSize(entry.size) : null}
                         {entry.updatedAtMs ? (
                           <span className="file-explorer__item-date">
                             {formatDate(entry.updatedAtMs)}
@@ -446,6 +555,11 @@ export function FileExplorerPanel() {
               </ul>
             )}
             {viewerLoading && <div className="file-explorer__state">读取文件中…</div>}
+            {openclawRoot && dir === openclawRoot && !error && (
+              <div className="file-explorer__hint">
+                提示：网关限制，根目录仅显示子目录；进入 workspace 后可浏览并预览文件。
+              </div>
+            )}
           </>
         )}
       </div>

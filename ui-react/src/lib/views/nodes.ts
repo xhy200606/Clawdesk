@@ -53,7 +53,7 @@ export type ChannelPairingsProps = {
   channelPairings: ChannelPairingGroup[];
   channelPairingsError: string | null;
   onChannelPairingsRefresh: () => void;
-  onChannelPairingApprove: (channel: string, code: string) => void;
+  onChannelPairingApprove: (channel: string, requestId: string, accountId?: string) => void;
 };
 
 export function renderNodes(props: NodesProps) {
@@ -157,16 +157,21 @@ export function renderChannelPairings(props: ChannelPairingsProps) {
                   (req) => html`
                     <div class="list-item">
                       <div class="list-main">
-                        <div class="list-title">用户 ID: ${req.id}</div>
+                        <div class="list-title">用户: ${req.senderId ?? req.id}</div>
                         <div class="list-sub">
-                          配对码: ${req.code} · 时间: ${req.createdAt}
+                          账号: ${req.accountId ?? "—"} · 时间: ${req.createdAt}
                           ${req.meta ? ` · ${JSON.stringify(req.meta)}` : ""}
                         </div>
                       </div>
                       <div class="list-meta">
                         <button
                           class="btn btn--sm primary"
-                          @click=${() => props.onChannelPairingApprove(group.channel, req.code)}
+                          @click=${() =>
+                            props.onChannelPairingApprove(
+                              group.channel,
+                              req.id,
+                              (req as { accountId?: string }).accountId,
+                            )}
                         >
                           批准
                         </button>

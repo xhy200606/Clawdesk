@@ -126,8 +126,17 @@ export function OverviewView() {
   const applySettings = s((st) => st.applySettings);
   const set = s((st) => st.set);
 
-  const presenceCount = presenceEntries.length;
-  const sessionsCount = sessionsResult?.count ?? null;
+  // [version-adapt] presence 是网关/浏览器实例（每个标签页都算），不是牛马。
+  // 在线牛马 = 有 running 会话的 agent 数；正在接客 = running 会话数。
+  const allSessions = (sessionsResult?.sessions ?? []) as Array<{
+    key: string;
+    agentId?: string;
+    status?: string;
+  }>;
+  const runningSessions = allSessions.filter((x) => x.status === "running");
+  const presenceCount = new Set(runningSessions.map((x) => x.agentId ?? x.key.split(":")[1] ?? ""))
+    .size;
+  const sessionsCount = runningSessions.length;
   const agents = (agentsList?.agents ?? []) as unknown as GatewayAgentRow[];
   const configForm = s((st) => st.configForm) as Record<string, unknown> | null;
   const channelsSnapshot = s((st) => st.channelsSnapshot) as ChannelsStatusSnapshot | null;
@@ -223,7 +232,7 @@ export function OverviewView() {
       <AgentsCard
         key="agents"
         agents={agents}
-        sessionActivity={sessionActivity as SessionActivityResult | null}
+        sessions={allSessions}
         channelBindings={channelBindings}
       />
     ),

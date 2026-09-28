@@ -555,8 +555,8 @@ export function ChannelsView() {
           pairings={channelPairings}
           error={channelPairingsError}
           onRefresh={() => void loadChannelPairings(getReactiveState() as never)}
-          onApprove={(channel, code) =>
-            void approveChannelPairing(getReactiveState() as never, channel, code)
+          onApprove={(channel, requestId, accountId) =>
+            void approveChannelPairing(getReactiveState() as never, channel, requestId, accountId)
           }
         />
       </div>

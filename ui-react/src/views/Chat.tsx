@@ -579,9 +579,30 @@ export function ChatView() {
       null
     );
   }, [sessionsResult, activeSessionKey]);
-  const composeUsedTokens = composeSession?.totalTokens ?? null;
   const composeContextTokens = composeSession?.contextTokens ?? null;
   const composeModelId = composeSession?.model ?? null;
+  // [fix] 部分提供商不向网关回报 usage（totalTokens 恒为 0），此时按当前
+  // 已加载的聊天内容估算 token 数（CJK≈0.75 token/字，其余≈0.25 token/字符）
+  const gatewayTotalTokens = composeSession?.totalTokens ?? null;
+  const composeEstimated = !(gatewayTotalTokens && gatewayTotalTokens > 0);
+  const estimatedTokens = React.useMemo(() => {
+    let chars = 0;
+    const scan = (arr: unknown[]) => {
+      for (const raw of arr) {
+        const m = raw as { text?: unknown; content?: unknown };
+        const text =
+          typeof m?.text === "string" ? m.text : typeof m?.content === "string" ? m.content : "";
+        if (!text) {
+          continue;
+        }
+        const cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) ?? []).length;
+        chars += cjk * 0.75 + (text.length - cjk) / 4;
+      }
+    };
+    scan(chatMessages ?? []);
+    return Math.ceil(chars);
+  }, [chatMessages]);
+  const composeUsedTokens = composeEstimated ? estimatedTokens : gatewayTotalTokens;
 
   // 聊天页初始也加载会话列表（供当前模型名 / 上下文圆环使用）
   useEffect(() => {
@@ -683,12 +704,36 @@ export function ChatView() {
 
   // --- Handlers ---
   const handleSend = useCallback(() => {
+    const stNow = s.getState() as unknown as {
+      sessionKey: string;
+      chatDrafts?: Record<string, string>;
+    };
+    if (stNow.chatDrafts && Object.hasOwn(stNow.chatDrafts, stNow.sessionKey)) {
+      const next = { ...stNow.chatDrafts };
+      delete next[stNow.sessionKey];
+      s.setState({ chatDrafts: next } as never);
+    }
     void handleSendChat(getReactiveState() as unknown as ChatHost);
   }, []);
 
   const handleAbort = useCallback(() => {
     void abortChatRun(getReactiveState() as unknown as ChatState);
   }, []);
+
+  // 切换会话时恢复该会话的输入框草稿
+  const chatDrafts = s((st) => st.chatDrafts);
+  useEffect(() => {
+    const st = s.getState() as unknown as {
+      chatDrafts?: Record<string, string>;
+      chatMessage?: string;
+    };
+    const draft = st.chatDrafts?.[sessionKey] ?? "";
+    if (draft !== st.chatMessage) {
+      set({ chatMessage: draft });
+    }
+    // 仅在会话切换时恢复，草稿更新不触发
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey]);
 
   const handleNewSession = useCallback(() => {
     const newKey = `session-${Date.now()}`;
@@ -722,7 +767,15 @@ export function ChatView() {
   const handleInput = useCallback(
     (e: React.FormEvent<HTMLTextAreaElement>) => {
       const target = e.target as HTMLTextAreaElement;
-      set({ chatMessage: target.value });
+      const value = target.value;
+      const stNow = s.getState() as unknown as {
+        sessionKey: string;
+        chatDrafts?: Record<string, string>;
+      };
+      set({
+        chatMessage: value,
+        chatDrafts: { ...(stNow.chatDrafts ?? {}), [stNow.sessionKey]: value },
+      });
       // Recalculate height after value update
       requestAnimationFrame(() => {
         if (target.isConnected) {
@@ -1067,6 +1120,7 @@ export function ChatView() {
               <ContextUsage
                 usedTokens={composeUsedTokens}
                 contextTokens={composeContextTokens}
+                estimated={composeEstimated}
                 modelId={composeModelId}
               />
             </div>

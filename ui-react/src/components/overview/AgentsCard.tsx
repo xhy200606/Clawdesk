@@ -58,14 +58,34 @@ const CHANNEL_ICON_MAP: Record<string, string> = {
 
 export type AgentsCardProps = {
   agents: GatewayAgentRow[];
-  sessionActivity: SessionActivityResult | null;
+  sessionActivity?: SessionActivityResult | null;
+  /** 会话列表（sessions.list），用于工作状态判定与会话详情 */
+  sessions?: Array<{
+    key: string;
+    agentId?: string;
+    status?: string;
+    state?: string;
+    lastActivityAgo?: number;
+    queueDepth?: number;
+    totalTokens?: number | null;
+    contextTokens?: number | null;
+  }> | null;
   channelBindings?: Record<string, string[]>;
 };
 
 // ─── Main Component ──────────────────────────────────────────
 
-export function AgentsCard({ agents, sessionActivity, channelBindings }: AgentsCardProps) {
+export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProps) {
   const [editingAgent, setEditingAgent] = useState<GatewayAgentRow | null>(null);
+  // [version-adapt] 网关 2026.9.x 无 sessions.activity RPC，改用 sessions.list 的 status 字段
+  const allSessions = sessions ?? [];
+  const runningSessions = allSessions.filter((x) => x.status === "running");
+  const runningCount = runningSessions.length;
+  const idleCount = Math.max(
+    agents.length -
+      new Set(runningSessions.map((x) => x.agentId ?? x.key.split(":")[1] ?? "")).size,
+    0,
+  );
   return (
     <div data-swapy-slot="agents">
       <div data-swapy-item="agents">
@@ -78,14 +98,8 @@ export function AgentsCard({ agents, sessionActivity, channelBindings }: AgentsC
               </div>
               <div className="card-sub" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 {agents.length} 头牛马已就位
-                {sessionActivity && (
-                  <>
-                    {" · "}
-                    {OverviewIcons.running()} {sessionActivity.processing}{" "}
-                    {OverviewIcons.hourglass()} {sessionActivity.waiting} {OverviewIcons.moon()}{" "}
-                    {sessionActivity.idle}
-                  </>
-                )}
+                {" · "}
+                {OverviewIcons.running()} {runningCount} {OverviewIcons.moon()} {idleCount}
               </div>
             </div>
           </div>
@@ -93,17 +107,14 @@ export function AgentsCard({ agents, sessionActivity, channelBindings }: AgentsC
             {agents.map((agent) => {
               const avatarSrc = resolveAgentAvatarSrc(agent);
               const displayName = agent.identity?.name ?? agent.name ?? agent.id;
-              const agentSessions =
-                sessionActivity?.sessions.filter(
-                  (s) => (s.key.split(":")[1] ?? s.key) === agent.id,
-                ) ?? [];
-              const agentState: "processing" | "waiting" | "idle" = agentSessions.find(
-                (s) => s.state === "processing",
+              const agentSessions = allSessions.filter(
+                (x) => (x.agentId ?? x.key.split(":")[1] ?? x.key) === agent.id,
+              );
+              const agentState: "processing" | "waiting" | "idle" = agentSessions.some(
+                (x) => x.status === "running",
               )
                 ? "processing"
-                : agentSessions.find((s) => s.state === "waiting")
-                  ? "waiting"
-                  : "idle";
+                : "idle";
               const channels = channelBindings?.[agent.id] ?? [];
 
               return (
@@ -170,14 +181,20 @@ export function AgentsCard({ agents, sessionActivity, channelBindings }: AgentsC
                             <div key={i} className="agent-card-pixel__session">
                               <div className="agent-card-pixel__session-row">
                                 <span className="agent-card-pixel__session-icon">
-                                  <SessionStateIcon state={s.state} />
+                                  <SessionStateIcon
+                                    state={
+                                      s.status === "running" ? "processing" : (s.state ?? "idle")
+                                    }
+                                  />
                                 </span>
                                 <span className="agent-card-pixel__session-time">
-                                  {s.lastActivityAgo < 5000
+                                  {s.lastActivityAgo != null && s.lastActivityAgo < 5000
                                     ? "刚刚"
-                                    : formatRelativeTimestamp(Date.now() - s.lastActivityAgo)}
+                                    : formatRelativeTimestamp(
+                                        Date.now() - (s.lastActivityAgo ?? 0),
+                                      )}
                                 </span>
-                                {s.queueDepth > 0 && (
+                                {(s.queueDepth ?? 0) > 0 && (
                                   <span className="agent-card-pixel__session-queue">
                                     队列{s.queueDepth}
                                   </span>

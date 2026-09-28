@@ -98,6 +98,8 @@ export type AppState = {
   chatLoading: boolean;
   chatSending: boolean;
   chatMessage: string;
+  /** 按会话保存的输入框草稿（key = sessionKey） */
+  chatDrafts: Record<string, string>;
   chatMessages: unknown[];
   chatToolMessages: unknown[];
   chatStream: string | null;
@@ -436,6 +438,7 @@ function makeInitialState(): AppState {
     chatLoading: false,
     chatSending: false,
     chatMessage: "",
+    chatDrafts: {},
     chatMessages: [],
     chatToolMessages: [],
     chatStream: null,

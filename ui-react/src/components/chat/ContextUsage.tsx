@@ -9,6 +9,8 @@ export interface ContextUsageProps {
   contextTokens?: number | null;
   /** 当前模型 id（用于面板底部展示） */
   modelId?: string | null;
+  /** true = 用量由前端估算（提供商未回报 usage） */
+  estimated?: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -75,7 +77,7 @@ function ProgressRing({ percent }: { percent: number }) {
 
 // ─── Component ───────────────────────────────────────────────
 
-export function ContextUsage({ usedTokens, contextTokens, modelId }: ContextUsageProps) {
+export function ContextUsage({ usedTokens, contextTokens, modelId, estimated }: ContextUsageProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -170,7 +172,9 @@ export function ContextUsage({ usedTokens, contextTokens, modelId }: ContextUsag
           <div className="context-usage__hero">
             <span className="context-usage__pct">{pctText}</span>
             <span className="context-usage__used">
-              已使用 {formatTokenCount(used)} / {formatTokenCount(windowTokens)}
+              {estimated ? "已使用 ≈" : "已使用 "}
+              {formatTokenCount(used)} / {formatTokenCount(windowTokens)}
+              {estimated ? "（估算）" : ""}
             </span>
           </div>
           <div className="context-usage__bar">
