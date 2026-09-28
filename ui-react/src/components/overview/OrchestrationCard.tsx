@@ -30,6 +30,12 @@ const V_GAP = 50;
 
 // ── Session key parsing ────────────────────────────────────────
 
+/** 从会话键推断父会话键（网关未返回 parentSessionKey 时的兜底）。 */
+function inferParentKey(key: string): string | undefined {
+  const m = /^agent:([^:]+):(?:subagent|acp):.+$/.exec(key ?? "");
+  return m ? `agent:${m[1]}:main` : undefined;
+}
+
 function buildSessionTree(
   sessions: SessionActivityEntry[],
   details: GatewaySessionRow[],
@@ -53,6 +59,17 @@ function buildSessionTree(
   const childToParent = new Map<string, string>();
   for (const row of details) {
     for (const childKey of row.childSessions ?? []) childToParent.set(childKey, row.key);
+  }
+  // [hierarchy-fallback] 网关 2026.9.x 的 sessions.list 不返回
+  // parentSessionKey / spawnedBy / childSessions，父子关系必须从会话键推断：
+  //   agent:<id>:subagent:<uuid>  →  父 agent:<id>:main
+  //   agent:<id>:acp:<uuid>       →  父 agent:<id>:main
+  for (const node of nodeMap.values()) {
+    if (childToParent.has(node.key)) continue;
+    const inferred = inferParentKey(node.key);
+    if (inferred && inferred !== node.key && nodeMap.has(inferred)) {
+      childToParent.set(node.key, inferred);
+    }
   }
   const parentOf = new Map<string, string>();
   for (const node of nodeMap.values()) {

@@ -242,6 +242,33 @@ function serializeFormForSubmit(state: ConfigState): string {
   return serializeConfigForm(form);
 }
 
+/**
+ * Guarantee that a full config snapshot (with `hash`) and a populated form are
+ * present before any mutation is applied.
+ *
+ * Views outside the Config tab (e.g. the ranch "牛马档案" editor) can trigger
+ * `updateConfigFormValue` before `config.get` has ever run.  In that case
+ * `configSnapshot` is null → `config.set` rejects with "Config hash missing",
+ * and worse, the form base falls back to `{}` so submitting would wipe the
+ * whole config.  Callers must await this before touching the form.
+ */
+export async function ensureConfigLoaded(state: ConfigState): Promise<boolean> {
+  if (!state.client || !state.connected) {
+    return false;
+  }
+  if (state.configSnapshot?.hash && state.configForm) {
+    return true;
+  }
+  // No snapshot yet → whatever is in the form was built on an empty base.
+  // Drop the dirty flag so loadConfig can install the real config instead of
+  // preserving a stub that would wipe the file on submit.
+  if (!state.configSnapshot?.hash) {
+    state.configFormDirty = false;
+  }
+  await loadConfig(state);
+  return Boolean(state.configSnapshot?.hash);
+}
+
 export async function saveConfig(state: ConfigState) {
   if (!state.client || !state.connected) {
     return;
@@ -249,6 +276,10 @@ export async function saveConfig(state: ConfigState) {
   state.configSaving = true;
   state.lastError = null;
   try {
+    // Never submit a half-built form: pull a fresh snapshot+hash first.
+    if (!state.configSnapshot?.hash || !state.configForm) {
+      await loadConfig(state);
+    }
     const raw = serializeFormForSubmit(state);
     const baseHash = state.configSnapshot?.hash;
     if (!baseHash) {
@@ -272,6 +303,9 @@ export async function applyConfig(state: ConfigState) {
   state.configApplying = true;
   state.lastError = null;
   try {
+    if (!state.configSnapshot?.hash || !state.configForm) {
+      await loadConfig(state);
+    }
     const raw = serializeFormForSubmit(state);
     const baseHash = state.configSnapshot?.hash;
     if (!baseHash) {

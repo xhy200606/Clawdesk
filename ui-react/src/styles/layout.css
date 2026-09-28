@@ -108,10 +108,25 @@
   gap: 12px;
 }
 
+/* 侧栏收起后，顶栏这个按钮是唯一的展开入口 —— 必须一眼可见 */
 .topbar .nav-collapse-toggle {
   width: 36px;
   height: 36px;
   margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.topbar .nav-collapse-toggle:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  color: var(--accent);
 }
 
 .topbar .nav-collapse-toggle__icon {

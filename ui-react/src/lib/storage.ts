@@ -5,7 +5,16 @@ import { inferBasePathFromPathname, normalizeBasePath } from "./navigation.ts";
 import type { ThemeMode } from "./theme.ts";
 
 /** 可用主题色（与 base.css 中 data-accent 色板一一对应） */
-export const ACCENT_IDS = ["blue", "green", "purple", "orange", "rose", "cyan"] as const;
+export const ACCENT_IDS = [
+  "blue",
+  "green",
+  "purple",
+  "orange",
+  "rose",
+  "cyan",
+  "midnight",
+  "sand",
+] as const;
 export const ACCENT_LABELS: Record<string, string> = {
   blue: "经典蓝",
   green: "牧场绿",
@@ -13,6 +22,8 @@ export const ACCENT_LABELS: Record<string, string> = {
   orange: "暖阳橙",
   rose: "蔷薇红",
   cyan: "湖水青",
+  midnight: "午夜蓝",
+  sand: "砂岩褐",
 };
 export const ACCENT_COLORS: Record<string, string> = {
   blue: "#0A84FF",
@@ -21,6 +32,8 @@ export const ACCENT_COLORS: Record<string, string> = {
   orange: "#FF9F0A",
   rose: "#FF375F",
   cyan: "#64D2FF",
+  midnight: "#4D8DFF",
+  sand: "#C98F4E",
 };
 
 // [multi-gateway] 一个可切换的 OpenClaw 网关连接配置

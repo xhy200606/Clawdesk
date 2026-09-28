@@ -407,3 +407,185 @@
     height: 11px;
   }
 }
+
+/* ===========================================================
+   手机主布局（≤720px）：内容单列 + 底部标签栏
+   之前的移动端规则只缩了字号/间距，但 .nav 仍占据 grid 第一列、
+   topbar 仍偏移 --shell-nav-width，手机上左侧被压成窄条。
+   这里把侧栏改成固定底部标签栏，内容区占满整宽。
+   =========================================================== */
+
+@media (max-width: 720px) {
+  .shell,
+  .shell--nav-collapsed,
+  .shell--chat-focus,
+  .shell--explorer {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "content";
+  }
+
+  /* 顶栏回到整宽 */
+  .topbar {
+    left: 0;
+    right: 0;
+    padding: 0 12px;
+  }
+
+  /* 侧栏 → 底部标签栏 */
+  .nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 60;
+    grid-area: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    min-width: 0;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    background: var(--chrome-strong);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.2);
+    scrollbar-width: none;
+  }
+
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 收起状态在手机上仍要保留可点导航 */
+  .nav--collapsed,
+  .shell--chat-focus .nav {
+    width: auto;
+    min-width: 0;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    opacity: 1;
+    pointer-events: auto;
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* 底部栏里不需要品牌区、用户卡片和收起按钮 */
+  .nav-brand,
+  .nav-bottom-items,
+  .nav .user-profile-wrapper,
+  .nav .nav-collapse-toggle,
+  .nav .session-list {
+    display: none;
+  }
+
+  .nav-group {
+    display: contents;
+  }
+
+  .nav-group__items,
+  .nav-group--collapsed .nav-group__items {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .nav-label,
+  .nav-item__text {
+    display: none;
+  }
+
+  .nav-item,
+  .nav-item--standalone {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    min-width: 46px;
+    min-height: 42px;
+    padding: 8px 10px;
+    flex-shrink: 0;
+  }
+
+  .nav-item__icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+  }
+
+  .nav-item__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* 内容区：顶部让出 topbar，底部让出标签栏 */
+  .content {
+    padding: calc(var(--shell-topbar-height) + 6px) 12px calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 概览：卡片网格全部单列 */
+  .overview-swapy,
+  .ov-ranch-snapshot-row,
+  .snapshot-charts {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .ov-ranch-col,
+  .ov-snapshot-col {
+    min-height: 0;
+  }
+
+  /* 编排卡片：树图可横向滚动，任务表单纵向排列 */
+  .orch-svg-container {
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .orch-task-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .orch-task-form select,
+  .orch-task-form input,
+  .orch-task-form button {
+    width: 100%;
+    min-height: 38px;
+  }
+
+  .orch-workflow__step,
+  .orch-trace {
+    flex-wrap: wrap;
+  }
+
+  /* 表格类内容允许横向滚动而非撑破布局 */
+  .usage-table-wrapper,
+  .sessions-table-wrapper,
+  .cfg-array,
+  .cfg-map {
+    overflow-x: auto;
+  }
+}
+
+/* 横屏矮屏：底部栏更紧凑 */
+@media (max-width: 900px) and (max-height: 480px) {
+  .nav {
+    max-height: 48px;
+    padding-top: 4px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .nav-item,
+  .nav-item--standalone {
+    min-height: 36px;
+  }
+
+  .content {
+    padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+}

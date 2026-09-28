@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { AccessCard } from "../components/overview/AccessCard.tsx";
 import { AgentsCard } from "../components/overview/AgentsCard.tsx";
 import { OrchestrationCard } from "../components/overview/OrchestrationCard.tsx";
@@ -8,8 +8,10 @@ import { SnapshotCard, OverviewIcons } from "../components/overview/SnapshotCard
 import { SwapyLayout, getSavedCardOrder } from "../components/overview/SwapyLayout.tsx";
 import { UsageChartCard } from "../components/overview/UsageChartCard.tsx";
 import { loadOverview } from "../lib/app-settings.ts";
+import { loadSessions } from "../lib/controllers/sessions.ts";
 import type {
   SessionActivityResult,
+  GatewaySessionRow,
   GatewayAgentRow,
   CostUsageSummary,
   SessionsUsageResult,
@@ -125,6 +127,8 @@ export function OverviewView() {
   const overviewWeekUsageResult = s((st) => st.overviewWeekUsageResult);
   const applySettings = s((st) => st.applySettings);
   const set = s((st) => st.set);
+  // 运行追踪（lifecycle 事件派生）—— 编排卡片「运行追踪」视图的数据源
+  const agentRunTraces = s((st) => st.agentRunTraces);
 
   // [version-adapt] presence 是网关/浏览器实例（每个标签页都算），不是牛马。
   // 在线牛马 = 有 running 会话的 agent 数；正在接客 = running 会话数。
@@ -206,6 +210,50 @@ export function OverviewView() {
   }, [sessionsResult, allSessions]);
   const ranchActivity = (sessionActivity as SessionActivityResult | null) ?? derivedActivity;
 
+  // [orch-tree-fix] 编排卡片要的是「逐会话」视图：树节点必须一一对应真实会话，
+  // 子 Agent（parentSessionKey / childSessions）才会挂到父节点下。
+  // derivedActivity 按 agent 聚合后每个牛马只剩一个虚拟节点，
+  // 会把 subagent 会话整个吞掉 —— 这也是编排只显示 1 个节点 / 0 tok 的原因。
+  const orchActivity = React.useMemo<SessionActivityResult | null>(() => {
+    if (!sessionsResult) return null;
+    const rows = allSessions.map((x) => {
+      const row = x as {
+        status?: string;
+        hasActiveRun?: boolean;
+        queueDepth?: number;
+        updatedAt?: number | null;
+        lastActivityAgo?: number;
+        totalTokens?: number;
+        contextTokens?: number;
+      };
+      const running = row.status === "running" || row.hasActiveRun === true;
+      const lastAgo =
+        typeof row.lastActivityAgo === "number"
+          ? row.lastActivityAgo
+          : row.updatedAt
+            ? Math.max(0, Date.now() - row.updatedAt)
+            : 999999;
+      return {
+        key: x.key,
+        state: (running ? "processing" : (row.queueDepth ?? 0) > 0 ? "waiting" : "idle") as
+          | "processing"
+          | "waiting"
+          | "idle",
+        lastActivityAgo: lastAgo,
+        queueDepth: row.queueDepth ?? 0,
+        totalTokens: row.totalTokens ?? undefined,
+        contextTokens: row.contextTokens ?? undefined,
+      };
+    });
+    return {
+      ts: Date.now(),
+      processing: rows.filter((r) => r.state === "processing").length,
+      waiting: rows.filter((r) => r.state === "waiting").length,
+      idle: rows.filter((r) => r.state === "idle").length,
+      sessions: rows,
+    };
+  }, [sessionsResult, allSessions]);
+
   // Calcular qué canales están vinculados a cada agent
   const channelBindings = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -245,6 +293,92 @@ export function OverviewView() {
 
   const snapshot = hello?.snapshot as { authMode?: string } | undefined;
   const isTrustedProxy = snapshot?.authMode === "trusted-proxy";
+
+  // ── 编排卡片交互 ──────────────────────────────────────────────
+
+  /** 打开会话：切到该会话并跳到聊天页（与侧栏会话切换行为一致） */
+  const openSession = useCallback((key: string) => {
+    const rs = getReactiveState() as unknown as Record<string, unknown>;
+    rs.sessionKey = key;
+    rs.chatMessage = "";
+    rs.chatMessages = [];
+    rs.chatStream = null;
+    rs.chatStreamStartedAt = null;
+    rs.chatRunId = null;
+    rs.chatQueue = [];
+    void import("../lib/app-settings.ts").then(
+      ({ applySettings: apply, setTab, syncUrlWithSessionKey }) => {
+        apply(rs as never, {
+          ...useAppStore.getState().settings,
+          sessionKey: key,
+          lastActiveSessionKey: key,
+        });
+        syncUrlWithSessionKey(rs as never, key, true);
+        setTab(rs as never, "chat");
+      },
+    );
+    void import("../lib/controllers/chat.ts").then(({ loadChatHistory }) => {
+      void loadChatHistory(rs as never);
+    });
+  }, []);
+
+  /** 停止 SubAgent 运行：优先 chat.abort（带 runId），失败回退 sessions.abort */
+  const stopRun = useCallback(async (sessionKey: string, runId: string) => {
+    const rs = getReactiveState() as unknown as {
+      client: { request: (method: string, params: unknown) => Promise<unknown> } | null;
+    };
+    if (!rs.client) {
+      throw new Error("网关未连接");
+    }
+    try {
+      await rs.client.request("chat.abort", { sessionKey, runId });
+    } catch {
+      await rs.client.request("sessions.abort", { key: sessionKey });
+    }
+    await loadSessions(getReactiveState() as never);
+  }, []);
+
+  /** 发起任务：切到目标牛马的主会话并发送 */
+  const startTask = useCallback(async (agentId: string, task: string) => {
+    const rs = getReactiveState() as unknown as Record<string, unknown>;
+    rs.sessionKey = `agent:${agentId}:main`;
+    rs.chatMessages = [];
+    rs.chatStream = null;
+    rs.chatRunId = null;
+    const { sendChatMessage } = await import("../lib/controllers/chat.ts");
+    await sendChatMessage(rs as never, task);
+    await loadSessions(getReactiveState() as never);
+  }, []);
+
+  // ── 会话变更后的刷新 ──────────────────────────────────────────
+  // 1) 追踪数据（lifecycle 事件）变化 → 防抖重拉会话，让状态与草料及时跟上。
+  //    修复「追踪数据不触发界面更新」：traces 变化后必须重新拉 sessions，
+  //    否则编排视图一直停在旧快照。
+  const refreshTimer = useRef<number | null>(null);
+  useEffect(() => {
+    if (refreshTimer.current !== null) {
+      window.clearTimeout(refreshTimer.current);
+    }
+    refreshTimer.current = window.setTimeout(() => {
+      void loadSessions(getReactiveState() as never);
+    }, 700);
+    return () => {
+      if (refreshTimer.current !== null) {
+        window.clearTimeout(refreshTimer.current);
+      }
+    };
+  }, [agentRunTraces]);
+
+  // 2) 兜底轮询，保证编排视图不会长期停在旧数据
+  useEffect(() => {
+    if (!connected) {
+      return;
+    }
+    const id = window.setInterval(() => {
+      void loadSessions(getReactiveState() as never);
+    }, 10000);
+    return () => window.clearInterval(id);
+  }, [connected]);
 
   const todayTokens =
     (overviewUsageResult as SessionsUsageResult | null)?.sessions?.reduce(
@@ -320,7 +454,15 @@ export function OverviewView() {
         </div>
       </div>
       <div className="overview-swapy">{cardOrder.map((slot) => cardMap[slot])}</div>
-      <OrchestrationCard sessionActivity={ranchActivity} />
+      <OrchestrationCard
+        sessionActivity={orchActivity ?? ranchActivity}
+        sessions={(sessionsResult?.sessions ?? []) as GatewaySessionRow[]}
+        agents={agents}
+        traces={agentRunTraces}
+        onStartTask={startTask}
+        onStopRun={(sessionKey, runId) => stopRun(sessionKey, runId)}
+        onOpenSession={openSession}
+      />
     </SwapyLayout>
   );
 }

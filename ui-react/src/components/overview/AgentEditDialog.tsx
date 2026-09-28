@@ -3,6 +3,7 @@ import { ANIMAL_SPECIES } from "../../lib/animals.ts";
 import { loadAgents } from "../../lib/controllers/agents.ts";
 import {
   applyConfig,
+  ensureConfigLoaded,
   saveConfig,
   updateConfigFormValue,
   removeConfigFormValue,
@@ -212,6 +213,11 @@ export function AgentEditDialog({
       };
       if (!reactive.client) throw new Error("网关未连接");
 
+      // 概览页不一定加载过 config：先拉取完整快照（含 hash），
+      // 否则 config.set 会报 "Config hash missing"，且空表单会覆盖整个配置。
+      const ready = await ensureConfigLoaded(reactive);
+      if (!ready) throw new Error("配置尚未加载完成，请稍后重试");
+
       let avatarValue = avatar.trim();
       // data URI 头像走 RPC 存成文件，避免配置膨胀
       if (/^data:image\//i.test(avatarValue)) {
@@ -266,6 +272,8 @@ export function AgentEditDialog({
         client: { request: (method: string, params: unknown) => Promise<unknown> } | null;
       };
       if (!reactive.client) throw new Error("网关未连接");
+      const ready = await ensureConfigLoaded(reactive);
+      if (!ready) throw new Error("配置尚未加载完成，请稍后重试");
       // 从 agents.entries record 移除该键；清空时整键移除（entries 空对象会触发
       // "must contain at least one configured agent" 校验失败）
       const entries = readAgentEntries(reactive.configForm as Record<string, unknown> | null);
