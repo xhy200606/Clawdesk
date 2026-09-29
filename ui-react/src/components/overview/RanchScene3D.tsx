@@ -103,10 +103,48 @@ function SkyBodies3D() {
         <meshBasicMaterial color="#ffd76e" fog={false} />
       </mesh>
       <mesh ref={moonRef} visible={false}>
-        <sphereGeometry args={[2.2, 16, 16]} />
+        <sphereGeometry args={[2.4, 16, 16]} />
         <meshBasicMaterial color="#e6ecf8" fog={false} />
       </mesh>
     </>
+  );
+}
+
+/**
+ * 3D 星空：星星分布在天球（上半球）上，与世界坐标绑定。
+ * 旋转/环绕视角时星空保持空间关系，不再贴在屏幕表面上。
+ * 星点位置由 2D 星空数据（DAYCYCLE_STARS）映射到球面，保持相对排列。
+ */
+function StarField3D({ alpha }: { alpha: number }) {
+  const geometry = useMemo(() => {
+    const positions: number[] = [];
+    for (const [sx, sy] of DAYCYCLE_STARS) {
+      const az = (sx / 100) * Math.PI * 2;
+      // sy=0（屏幕顶部）→ 高仰角；sy=100 → 接近地平线
+      const el = (Math.PI / 2) * (0.12 + (1 - sy / 100) * 0.78);
+      const r = 44;
+      positions.push(
+        r * Math.cos(el) * Math.sin(az),
+        r * Math.sin(el),
+        r * Math.cos(el) * Math.cos(az),
+      );
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    return geo;
+  }, []);
+  if (alpha <= 0.02) return null;
+  return (
+    <points geometry={geometry} frustumCulled={false}>
+      <pointsMaterial
+        size={0.45}
+        color="#ffffff"
+        transparent
+        opacity={alpha}
+        fog={false}
+        sizeAttenuation
+      />
+    </points>
   );
 }
 
@@ -114,7 +152,7 @@ const ZONE_3D: Record<RanchVisualStatus, [number, number]> = {
   thinking: [-3, -3], // Cerca del granero
   tool_calling: [6, -4], // Junto al molino
   speaking: [0, 1], // Centro (cartel)
-  idle: [4, 2], // Cerca del estanque
+  idle: [4.6, -4], // 围栏圈内（与 2D 一致：空闲在圈内活动，避免切 3D 时出圈）
   error: [-2, 4], // Campo
   spawning: [-3, -2], // Puerta del granero
 };
@@ -381,6 +419,99 @@ function Pond3D({ position }: { position: [number, number, number] }) {
           opacity={0.85}
         />
       </mesh>
+    </group>
+  );
+}
+
+// ─── River3D（左上角区域，与 2D 河流对应） ───────────────────────────
+
+function RiverSegment3D({
+  from,
+  to,
+  width = 1.2,
+}: {
+  from: [number, number];
+  to: [number, number];
+  width?: number;
+}) {
+  const dx = to[0] - from[0];
+  const dz = to[1] - from[1];
+  const length = Math.sqrt(dx * dx + dz * dz);
+  const angle = Math.atan2(dx, dz);
+  const cx = (from[0] + to[0]) / 2;
+  const cz = (from[1] + to[1]) / 2;
+  return (
+    <group>
+      {/* 河岸（沙土色底层） */}
+      <mesh position={[cx, 0.008, cz]} rotation={[0, angle, 0]} receiveShadow>
+        <boxGeometry args={[width + 0.4, 0.012, length + 0.25]} />
+        <meshStandardMaterial color="#c9b48a" roughness={0.95} />
+      </mesh>
+      {/* 水面 */}
+      <mesh position={[cx, 0.02, cz]} rotation={[0, angle, 0]}>
+        <boxGeometry args={[width, 0.012, length]} />
+        <meshStandardMaterial
+          color={WATER_COLOR}
+          roughness={0.2}
+          metalness={0.1}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function Bridge3D({ at, angle }: { at: [number, number]; angle: number }) {
+  return (
+    <group position={[at[0], 0, at[1]]} rotation={[0, angle, 0]}>
+      {/* 桥面板（横跨河面） */}
+      <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.2, 0.06, 1.5]} />
+        <meshStandardMaterial color="#a07020" roughness={0.85} />
+      </mesh>
+      {/* 桥板纹路 */}
+      {[0, 1, 2, 3].map((i) => (
+        <mesh key={i} position={[0, 0.155, -0.55 + i * 0.37]}>
+          <boxGeometry args={[2.2, 0.015, 0.05]} />
+          <meshStandardMaterial color="#8b5a2b" roughness={0.9} />
+        </mesh>
+      ))}
+      {/* 扶手栏杆 */}
+      {[-0.7, 0.7].map((z) => (
+        <group key={z}>
+          <mesh position={[0, 0.32, z]} castShadow>
+            <boxGeometry args={[2.2, 0.05, 0.05]} />
+            <meshStandardMaterial color="#c09040" roughness={0.8} />
+          </mesh>
+          {[-0.95, 0, 0.95].map((x) => (
+            <mesh key={x} position={[x, 0.22, z]} castShadow>
+              <boxGeometry args={[0.06, 0.24, 0.06]} />
+              <meshStandardMaterial color="#8b5a2b" roughness={0.85} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function River3D() {
+  // 与 2D 对应：左上角（默认视角的远左区域），从场地后缘流向左侧
+  const segments: { from: [number, number]; to: [number, number] }[] = [
+    { from: [-4.6, -8.2], to: [-6.0, -5.8] },
+    { from: [-6.0, -5.8], to: [-7.2, -4.0] },
+    { from: [-7.2, -4.0], to: [-8.4, -1.6] },
+  ];
+  // 桥架在第二段上，横跨河面
+  const bridgeAt: [number, number] = [-6.6, -4.9];
+  const bridgeAngle = Math.atan2(-1.2, -1.8) + Math.PI / 2;
+  return (
+    <group>
+      {segments.map((seg, i) => (
+        <RiverSegment3D key={i} from={seg.from} to={seg.to} />
+      ))}
+      <Bridge3D at={bridgeAt} angle={bridgeAngle} />
     </group>
   );
 }
@@ -839,6 +970,7 @@ function SceneContent({
   return (
     <>
       <SkyBodies3D />
+      <StarField3D alpha={day.starAlpha} />
       <ambientLight intensity={0.35 * day.lightLevel + 0.12} />
       <directionalLight
         position={[8, 12, 8]}
@@ -878,6 +1010,9 @@ function SceneContent({
 
       <Pond3D position={[-4, 0.02, 4]} />
 
+      {/* 左上角河流 + 木桥（与 2D 牧场对应） */}
+      <River3D />
+
       {/* Cerca con puerta */}
       <Fence3D from={[2, 0, -6]} to={[8, 0, -6]} />
       <Fence3D from={[8, 0, -6]} to={[8, 0, -2]} />
@@ -914,7 +1049,8 @@ function SceneContent({
 
         const [zoneX, zoneZ] = ZONE_3D[visualStatus];
         const offsetX = (idx % 3) * 1.2 - 1.2;
-        const offsetZ = Math.floor(idx / 3) * 1.0;
+        // 槽位纵向排布限制在两行内循环，避免牛马数量多时被挤出围栏
+        const offsetZ = (Math.floor(idx / 3) % 2) * 1.0;
         const pos: [number, number, number] = [zoneX + offsetX, 0, zoneZ + offsetZ];
 
         const activityLabel = baseState === "waiting" ? "等待接单" : ACTIVITY_LABELS[visualStatus];
@@ -962,23 +1098,7 @@ export function RanchScene3D({ agents, sessionActivity }: RanchScene3DProps) {
         <fog attach="fog" args={[day.skyTop, 20, 40]} />
         <SceneContent agents={agents} sessionActivity={sessionActivity} />
       </Canvas>
-      {/* 天体 / 星空 / 色调 / 时钟（屏幕坐标，与 2D 一致） */}
-      <div className="ranch-daycycle-overlay" aria-hidden>
-        {/* 日/月已渲染为 3D 天体（SkyBodies3D），随视角旋转方向变化 */}
-        {day.starAlpha > 0.02 &&
-          DAYCYCLE_STARS.map(([sx, sy, delay], i) => (
-            <span
-              key={i}
-              className="ranch-daycycle__star"
-              style={{
-                left: `${sx}%`,
-                top: `${sy}%`,
-                opacity: day.starAlpha,
-                animationDelay: `${delay}s`,
-              }}
-            />
-          ))}
-      </div>
+      {/* 星空已渲染为 3D 天球星点（StarField3D），随视角旋转保持空间关系 */}
       <div className="ranch-daycycle__tint" style={{ background: day.tint }} aria-hidden />
       <div className="ranch-daycycle__badge" aria-hidden>
         {day.label} · {day.clock}

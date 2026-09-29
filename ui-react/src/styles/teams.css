@@ -246,6 +246,8 @@
 .team-flow-node__status {
   align-self: flex-start;
   margin-left: auto;
+  /* 状态点不要贴着卡片右缘（绿标往左移一点） */
+  margin-right: 10px;
 }
 .team-flow-node__status--working,
 .teams-workbench__state-dot--working {

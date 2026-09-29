@@ -274,6 +274,66 @@ function PixelPond() {
   );
 }
 
+// ── 像素河 + 木桥（左上角区域） ──
+function PixelRiver() {
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 160 300"
+      preserveAspectRatio="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ imageRendering: "pixelated", display: "block" }}
+    >
+      {/* 河岸 */}
+      <path
+        d="M 130 0 C 95 55, 62 115, 42 175 S 12 240, 0 262"
+        fill="none"
+        stroke="#3d7b6a"
+        strokeWidth="34"
+        strokeLinecap="round"
+      />
+      {/* 水面 */}
+      <path
+        d="M 130 0 C 95 55, 62 115, 42 175 S 12 240, 0 262"
+        fill="none"
+        stroke="#4a9e8a"
+        strokeWidth="24"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 130 0 C 95 55, 62 115, 42 175 S 12 240, 0 262"
+        fill="none"
+        stroke="#5cb8a4"
+        strokeWidth="10"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
+      {/* 波光 */}
+      <path
+        d="M 118 18 q 8 6 0 12 M 84 74 q 8 6 0 12 M 58 128 q 8 6 0 12 M 40 182 q 8 6 0 12 M 20 232 q 8 6 0 12"
+        stroke="#8ad8c8"
+        strokeWidth="3"
+        fill="none"
+        opacity="0.6"
+      />
+      {/* 木桥（横跨河面） */}
+      <g transform="translate(52 146) rotate(52)">
+        <rect x="-11" y="-24" width="22" height="48" rx="2" fill="#a07020" />
+        <rect x="-8" y="-21" width="16" height="42" fill="#c09040" />
+        <rect x="-8" y="-13" width="16" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-8" y="-2" width="16" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-8" y="9" width="16" height="2.5" fill="#a07020" opacity="0.6" />
+        {/* 桥头桩 */}
+        <rect x="-13" y="-24" width="5" height="7" fill="#8b5a2b" />
+        <rect x="8" y="-24" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-13" y="17" width="5" height="7" fill="#8b5a2b" />
+        <rect x="8" y="17" width="5" height="7" fill="#8b5a2b" />
+      </g>
+    </svg>
+  );
+}
+
 function PixelSmallHouse({ roofColor = "#7a9e4e" }: { roofColor?: string }) {
   return (
     <svg
@@ -1176,6 +1236,21 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
           className="ranch-path ranch-path--h"
           style={{ left: "45%", right: 0, top: "30%", width: "55%", height: 24 }}
         />
+
+        {/* River + bridge（左上角区域，装饰；牛马活动区不受影响） */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "16%",
+            height: "32%",
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelRiver />
+        </div>
 
         {/* Pond */}
         <div style={{ position: "absolute", left: "6%", top: "64%", zIndex: 2 }}>

@@ -69,6 +69,11 @@ function stateLabel(state: WorkState): string {
   }[state];
 }
 
+/** 是否属于「正在参与工作」：执行中 / 等待接单 / 失败（已完成与空闲不显示） */
+function isActiveState(state: WorkState): boolean {
+  return state === "working" || state === "waiting" || state === "failed";
+}
+
 function age(timestamp: number | null | undefined): string {
   if (!timestamp) return "暂无活动";
   const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
@@ -194,6 +199,16 @@ export function TeamsView() {
   const lead = members.find((member) => member.id === leadId)!;
   const teammates = members.filter((member) => member.id !== leadId);
   const leadKey = `agent:${leadId}:${agentsList?.mainKey || "main"}`;
+  // 只显示正在工作的 Agent：空闲/已完成的成员与 SubAgent 不进入拓扑，
+  // 工作结束后节点自动消失，布局随活跃集合实时重排。
+  const visibleLeadChildren = lead.children.filter((child) =>
+    isActiveState(stateOf(child, activeTraceSessions)),
+  );
+  const visibleTeammates = teammates.filter(
+    (member) =>
+      isActiveState(member.state) ||
+      member.children.some((child) => isActiveState(stateOf(child, activeTraceSessions))),
+  );
   const activeCount = members.filter((member) => member.state === "working").length;
   const childCount = members.reduce((sum, member) => sum + member.children.length, 0);
 
@@ -279,17 +294,24 @@ export function TeamsView() {
     selection?.kind === "member" ? members.find((member) => member.id === selection.id) : undefined;
   const selectedSession =
     selection?.kind === "session" ? rows.find((row) => row.key === selection.key) : undefined;
-  const hasLeadChildren = lead.children.length > 0;
-  const columns = teammates.length + (hasLeadChildren ? 1 : 0);
+  const hasLeadChildren = visibleLeadChildren.length > 0;
+  const columns = visibleTeammates.length + (hasLeadChildren ? 1 : 0);
   // 自适应：画布宽度跟随视口，核心团队均匀铺满一行（成员数变化自动重排）
   const width = Math.max(760, viewportWidth - 24);
   // 03 区行数：主 Agent 的 SubAgent 横向铺满一行后换行；成员 SubAgent 竖排
+  const visibleChildCount = (member: Member) =>
+    member.children.filter((child) => isActiveState(stateOf(child, activeTraceSessions))).length;
   const subRows = Math.max(
     1,
-    Math.ceil(lead.children.length / Math.max(columns, 1)),
-    ...teammates.map((member) => member.children.length),
+    Math.ceil(visibleLeadChildren.length / Math.max(columns, 1)),
+    ...visibleTeammates.map((member) => visibleChildCount(member)),
   );
-  const height = 396 + subRows * 130 + 36;
+  // 无可见成员时 03 区整体上移，避免拓扑中部留白
+  const subBaseY = visibleTeammates.length > 0 ? 396 : 236;
+  const hasVisibleChildren =
+    visibleLeadChildren.length > 0 || visibleTeammates.some((m) => visibleChildCount(m) > 0);
+  const height =
+    visibleTeammates.length === 0 && !hasVisibleChildren ? 240 : subBaseY + subRows * 130 + 36;
   const columnX = (index: number) => {
     if (columns <= 1) return (width - NODE_W) / 2;
     const span = Math.max(width - 64 - NODE_W, 0);
@@ -312,13 +334,13 @@ export function TeamsView() {
     return [...counts.entries()];
   }, [commMessages]);
   const nodeCenterX = useCallback(
-    (id: string) => {
+    (id: string): number | null => {
       if (id === leadId) return width / 2;
-      const index = teammates.findIndex((member) => member.id === id);
-      return index >= 0 ? teammateX(index) + NODE_W / 2 : width / 2;
+      const index = visibleTeammates.findIndex((member) => member.id === id);
+      return index >= 0 ? teammateX(index) + NODE_W / 2 : null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [leadId, teammates, width],
+    [leadId, visibleTeammates, width],
   );
 
   return (
@@ -346,8 +368,10 @@ export function TeamsView() {
           </strong>
         </div>
         <div>
-          <small>团队成员</small>
-          <strong>{members.length}</strong>
+          <small>参与协作 / 团队成员</small>
+          <strong>
+            {visibleTeammates.length}/{teammates.length}
+          </strong>
         </div>
         <div>
           <small>执行中</small>
@@ -404,8 +428,8 @@ export function TeamsView() {
                       </marker>
                     </defs>
                     {/* 主 Agent 的 SubAgent：从 01 主节点直接拉到 03 区（绕过 02） */}
-                    {lead.children.map((child, index) => {
-                      const y = 396 + subRowOf(index) * 130;
+                    {visibleLeadChildren.map((child, index) => {
+                      const y = subBaseY + subRowOf(index) * 130;
                       const midY = y + 50; // 进入 SubAgent 卡片左侧中部
                       const linked =
                         child.parentSessionKey === leadKey || child.spawnedBy === leadKey;
@@ -423,7 +447,7 @@ export function TeamsView() {
                       const [fromId, toId] = pair.split("→");
                       const x1 = nodeCenterX(fromId);
                       const x2 = nodeCenterX(toId);
-                      if (x1 === x2) return null;
+                      if (x1 === null || x2 === null || x1 === x2) return null;
                       const lift = Math.min(96, 44 + count * 8);
                       return (
                         <path
@@ -435,7 +459,7 @@ export function TeamsView() {
                         />
                       );
                     })}
-                    {teammates.map((member, index) => {
+                    {visibleTeammates.map((member, index) => {
                       const x = teammateX(index) + NODE_W / 2;
                       const linked = member.sessions.some(
                         (row) => row.parentSessionKey === leadKey || row.spawnedBy === leadKey,
@@ -448,27 +472,32 @@ export function TeamsView() {
                         />
                       );
                     })}
-                    {teammates.flatMap((member, index) =>
-                      member.children.map((child, childIndex) => {
-                        const linked = Boolean(child.parentSessionKey || child.spawnedBy);
-                        return (
-                          <path
-                            key={child.key}
-                            className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
-                            d={`M ${teammateX(index)} 290 L ${teammateX(index) - 10} 290 L ${teammateX(index) - 10} ${396 + childIndex * 130 + 50} L ${teammateX(index)} ${396 + childIndex * 130 + 50}`}
-                          />
-                        );
-                      }),
+                    {visibleTeammates.flatMap((member, index) =>
+                      member.children
+                        .filter((child) => isActiveState(stateOf(child, activeTraceSessions)))
+                        .map((child) => {
+                          const childIndex = member.children.indexOf(child);
+                          const linked = Boolean(child.parentSessionKey || child.spawnedBy);
+                          return (
+                            <path
+                              key={child.key}
+                              className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
+                              d={`M ${teammateX(index)} 290 L ${teammateX(index) - 10} 290 L ${teammateX(index) - 10} ${subBaseY + childIndex * 130 + 50} L ${teammateX(index)} ${subBaseY + childIndex * 130 + 50}`}
+                            />
+                          );
+                        }),
                     )}
                   </svg>
                   <div className="team-flow__stage" style={{ top: 16 }}>
                     01 · 主 Agent 接收与分配
                   </div>
-                  <div className="team-flow__stage" style={{ top: 192 }}>
-                    02 · 核心团队成员执行
-                  </div>
-                  {childCount > 0 && (
-                    <div className="team-flow__stage" style={{ top: 374 }}>
+                  {visibleTeammates.length > 0 && (
+                    <div className="team-flow__stage" style={{ top: 192 }}>
+                      02 · 核心团队成员执行
+                    </div>
+                  )}
+                  {hasVisibleChildren && (
+                    <div className="team-flow__stage" style={{ top: subBaseY - 22 }}>
                       03 · SubAgent 执行
                     </div>
                   )}
@@ -487,11 +516,11 @@ export function TeamsView() {
                       onClick={() => setSelection({ kind: "member", id: lead.id })}
                     />
                   </div>
-                  {lead.children.map((child, index) => (
+                  {visibleLeadChildren.map((child, index) => (
                     <div
                       className="team-flow__position"
                       key={child.key}
-                      style={{ left: subCol(index), top: 396 + subRowOf(index) * 130 }}
+                      style={{ left: subCol(index), top: subBaseY + subRowOf(index) * 130 }}
                     >
                       <NodeCard
                         title={sessionName(child)}
@@ -504,7 +533,7 @@ export function TeamsView() {
                       />
                     </div>
                   ))}
-                  {teammates.map((member, index) => (
+                  {visibleTeammates.map((member, index) => (
                     <React.Fragment key={member.id}>
                       <div
                         className="team-flow__position"
@@ -521,28 +550,36 @@ export function TeamsView() {
                           onClick={() => setSelection({ kind: "member", id: member.id })}
                         />
                       </div>
-                      {member.children.map((child, childIndex) => (
-                        <div
-                          className="team-flow__position"
-                          key={child.key}
-                          style={{ left: teammateX(index), top: 396 + childIndex * 130 }}
-                        >
-                          <NodeCard
-                            title={sessionName(child)}
-                            subtitle={child.model || "子会话"}
-                            role="SubAgent"
-                            state={stateOf(child, activeTraceSessions)}
-                            emoji="↳"
-                            selected={selection?.kind === "session" && selection.key === child.key}
-                            onClick={() => setSelection({ kind: "session", key: child.key })}
-                          />
-                        </div>
-                      ))}
+                      {member.children
+                        .filter((child) => isActiveState(stateOf(child, activeTraceSessions)))
+                        .map((child) => {
+                          const childIndex = member.children.indexOf(child);
+                          return (
+                            <div
+                              className="team-flow__position"
+                              key={child.key}
+                              style={{ left: teammateX(index), top: subBaseY + childIndex * 130 }}
+                            >
+                              <NodeCard
+                                title={sessionName(child)}
+                                subtitle={child.model || "子会话"}
+                                role="SubAgent"
+                                state={stateOf(child, activeTraceSessions)}
+                                emoji="↳"
+                                selected={
+                                  selection?.kind === "session" && selection.key === child.key
+                                }
+                                onClick={() => setSelection({ kind: "session", key: child.key })}
+                              />
+                            </div>
+                          );
+                        })}
                     </React.Fragment>
                   ))}
-                  {members.length === 1 && lead.children.length === 0 && (
+                  {visibleTeammates.length === 0 && !hasVisibleChildren && (
                     <p className="team-flow__empty">
-                      主 Agent 分配任务后，成员和 SubAgent 的执行状态会出现在这里。
+                      当前没有正在工作的 Agent。任务开始后，成员和 SubAgent
+                      的执行节点会自动出现在这里，完成后自动收起。
                     </p>
                   )}
                 </div>

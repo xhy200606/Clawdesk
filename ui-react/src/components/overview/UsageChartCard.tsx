@@ -351,6 +351,9 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
       const points: UsagePoint[] = [];
       let failures = 0;
       let cursor = 0;
+      // transcript 已归档/清理的会话：网关返回 "No transcript found"，
+      // 它们本来就没有逐小时记录，视为「无数据」而非失败，今日总量口径同步扣除。
+      const noTranscript = new Set<string>();
       const workers = Array.from({ length: Math.min(6, unique.length) }, async () => {
         while (cursor < unique.length) {
           const entry = unique[cursor++];
@@ -370,19 +373,25 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
                 });
               }
             }
-          } catch {
-            failures++;
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (/no transcript found/i.test(msg)) noTranscript.add(entry.key);
+            else failures++;
           }
         }
       });
       await Promise.all(workers);
       if (canceled) return;
-      const expectedToday =
+      const baseExpected =
         mode === "1d"
           ? hasFilter
             ? selected.reduce((sum, entry) => sum + (entry.usage?.totalTokens ?? 0), 0)
             : (usageResult?.totals.totalTokens ?? 0)
           : 0;
+      const missingTokens = selected
+        .filter((entry) => noTranscript.has(entry.key))
+        .reduce((sum, entry) => sum + (entry.usage?.totalTokens ?? 0), 0);
+      const expectedToday = baseExpected - missingTokens;
       const todayKey = localDateKey(new Date());
       const recordedToday = points.reduce(
         (sum, point) =>

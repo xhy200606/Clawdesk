@@ -181,65 +181,9 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
                     </div>
                   </div>
 
-                  {/* ── Stats Panel: Sessions + Channels ── */}
+                  {/* ── Stats Panel: Channels ──
+                      （会话列表已按需求移除：拓扑关系页已覆盖会话展示，档案只保留形象/渠道） */}
                   <div className="agent-card-pixel__stats">
-                    {/* Sessions */}
-                    {agentSessions.length > 0 && (
-                      <>
-                        <div className="agent-card-pixel__stat-title">会话</div>
-                        <div className="agent-card-pixel__sessions">
-                          {agentSessions.map((s, i) => (
-                            <div key={i} className="agent-card-pixel__session">
-                              <div className="agent-card-pixel__session-row">
-                                <span className="agent-card-pixel__session-icon">
-                                  <SessionStateIcon
-                                    state={
-                                      s.status === "running" ? "processing" : (s.state ?? "idle")
-                                    }
-                                  />
-                                </span>
-                                <span className="agent-card-pixel__session-time">
-                                  {s.lastActivityAgo != null && s.lastActivityAgo < 5000
-                                    ? "刚刚"
-                                    : formatRelativeTimestamp(
-                                        Date.now() - (s.lastActivityAgo ?? 0),
-                                      )}
-                                </span>
-                                {(s.queueDepth ?? 0) > 0 && (
-                                  <span className="agent-card-pixel__session-queue">
-                                    队列{s.queueDepth}
-                                  </span>
-                                )}
-                              </div>
-                              {(() => {
-                                // [context-fix] 优先用网关回报的 contextUsage.promptTokens（当前上下文占用）
-                                const cu = s.contextUsage;
-                                const usedTok =
-                                  cu?.state === "available" && (cu.promptTokens ?? 0) > 0
-                                    ? (cu.promptTokens as number)
-                                    : (s.totalTokens ?? 0);
-                                return usedTok > 0 && s.contextTokens ? (
-                                  <div className="agent-card-pixel__bar-row">
-                                    <div className="agent-card-pixel__token-bar">
-                                      <div
-                                        className="agent-card-pixel__token-fill"
-                                        style={{
-                                          width: `${Math.min((usedTok / s.contextTokens) * 100, 100)}%`,
-                                        }}
-                                      />
-                                    </div>
-                                    <span className="agent-card-pixel__token-val">
-                                      {OverviewIcons.wheat(9)} {usedTok.toLocaleString()}
-                                    </span>
-                                  </div>
-                                ) : null;
-                              })()}
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-
                     {/* Channel icons */}
                     {channels.length > 0 && (
                       <>
