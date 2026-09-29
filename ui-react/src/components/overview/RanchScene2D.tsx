@@ -5,8 +5,16 @@
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { resolveAgentAppearance } from "../../lib/ranch/animals.ts";
+import { routeBetween, EXCURSIONS, penCenter, penGate } from "../../lib/ranch/layout.ts";
+import { moonLitPath } from "../../lib/ranch/moon.ts";
 import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch/ranch-daycycle.ts";
-import { useRanchWeather, seededRand } from "../../lib/ranch/ranch-weather.ts";
+import {
+  useRanchWeather,
+  seededRand,
+  snowCoverNow,
+  markSnowCover,
+  snowPatches,
+} from "../../lib/ranch/ranch-weather.ts";
 import type { RanchWeather } from "../../lib/ranch/ranch-weather.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
@@ -312,8 +320,23 @@ function PixelRiver() {
         fill="none"
         opacity="0.6"
       />
-      {/* 木桥：架在河道与 55% 横路的交点 (93,385)，桥面沿路方向（近水平），与路连通 */}
-      <g transform="translate(93 385) rotate(81)">
+      {/* 入户路：谷仓门口 → 竖路二顶端（与 3D HOUSE_PATH 一致） */}
+      <path
+        d="M 166 198 C 185 240, 200 290, 200 380 L 200 552"
+        fill="none"
+        stroke="#b89a5e"
+        strokeWidth="13"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 166 198 C 185 240, 200 290, 200 380 L 200 552"
+        fill="none"
+        stroke="#d4be7a"
+        strokeWidth="9"
+        strokeLinecap="round"
+      />
+      {/* 木桥：架在河道与横路（y=55%）的真实交点 (74,550)，桥面沿路方向，与路连通 */}
+      <g transform="translate(74 550) rotate(90)">
         <rect x="-10" y="-27" width="20" height="54" rx="2" fill="#a07020" />
         <rect x="-7.5" y="-24" width="15" height="48" fill="#c09040" />
         <rect x="-7.5" y="-15" width="15" height="2.5" fill="#a07020" opacity="0.6" />
@@ -326,6 +349,34 @@ function PixelRiver() {
         <rect x="7" y="20" width="5" height="7" fill="#8b5a2b" />
       </g>
     </svg>
+  );
+}
+
+// ── 地面积雪（下雪随机积雪，雪停残留渐融） ──
+function SnowCover2D({ seed, melting }: { seed: number; melting: boolean }) {
+  const patches = useMemo(
+    () => snowPatches(seed + (melting ? 7 : 0), melting ? 14 : 26),
+    [seed, melting],
+  );
+  return (
+    <>
+      {patches.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: `${p.r * 2}px`,
+            height: `${p.r * p.sq}px`,
+            borderRadius: "50%",
+            background: `rgba(238, 244, 251, ${(melting ? 0.34 : 0.72) - (i % 3) * 0.08})`,
+            transform: `translate(-50%, -50%) rotate(${p.rot}deg)`,
+            pointerEvents: "none",
+          }}
+        />
+      ))}
+    </>
   );
 }
 
@@ -980,6 +1031,8 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
   // 牧场昼夜循环（10 分钟一天）
   const day = useRanchDayCycle();
   const weather = useRanchWeather();
+  const snowCover = snowCoverNow(weather.weather);
+  useEffect(() => markSnowCover(weather.weather), [weather.weather]);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const panRef = useRef(pan);
   panRef.current = pan;
@@ -1190,6 +1243,35 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
     return () => window.clearInterval(timer);
   }, [agents, agentStateMap]);
 
+  // 跨区域远足：空闲牛马偶尔出圈，沿路网（入户路/横竖路/沿河路/桥）遛弯再回圈。
+  // 与游走共用 3.6s 节拍：每拍前进一段；一旦开工立即放弃远足。
+  const [trips, setTrips] = useState<Record<string, { pts: Array<[number, number]>; leg: number }>>(
+    {},
+  );
+  useEffect(() => {
+    const step = () =>
+      setTrips((current) => {
+        const next: typeof current = {};
+        for (const agent of agents) {
+          const base = agentStateMap.get(agent.id) ?? "idle";
+          if (base === "processing") continue;
+          const t = current[agent.id];
+          if (t) {
+            if (t.leg < t.pts.length - 1) next[agent.id] = { ...t, leg: t.leg + 1 };
+            // 走完 → 清空，之后重新随机决定是否再出发
+          } else if (Math.random() < 0.16) {
+            const dest = EXCURSIONS[Math.floor(Math.random() * EXCURSIONS.length)];
+            const pts = [penGate(), ...routeBetween(penCenter(), dest, { forceRoads: true }), dest];
+            if (pts.length > 2) next[agent.id] = { pts, leg: 0 };
+          }
+        }
+        return next;
+      });
+    step();
+    const timer = window.setInterval(step, 3600);
+    return () => window.clearInterval(timer);
+  }, [agents, agentStateMap]);
+
   // Construir lista de animales con visual status y zona
   const animals = useMemo<AnimalData[]>(() => {
     return agents.map((agent, idx) => {
@@ -1223,8 +1305,16 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
       // 游走模型：空闲（含等待/异常）在圈内悠闲走动；
       // 执行任务时在对应工作位置的槽位附近小范围活动。
       const walk = wander[agentId] ?? { dx: 0, dy: 0 };
-      const style: React.CSSProperties =
-        baseState === "processing"
+      const trip = trips[agentId];
+      const tripPt = trip ? trip.pts[Math.min(trip.leg, trip.pts.length - 1)] : null;
+      const style: React.CSSProperties = tripPt
+        ? {
+            // 远足中：沿路网逐段行走（过河必走桥）
+            left: `${tripPt[0]}%`,
+            top: `${tripPt[1]}%`,
+            transition: "left 3.4s ease-in-out, top 3.4s ease-in-out",
+          }
+        : baseState === "processing"
           ? {
               left: `calc(${zone.left + offsetX}% + ${walk.dx}px)`,
               top: `calc(${zone.top + offsetY}% + ${walk.dy}px)`,
@@ -1259,7 +1349,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         ...sess,
       };
     });
-  }, [agents, agentStateMap, agentSessionMap, wander]);
+  }, [agents, agentStateMap, agentSessionMap, wander, trips]);
 
   if (!agents || agents.length === 0) return null;
 
@@ -1300,11 +1390,37 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         style={{ background: `linear-gradient(${day.skyTop} 0%, ${day.skyBottom} 100%)` }}
         aria-hidden
       />
-      <div
-        className={day.showSun ? "ranch-daycycle__sun" : "ranch-daycycle__moon"}
-        style={{ left: `${day.orbX * 100}%`, top: `${day.orbY * 100}%` }}
-        aria-hidden
-      />
+      {day.showSun ? (
+        <div
+          className="ranch-daycycle__sun"
+          style={{ left: `${day.orbX * 100}%`, top: `${day.orbY * 100}%` }}
+          aria-hidden
+        />
+      ) : (
+        <div
+          className="ranch-daycycle__moon ranch-daycycle__moon--phased"
+          style={{
+            left: `${day.orbX * 100}%`,
+            top: `${day.orbY * 100}%`,
+            filter: `brightness(${(0.72 + 0.4 * day.moonIllum).toFixed(3)})`,
+          }}
+          aria-hidden
+        >
+          <svg viewBox="0 0 40 40" width="100%" height="100%">
+            <circle cx="20" cy="20" r="15" fill="#39415c" />
+            <circle
+              cx="20"
+              cy="20"
+              r="15"
+              fill="none"
+              stroke="#4a5578"
+              strokeWidth="1"
+              opacity="0.6"
+            />
+            <path d={moonLitPath(day.moonPhase, 15, 20, 20)} fill="#eef2fb" />
+          </svg>
+        </div>
+      )}
       {day.starAlpha > 0.02 &&
         DAYCYCLE_STARS.map(([sx, sy, delay], i) => (
           <span
@@ -1325,6 +1441,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
       >
         {/* Grass pattern */}
         <div className="ranch-tiles" />
+        {snowCover.active && <SnowCover2D seed={weather.seed} melting={snowCover.melting} />}
 
         {/* Dirt paths（横路保持完整贯穿；围栏圈内不放路） */}
         <div className="ranch-path ranch-path--h" style={{ left: 0, right: 0, top: "55%" }} />

@@ -7,6 +7,7 @@
  * 3D 场景用它缩放灯光强度与背景色，两端视觉节奏一致。
  */
 import { useEffect, useState } from "react";
+import { computeMoonPhase } from "./moon.ts";
 
 export type DayPhaseInfo = {
   /** 0..1，0 = 午夜 00:00，1 = 次日午夜（物理时间） */
@@ -29,6 +30,12 @@ export type DayPhaseInfo = {
   lightLevel: number;
   /** 牧场时钟 hh:mm（即真实本地时间） */
   clock: string;
+  /** 真实月相（随日期变化）：phase 0..1（0=新月 0.5=满月） */
+  moonPhase: number;
+  /** 月面照度 0..1（被照亮比例），夜景亮度随之浮动 */
+  moonIllum: number;
+  moonWaxing: boolean;
+  moonPhaseLabel: string;
 };
 
 type Key = {
@@ -148,6 +155,8 @@ export function useRanchDayCycle(intervalMs = 1000): DayPhaseInfo {
   // 星星：夜幕越深越亮（light≈0.45 的夜晚 → alpha≈0.7，星光明显）
   const starAlpha = Math.min(1, Math.max(0, (0.62 - light) * 4));
 
+  const moon = computeMoonPhase();
+
   return {
     phase,
     label: labelOf(phase),
@@ -162,5 +171,9 @@ export function useRanchDayCycle(intervalMs = 1000): DayPhaseInfo {
     starAlpha,
     lightLevel: light,
     clock: clockOf(phase),
+    moonPhase: moon.phase,
+    moonIllum: moon.illum,
+    moonWaxing: moon.waxing,
+    moonPhaseLabel: moon.label,
   };
 }

@@ -7,11 +7,49 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import React, { useRef, useMemo, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { resolveAgentAppearance, resolveAgentSpecies } from "../../lib/ranch/animals.ts";
+import {
+  w3d,
+  RIVER_PTS,
+  BRIDGE,
+  ROADS,
+  POND_CENTER,
+  HOUSES,
+  HOUSE_PATH_PTS,
+  ZONES,
+  barnCenter,
+  houseCenter,
+  penRect,
+  penGate,
+  penCenter,
+  routeBetween,
+  EXCURSIONS,
+} from "../../lib/ranch/layout.ts";
+import { computeMoonPhase, drawMoonCanvas } from "../../lib/ranch/moon.ts";
 import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch/ranch-daycycle.ts";
-import { useRanchWeather, seededRand } from "../../lib/ranch/ranch-weather.ts";
+import {
+  useRanchWeather,
+  seededRand,
+  snowCoverNow,
+  markSnowCover,
+  snowPatches,
+} from "../../lib/ranch/ranch-weather.ts";
 import type { RanchWeatherInfo } from "../../lib/ranch/ranch-weather.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
+
+/** 围栏圈内部游走区（与 2D 圈一致，四周留 4% 边距） */
+const PEN_IDLE = (() => {
+  const r = penRect();
+  const [x0, z0] = w3d(r.x0 + 4, r.y0 + 4);
+  const [x1, z1] = w3d(r.x1 - 4, r.y1 - 4);
+  return { x0, x1, z0, z1 };
+})();
+
+/** 入户路 3D 折线段（世界坐标） */
+const HOUSE_PATH_3D = (() => {
+  const pts = HOUSE_PATH_PTS.map(([x, y]) => w3d(x, y));
+  return pts.slice(0, -1).map((p, i) => ({ from: p, to: pts[i + 1] }));
+})();
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -79,12 +117,16 @@ function SkyBodies3D() {
   const moonGlowRef = useRef<THREE.Mesh>(null);
   const moonLightRef = useRef<THREE.PointLight>(null);
   const lastHourRef = useRef(-1);
-  useFrame(() => {
+  // 真实月相：Canvas 纹理公告板（任意视角都能看到正确相形）
+  const moonTexRef = useRef<THREE.CanvasTexture | null>(null);
+  const lastPhaseDrawnRef = useRef(-1);
+  useFrame((state) => {
     const now = new Date();
     const hour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
     if (Math.abs(hour - lastHourRef.current) < 1 / 60 && sunRef.current) return;
     lastHourRef.current = hour;
     const { sun, moon } = skyBodyPosition(hour);
+    const mp = computeMoonPhase(now);
     if (sunRef.current) {
       if (sun) {
         sunRef.current.visible = true;
@@ -96,17 +138,40 @@ function SkyBodies3D() {
     const moonVisible = Boolean(moon);
     if (moonRef.current) {
       moonRef.current.visible = moonVisible;
-      if (moon) moonRef.current.position.set(...moon);
+      if (moon) {
+        moonRef.current.position.set(...moon);
+        // 公告板：始终朝向相机
+        moonRef.current.quaternion.copy(state.camera.quaternion);
+      }
     }
     if (moonGlowRef.current) {
       moonGlowRef.current.visible = moonVisible;
-      if (moon) moonGlowRef.current.position.set(...moon);
+      if (moon) {
+        moonGlowRef.current.position.set(...moon);
+        const mat = moonGlowRef.current.material as THREE.MeshBasicMaterial;
+        mat.opacity = 0.04 + 0.22 * mp.illum;
+      }
     }
     if (moonLightRef.current) {
-      // 月光：随月亮移动的冷色点光源，夜晚给牧场一层星光月色照明
+      // 月光：随月亮移动的冷色点光源，强度随月相照度变化（满月最亮）
       moonLightRef.current.visible = moonVisible;
+      moonLightRef.current.intensity = 6 + 32 * mp.illum;
       if (moon)
         moonLightRef.current.position.set(moon[0] * 0.55, moon[1] * 0.55 + 4, moon[2] * 0.55);
+    }
+    // 月相纹理：相位变化超过阈值才重绘
+    if (moonVisible && Math.abs(mp.phase - lastPhaseDrawnRef.current) > 0.003) {
+      lastPhaseDrawnRef.current = mp.phase;
+      if (!moonTexRef.current) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 128;
+        canvas.height = 128;
+        moonTexRef.current = new THREE.CanvasTexture(canvas);
+      }
+      const ctx = moonTexRef.current.image.getContext("2d")!;
+      ctx.clearRect(0, 0, 128, 128);
+      drawMoonCanvas(ctx, 128, mp.phase);
+      moonTexRef.current.needsUpdate = true;
     }
   });
   return (
@@ -115,11 +180,17 @@ function SkyBodies3D() {
         <sphereGeometry args={[4.4, 16, 16]} />
         <meshBasicMaterial color="#ffd76e" fog={false} />
       </mesh>
+      {/* 月亮：真实月相公告板（transparent 底 + 月相纹理） */}
       <mesh ref={moonRef} visible={false}>
-        <sphereGeometry args={[3.4, 16, 16]} />
-        <meshBasicMaterial color="#e6ecf8" fog={false} />
+        <planeGeometry args={[8, 8]} />
+        <meshBasicMaterial
+          color="#ffffff"
+          map={moonTexRef.current ?? undefined}
+          transparent
+          fog={false}
+        />
       </mesh>
-      {/* 月晕（柔光外圈） */}
+      {/* 月晕（柔光外圈，亮度随照度） */}
       <mesh ref={moonGlowRef} visible={false}>
         <sphereGeometry args={[5.4, 16, 16]} />
         <meshBasicMaterial color="#c8d8ff" transparent opacity={0.16} fog={false} />
@@ -232,13 +303,14 @@ function WeatherParticles3D({ kind, seed }: { kind: "rain" | "snow"; seed: numbe
   );
 }
 
+// 与 2D ZONES 同源（lib/ranch/layout.ts），保证 2D/3D 槽位一致
 const ZONE_3D: Record<RanchVisualStatus, [number, number]> = {
-  thinking: [-3, -3], // Cerca del granero
-  tool_calling: [6, -4], // Junto al molino
-  speaking: [0, 1], // Centro (cartel)
-  idle: [4.6, -4], // 围栏圈内（与 2D 一致：空闲在圈内活动，避免切 3D 时出圈）
-  error: [-2, 4], // Campo
-  spawning: [-3, -2], // Puerta del granero
+  thinking: w3d(ZONES.thinking.left, ZONES.thinking.top),
+  tool_calling: w3d(ZONES.tool_calling.left, ZONES.tool_calling.top),
+  speaking: w3d(ZONES.speaking.left, ZONES.speaking.top),
+  idle: w3d(...penCenter()),
+  error: w3d(ZONES.error.left, ZONES.error.top),
+  spawning: w3d(ZONES.spawning.left, ZONES.spawning.top),
 };
 
 const ACTIVITY_LABELS: Record<RanchVisualStatus, string> = {
@@ -277,7 +349,42 @@ function Ground() {
         <planeGeometry args={[20, 1.2]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
+      {/* 竖路二（与 2D 一致：x=20%，仅南段 y55→100） */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w3d(ROADS.v2X, 50)[0], 0, 5.5]}>
+        <planeGeometry args={[1.2, 9]} />
+        <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
+      </mesh>
+      {/* 入户路：谷仓门口 → 竖路二（与 2D 一致） */}
+      {HOUSE_PATH_3D.map((seg, i) => (
+        <DirtPathSegment3D key={`hp-${i}`} from={seg.from} to={seg.to} />
+      ))}
     </group>
+  );
+}
+
+/** 土路小段（细长盒，与河道同构） */
+function DirtPathSegment3D({
+  from,
+  to,
+  width = 0.55,
+}: {
+  from: [number, number];
+  to: [number, number];
+  width?: number;
+}) {
+  const dx = to[0] - from[0];
+  const dz = to[1] - from[1];
+  const length = Math.hypot(dx, dz);
+  const angle = Math.atan2(dx, dz);
+  return (
+    <mesh
+      position={[(from[0] + to[0]) / 2, 0.006, (from[1] + to[1]) / 2]}
+      rotation={[0, angle, 0]}
+      receiveShadow
+    >
+      <boxGeometry args={[width, 0.012, length]} />
+      <meshStandardMaterial color="#c8a868" roughness={1} />
+    </mesh>
   );
 }
 
@@ -582,24 +689,19 @@ function Bridge3D({ at, angle }: { at: [number, number]; angle: number }) {
 }
 
 function River3D() {
-  // 与 2D 新河道对应：从后缘 (z≈-9.8) 蜿蜒向左下，在横路 (z=1) 处架桥与路连通，
-  // 下游汇入池塘 (-8.3, 3.6)。所有端点收在场内（|x|,|z| ≤ 9.8），河被场地边界截断。
-  const segments: { from: [number, number]; to: [number, number] }[] = [
-    { from: [-5.5, -9.8], to: [-6.6, -7.6] },
-    { from: [-6.6, -7.6], to: [-7.6, -5.4] },
-    { from: [-7.6, -5.4], to: [-8.3, -3.2] },
-    { from: [-8.3, -3.2], to: [-8.8, -1.2] },
-    { from: [-8.8, -1.2], to: [-9.2, 1.0] },
-    { from: [-9.2, 1.0], to: [-9.0, 2.2] },
-    { from: [-9.0, 2.2], to: [-8.3, 3.6] },
-  ];
-  // 桥架在河道与横路 (z=1) 的交点，桥面沿路方向（沿 x 轴）与路连通
-  const bridgeAt: [number, number] = [-9.2, 1.0];
+  // 与 2D 完全一致：RIVER_PTS（lib/ranch/layout.ts 单一事实源）逐段映射，
+  // 北端起于场地边缘（被边界截断），在横路（z=1）交点架桥，下游汇入池塘。
+  const pts = RIVER_PTS.map(([x, y]) => w3d(x, y));
+  const segments: { from: [number, number]; to: [number, number] }[] = pts
+    .slice(0, -1)
+    .map((p, i) => ({ from: p, to: pts[i + 1] }));
+  // 桥架在河道与横路 (y=55% → z=1) 的真实交点，桥面沿路方向（沿 x 轴）与路连通
+  const bridgeAt: [number, number] = w3d(BRIDGE.x, BRIDGE.y);
   const bridgeAngle = 0;
   return (
     <group>
       {segments.map((seg, i) => (
-        <RiverSegment3D key={i} from={seg.from} to={seg.to} width={0.9} />
+        <RiverSegment3D key={i} from={seg.from} to={seg.to} width={0.8} />
       ))}
       <Bridge3D at={bridgeAt} angle={bridgeAngle} />
     </group>
@@ -607,6 +709,36 @@ function River3D() {
 }
 
 // ─── 晴夜萤火虫（贴地漂浮 + 闪烁，仅晴朗夜晚出现） ───
+// ── 地面积雪（与 2D 同一套随机雪块，世界坐标经 w3d 映射） ──
+function SnowCover3D({ seed, melting }: { seed: number; melting: boolean }) {
+  const patches = useMemo(
+    () => snowPatches(seed + (melting ? 7 : 0), melting ? 14 : 26),
+    [seed, melting],
+  );
+  return (
+    <group>
+      {patches.map((p, i) => {
+        const [x, z] = w3d(p.x, p.y);
+        return (
+          <mesh
+            key={i}
+            position={[x, 0.014, z]}
+            rotation={[-Math.PI / 2, 0, (p.rot * Math.PI) / 180]}
+          >
+            <circleGeometry args={[p.r / 34, 10]} />
+            <meshStandardMaterial
+              color="#eef4fb"
+              roughness={0.95}
+              transparent
+              opacity={melting ? 0.42 : 0.85}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 function Fireflies3D({ seed }: { seed: number }) {
   const pointsRef = useRef<THREE.Points>(null);
   const count = 22;
@@ -749,6 +881,8 @@ type CowCharacterProps = {
   toolName: string | null;
   /** 跑动相位错开（按 agent 序号传入），避免集体整齐划一 */
   phase?: number;
+  /** 远足路标队列（世界坐标 [x,z]；非空时沿队列逐段走） */
+  trip?: Array<[number, number]> | null;
 };
 
 function CowCharacter3D({
@@ -760,6 +894,7 @@ function CowCharacter3D({
   activityLabel,
   toolName,
   phase = 0,
+  trip = null,
 }: CowCharacterProps) {
   const groupRef = useRef<THREE.Group>(null);
   const bodyGroupRef = useRef<THREE.Group>(null);
@@ -770,6 +905,11 @@ function CowCharacter3D({
   const idleNextPickRef = useRef(0);
   const isWalkingRef = useRef(false);
   const initializedRef = useRef(false);
+  // 远足路标队列（引用可变，useFrame 内逐段消化）
+  const tripQueueRef = useRef<Array<[number, number]>>([]);
+  useEffect(() => {
+    tripQueueRef.current = trip ? [...trip] : [];
+  }, [trip]);
 
   // Actualizar target cuando cambia la prop
   useEffect(() => {
@@ -791,7 +931,15 @@ function CowCharacter3D({
     // 执行任务时在对应工作位置（槽位）附近小范围游走
     const isWorking =
       visualStatus === "thinking" || visualStatus === "tool_calling" || visualStatus === "speaking";
-    if (isWorking) {
+    if (tripQueueRef.current.length > 0) {
+      // 远足中：沿路标逐段走，接近路标后切下一段
+      const wp = tripQueueRef.current[0];
+      targetRef.current.x = wp[0];
+      targetRef.current.z = wp[1];
+      if (Math.hypot(wp[0] - pos.x, wp[1] - pos.z) < 0.28) {
+        tripQueueRef.current.shift();
+      }
+    } else if (isWorking) {
       targetRef.current.x = targetPosition[0] + Math.sin(t * 0.5 + phase) * 1.2;
       targetRef.current.z = targetPosition[2] + Math.cos(t * 0.35 + phase) * 0.8;
     } else {
@@ -799,8 +947,8 @@ function CowCharacter3D({
       // 到达/超时后停顿片刻再换新目标（随机游走 + 随机固定）
       if (!idleTargetRef.current || t >= idleNextPickRef.current) {
         idleTargetRef.current = {
-          x: 2.8 + Math.random() * 4.4,
-          z: -5.2 + Math.random() * 2.4,
+          x: PEN_IDLE.x0 + Math.random() * (PEN_IDLE.x1 - PEN_IDLE.x0),
+          z: PEN_IDLE.z0 + Math.random() * (PEN_IDLE.z1 - PEN_IDLE.z0),
         };
         idleNextPickRef.current = t + 3 + Math.random() * 4;
       }
@@ -1050,6 +1198,8 @@ function SceneContent({
   sessionActivity: SessionActivityResult | null;
   weather: RanchWeatherInfo;
 }) {
+  const snowCover = snowCoverNow(weather.weather);
+  useEffect(() => markSnowCover(weather.weather), [weather.weather]);
   // Re-render periódico para cycling
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -1085,6 +1235,56 @@ function SceneContent({
   }, [agents, agentStateMap]);
 
   // Tree positions（避开新河道：河道沿 x≈-7.4→-10, z=-10→+2 一带）
+  // 与 2D 对齐的建筑位置（lib/ranch/layout.ts 单一事实源）
+  const barn3d = w3d(...barnCenter());
+  const pond3d = w3d(...POND_CENTER);
+  const house3d = HOUSES.map((h) => w3d(...houseCenter(h)));
+  const gate3d = w3d(...penGate());
+  const penR = penRect();
+  const fence3d = {
+    x0: w3d(penR.x0, penR.y0)[0],
+    z0: w3d(penR.x0, penR.y0)[1],
+    x1: w3d(penR.x1, penR.y1)[0],
+    z1: w3d(penR.x1, penR.y1)[1],
+  };
+  const mill3d = w3d(87.9, 13.7); // 风车中心（2D: 85%,8% + 40×56px）
+
+  // 跨区域远足（与 2D 同一套路网，坐标经 w3d 映射；走到点再下一段）
+  const [trips3d, setTrips3d] = useState<Record<string, Array<[number, number]> | null>>({});
+  const agentsRef = useRef(agents);
+  agentsRef.current = agents;
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTrips3d((current) => {
+        const next: typeof current = {};
+        for (const agent of agentsRef.current) {
+          const base = agentStateMap.get(agent.id) ?? "idle";
+          if (base === "processing") continue;
+          const t = current[agent.id];
+          if (t) {
+            if (t.length > 0) {
+              const rest = t.slice(1);
+              next[agent.id] = rest.length > 0 ? rest : null;
+            }
+            // 空数组 = 到家
+          } else if (Math.random() < 0.16) {
+            const dest = EXCURSIONS[Math.floor(Math.random() * EXCURSIONS.length)];
+            const ptsW = [
+              penGate(),
+              ...routeBetween(penCenter(), dest, { forceRoads: true }),
+              dest,
+            ];
+            if (ptsW.length > 2) {
+              next[agent.id] = ptsW.map(([x, y]) => w3d(x, y));
+            }
+          }
+        }
+        return next;
+      });
+    }, 3600);
+    return () => window.clearInterval(timer);
+  }, [agentStateMap]);
+
   const treePositions = useMemo<[number, number, number][]>(
     () => [
       [-5.5, 0, -8],
@@ -1134,7 +1334,7 @@ function SceneContent({
       <ambientLight intensity={0.35 * lightLevel + 0.12} />
       <directionalLight
         position={[8, 12, 8]}
-        intensity={1.1 * lightLevel + 0.15}
+        intensity={1.1 * lightLevel * (day.isNight ? 0.5 + 0.5 * day.moonIllum : 1) + 0.15}
         color={day.isNight ? "#b9c9ff" : "#fff6e8"}
         castShadow
         shadow-mapSize-width={1024}
@@ -1161,27 +1361,27 @@ function SceneContent({
       />
 
       <Ground />
+      {snowCover.active && <SnowCover3D seed={weather.seed} melting={snowCover.melting} />}
 
       {/* Edificios */}
-      <Barn position={[-3, 0, -4]} />
-      <Windmill position={[6, 0, -5]} />
-      <SmallHouse position={[-6, 0, 3.2]} roofColor="#48a838" />
-      <SmallHouse position={[2, 0, 5]} roofColor="#d04040" />
-      <SmallHouse position={[6, 0, 4]} roofColor="#4080d0" />
+      <Barn position={[barn3d[0], 0, barn3d[1]]} />
+      <Windmill position={[mill3d[0], 0, mill3d[1]]} />
+      <SmallHouse position={[house3d[0][0], 0, house3d[0][1]]} roofColor="#7a9e4e" />
+      <SmallHouse position={[house3d[1][0], 0, house3d[1][1]]} roofColor="#c87848" />
+      <SmallHouse position={[house3d[2][0], 0, house3d[2][1]]} roofColor="#6a9898" />
 
-      <Pond3D position={[-8.3, 0.02, 3.6]} />
+      <Pond3D position={[pond3d[0], 0.02, pond3d[1]]} />
 
       {/* 左上角河流 + 木桥（与 2D 牧场对应） */}
       <River3D />
 
-      {/* Cerca con puerta */}
-      <Fence3D from={[2, 0, -6]} to={[8, 0, -6]} />
-      <Fence3D from={[8, 0, -6]} to={[8, 0, -2]} />
-      {/* Cerca inferior dividida en dos con puerta en el medio */}
-      <Fence3D from={[8, 0, -2]} to={[5.5, 0, -2]} />
-      <FenceGate3D position={[5, 0, -2]} open={gateOpen} />
-      <Fence3D from={[4.5, 0, -2]} to={[2, 0, -2]} />
-      <Fence3D from={[2, 0, -2]} to={[2, 0, -6]} />
+      {/* 围栏圈与 2D 完全一致（52%~81% × 18%~36.3%，门在南栏中部） */}
+      <Fence3D from={[fence3d.x0, 0, fence3d.z0]} to={[fence3d.x1, 0, fence3d.z0]} />
+      <Fence3D from={[fence3d.x1, 0, fence3d.z0]} to={[fence3d.x1, 0, fence3d.z1]} />
+      <Fence3D from={[fence3d.x0, 0, fence3d.z1]} to={[gate3d[0] - 0.55, 0, fence3d.z1]} />
+      <FenceGate3D position={[gate3d[0], 0, fence3d.z1]} open={gateOpen} />
+      <Fence3D from={[gate3d[0] + 0.55, 0, fence3d.z1]} to={[fence3d.x1, 0, fence3d.z1]} />
+      <Fence3D from={[fence3d.x0, 0, fence3d.z0]} to={[fence3d.x0, 0, fence3d.z1]} />
 
       {/* Árboles */}
       {treePositions.map((pos, i) => (
@@ -1215,11 +1415,13 @@ function SceneContent({
         const pos: [number, number, number] = [zoneX + offsetX, 0, zoneZ + offsetZ];
 
         const activityLabel = baseState === "waiting" ? "等待接单" : ACTIVITY_LABELS[visualStatus];
+        const tripQueue = trips3d[agentId] ?? null;
 
         return (
           <CowCharacter3D
             key={agentId}
             targetPosition={pos}
+            trip={tripQueue}
             phase={idx * 1.7}
             {...appearance}
             name={name}
@@ -1248,6 +1450,8 @@ export type RanchScene3DProps = {
 export function RanchScene3D({ agents, sessionActivity }: RanchScene3DProps) {
   const day = useRanchDayCycle();
   const weather = useRanchWeather();
+  const snowCover = snowCoverNow(weather.weather);
+  useEffect(() => markSnowCover(weather.weather), [weather.weather]);
   // 天气影响雾：注意相机可拉远到 25 + 场景半径 ~12，雾 far 必须远大于 37，
   // 否则缩小视角时整个场景被雾色吞掉（之前 fog far=17 导致整屏发白）
   const fogArgs =

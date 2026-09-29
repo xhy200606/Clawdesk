@@ -2456,6 +2456,18 @@
     box-shadow: 0 0 18px rgba(220, 228, 245, 0.7);
 }
 
+.ranch-daycycle__moon--phased {
+    background: none !important;
+    box-shadow: 0 0 20px rgba(214, 226, 250, 0.55);
+    width: 42px;
+    height: 42px;
+}
+
+.ranch-daycycle__moon--phased svg {
+    display: block;
+    filter: drop-shadow(0 0 6px rgba(214, 226, 250, 0.45));
+}
+
 .ranch-daycycle__star {
     position: absolute;
     z-index: 0;

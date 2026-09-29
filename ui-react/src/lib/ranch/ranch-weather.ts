@@ -44,6 +44,43 @@ export function seededRand(seed: number, i: number): number {
   return hash(hash(seed + i * 0x9e3779b1) ^ (i * 0x85ebca6b)) / 4294967296;
 }
 
+// ── 地面积雪：下雪时记录「积雪保留至」时刻（雪停后残留 2 小时渐融） ──
+const SNOW_UNTIL_KEY = "ranchSnowUntil";
+const SNOW_LINGER_MS = 2 * 60 * 60 * 1000;
+
+/** 当前地面是否被雪覆盖；melting = 雪停后的残留融化态 */
+export function snowCoverNow(weather: RanchWeather): { active: boolean; melting: boolean } {
+  if (weather === "snow") return { active: true, melting: false };
+  const until = Number(localStorage.getItem(SNOW_UNTIL_KEY) || 0);
+  if (Date.now() < until) return { active: true, melting: true };
+  return { active: false, melting: false };
+}
+
+/** 下雪时刷新保留时刻（组件 effect 内调用） */
+export function markSnowCover(weather: RanchWeather): void {
+  if (weather === "snow") {
+    localStorage.setItem(SNOW_UNTIL_KEY, String(Date.now() + SNOW_LINGER_MS));
+  }
+}
+
+/** 生成随机积雪块（世界百分比坐标 + 像素尺寸；同 seed 稳定） */
+export function snowPatches(
+  seed: number,
+  count: number,
+): Array<{ x: number; y: number; r: number; sq: number; rot: number }> {
+  const out: Array<{ x: number; y: number; r: number; sq: number; rot: number }> = [];
+  for (let i = 0; i < count; i++) {
+    out.push({
+      x: 4 + seededRand(seed, i * 4 + 1) * 92,
+      y: 4 + seededRand(seed, i * 4 + 2) * 92,
+      r: 26 + seededRand(seed, i * 4 + 3) * 60,
+      sq: 0.5 + seededRand(seed, i * 4 + 4) * 0.25,
+      rot: seededRand(seed, i * 4 + 5) * 180,
+    });
+  }
+  return out;
+}
+
 const HOUR_MS = 60 * 60 * 1000;
 
 export function ranchWeatherNow(ts = Date.now()): RanchWeatherInfo {
