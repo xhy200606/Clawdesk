@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ChannelCard, type ChannelCardData } from "../components/channels/ChannelCard.tsx";
 import { ChannelConfigDrawer } from "../components/channels/ChannelConfigDrawer.tsx";
 import { ChannelPairings } from "../components/channels/ChannelPairings.tsx";
@@ -8,14 +8,16 @@ import {
 } from "../components/channels/ChannelQuickAdd.tsx";
 import type { DropdownGroup } from "../components/Dropdown.tsx";
 import { t } from "../i18n/index.ts";
+import { loadAgents } from "../lib/controllers/agents.ts";
 import { approveChannelPairing, loadChannelPairings } from "../lib/controllers/channel-pairing.ts";
 import { loadChannels } from "../lib/controllers/channels.ts";
 import {
-  applyConfig,
-  saveConfig,
+  ensureConfigLoaded,
+  loadConfig,
   updateConfigFormValue,
   type ConfigState,
 } from "../lib/controllers/config.ts";
+import { serializeConfigForm } from "../lib/controllers/config/form-utils.ts";
 import { formatRelativeTimestamp } from "../lib/format.ts";
 import type { ChannelAccountSnapshot } from "../lib/types.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
@@ -34,6 +36,7 @@ export function ChannelsView() {
   const configSaving = s((st) => st.configSaving);
   const configFormDirty = s((st) => st.configFormDirty);
   const configUiHints = s((st) => st.configUiHints);
+  const agentsList = s((st) => st.agentsList);
 
   // Quick-add state
   const quickAddExpanded = s((st) => st.channelQuickAddExpanded);
@@ -76,7 +79,11 @@ export function ChannelsView() {
     setDrawerChannelId(null);
   }, []);
 
-  // ── Build models/agents list from configForm ──
+  useEffect(() => {
+    if (_connected) void loadAgents(getReactiveState() as never);
+  }, [_connected]);
+
+  // ── Build model choices from config and Agent choices from the runtime roster. ──
   const { availableModels, modelGroups, availableAgents } = useMemo(() => {
     const providersObj = (
       (configForm as Record<string, unknown>)?.models as Record<string, unknown>
@@ -104,21 +111,35 @@ export function ChannelsView() {
     const agentsObj = (configForm as Record<string, unknown>)?.agents as
       | Record<string, unknown>
       | undefined;
-    const agentsList = (agentsObj?.list ?? []) as Array<{
-      id: string;
-      identity?: { name?: string };
-    }>;
-    const agents = agentsList.map((a) => ({ id: a.id, name: a.identity?.name ?? a.id }));
+    const agents = new Map<string, { id: string; name: string }>();
+    const entries = agentsObj?.entries;
+    if (entries && typeof entries === "object" && !Array.isArray(entries)) {
+      for (const [id, entry] of Object.entries(entries)) {
+        if (!id.trim()) continue;
+        const identity = (entry as { identity?: { name?: string } } | null)?.identity;
+        agents.set(id, { id, name: identity?.name || id });
+      }
+    }
+    for (const agent of agentsList?.agents ?? []) {
+      agents.set(agent.id, {
+        id: agent.id,
+        name: agent.identity?.name || agent.name || agent.id,
+      });
+    }
 
-    return { availableModels: models, modelGroups: groups, availableAgents: agents };
-  }, [configForm]);
+    return {
+      availableModels: models,
+      modelGroups: groups,
+      availableAgents: [...agents.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  }, [agentsList, configForm]);
 
   // ── Resolve channel cards data ──
   const channelCards: ChannelCardData[] = useMemo(() => {
-    const channels = snapshot?.channels as Record<string, unknown> | null;
-    if (!channels) {
-      return [];
-    }
+    const channels = (snapshot?.channels ?? {}) as Record<string, unknown>;
+    const configuredChannels = ((configForm as Record<string, unknown> | null)?.channels ??
+      {}) as Record<string, unknown>;
+    const configuredKeys = Object.keys(configuredChannels);
 
     // Orden de canales
     let channelOrder: string[];
@@ -140,6 +161,21 @@ export function ChannelsView() {
       ];
     }
 
+    const plugins = ((configForm as Record<string, unknown> | null)?.plugins ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const weixinPlugin = ((plugins.entries ?? {}) as Record<string, { enabled?: boolean }>)[
+      "openclaw-weixin"
+    ];
+    channelOrder = [
+      ...new Set([
+        ...channelOrder,
+        ...Object.keys(channels),
+        ...configuredKeys,
+        ...(weixinPlugin?.enabled ? ["openclaw-weixin"] : []),
+      ]),
+    ];
     const metaMap: Record<string, { label: string }> = {};
     if (snapshot?.channelMeta) {
       for (const m of snapshot.channelMeta) {
@@ -151,6 +187,14 @@ export function ChannelsView() {
       channelOrder
         .map((key) => {
           const status = channels[key] as Record<string, unknown> | undefined;
+          const channelConfig = configuredChannels[key] as Record<string, unknown> | undefined;
+          const configPresent = Boolean(
+            (key === "openclaw-weixin" && weixinPlugin?.enabled) ||
+            (channelConfig &&
+              channelConfig.enabled !== false &&
+              (Object.keys(channelConfig).some((field) => field !== "enabled") ||
+                channelConfig.enabled === true)),
+          );
           const accounts: ChannelAccountSnapshot[] = snapshot?.channelAccounts?.[key] ?? [];
           const configured =
             typeof status?.configured === "boolean" ? status.configured : undefined;
@@ -161,15 +205,19 @@ export function ChannelsView() {
 
           const isEnabled =
             configured ||
+            configPresent ||
             running ||
             connectedVal ||
             accounts.some((a) => a.configured || a.running || a.connected);
 
           return {
             key,
-            label: metaMap[key]?.label ?? snapshot?.channelLabels?.[key] ?? key,
+            label:
+              metaMap[key]?.label ??
+              snapshot?.channelLabels?.[key] ??
+              (key === "openclaw-weixin" ? "微信" : key),
             enabled: !!isEnabled,
-            configured: configured ?? undefined,
+            configured: Boolean(configured || configPresent),
             running: running ?? undefined,
             connected: connectedVal ?? undefined,
             lastError: lastError ?? null,
@@ -184,11 +232,13 @@ export function ChannelsView() {
           return 0;
         })
     );
-  }, [snapshot]);
+  }, [snapshot, configForm]);
 
   // ── Quick-add handlers ──
   const onToggle = useCallback(() => {
-    set({ channelQuickAddExpanded: !s.getState().channelQuickAddExpanded });
+    const expanded = !s.getState().channelQuickAddExpanded;
+    set({ channelQuickAddExpanded: expanded });
+    if (expanded) void loadAgents(getReactiveState() as never);
   }, [set]);
 
   const onChannelTypeChange = useCallback(
@@ -238,8 +288,11 @@ export function ChannelsView() {
     const f = s.getState().channelQuickAddForm;
     set({ channelQuickAddBusy: true, channelQuickAddError: null });
     try {
+      if (!(await ensureConfigLoaded(reactive))) {
+        throw new Error("无法读取当前配置，请检查网关连接后重试");
+      }
       const channel = f.channelType;
-      const accountId = f.accountId.trim();
+      const accountId = f.accountId.trim() || "default";
 
       if (channel === "telegram") {
         // streaming 必须是对象（schema: streaming.mode = off|partial|block|progress）；
@@ -298,9 +351,6 @@ export function ChannelsView() {
         updateConfigFormValue(reactive, ["plugins", "entries", "openclaw-weixin", "enabled"], true);
       }
 
-      // Esperar a que el proxy flush las escrituras al store
-      await new Promise((r) => setTimeout(r, 50));
-
       const agentIdToUse = f.createAgent ? f.agentId || accountId : "";
       if (f.createAgent && f.agentId === "") {
         let avatarValue: string = f.agentEmoji;
@@ -350,17 +400,33 @@ export function ChannelsView() {
       }
 
       if (f.createAgent && agentIdToUse) {
-        const newBinding = { agentId: agentIdToUse, match: { channel, accountId } };
+        const bindingChannel = channel === "weixin" ? "openclaw-weixin" : channel;
+        const newBinding = { agentId: agentIdToUse, match: { channel: bindingChannel, accountId } };
         const currentBindings = ((reactive.configForm as Record<string, unknown>)?.bindings ??
-          []) as unknown[];
-        updateConfigFormValue(reactive, ["bindings"], [...currentBindings, newBinding]);
+          []) as Array<{ agentId?: string; match?: { channel?: string; accountId?: string } }>;
+        updateConfigFormValue(
+          reactive,
+          ["bindings"],
+          [
+            ...currentBindings.filter(
+              (binding) =>
+                binding.match?.channel !== bindingChannel || binding.match?.accountId !== accountId,
+            ),
+            newBinding,
+          ],
+        );
       }
-
-      // Esperar flush final antes de persistir
-      await new Promise((r) => setTimeout(r, 50));
-
-      await saveConfig(reactive);
-      await applyConfig(reactive);
+      if (!reactive.client || !reactive.configForm || !reactive.configSnapshot?.hash) {
+        throw new Error("网关配置不可用，请重新加载后重试");
+      }
+      await reactive.client.request("config.apply", {
+        raw: serializeConfigForm(reactive.configForm),
+        baseHash: reactive.configSnapshot.hash,
+      });
+      reactive.configFormDirty = false;
+      await loadConfig(reactive);
+      if (reactive.lastError) throw new Error(reactive.lastError);
+      await Promise.all([loadChannels(reactive as never, false), loadAgents(reactive as never)]);
 
       set({
         channelQuickAddForm: {
@@ -514,16 +580,9 @@ export function ChannelsView() {
   }, [set]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    <div className="channels-view">
       {/* Primera fila: Quick Add + Pairings */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr minmax(280px,380px)",
-          gap: 18,
-          alignItems: "stretch",
-        }}
-      >
+      <div className="channels-view__setup">
         <ChannelQuickAdd
           form={quickAddForm}
           expanded={quickAddExpanded}

@@ -17,11 +17,31 @@ export type RanchSceneProps = {
 
 export function RanchScene({ agents, sessionActivity }: RanchSceneProps) {
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  const [zoom2D, setZoom2D] = useState(1);
 
   return (
     <div className="ranch-wrapper">
       {/* Toggle 2D/3D */}
       <div className="ranch-view-toggle">
+        {viewMode === "2d" && (
+          <div className="ranch-zoom-controls" aria-label="2D 牧场缩放">
+            <button
+              type="button"
+              title="缩小"
+              onClick={() => setZoom2D((value) => Math.max(1, +(value - 0.1).toFixed(1)))}
+            >
+              −
+            </button>
+            <span>{Math.round(zoom2D * 100)}%</span>
+            <button
+              type="button"
+              title="放大"
+              onClick={() => setZoom2D((value) => Math.min(2.5, +(value + 0.1).toFixed(1)))}
+            >
+              +
+            </button>
+          </div>
+        )}
         <button
           className={`ranch-view-toggle__btn ${viewMode === "2d" ? "ranch-view-toggle__btn--active" : ""}`}
           onClick={() => setViewMode("2d")}
@@ -64,7 +84,12 @@ export function RanchScene({ agents, sessionActivity }: RanchSceneProps) {
       </div>
 
       {viewMode === "2d" ? (
-        <RanchScene2D agents={agents} sessionActivity={sessionActivity} />
+        <RanchScene2D
+          agents={agents}
+          sessionActivity={sessionActivity}
+          zoom={zoom2D}
+          onZoom={setZoom2D}
+        />
       ) : (
         <Suspense
           fallback={

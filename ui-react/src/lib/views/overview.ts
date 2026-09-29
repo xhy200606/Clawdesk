@@ -1296,7 +1296,7 @@ export function renderOverview(props: OverviewProps) {
             <div class="card-header-row">
               ${dragHandleOnly}
               <div style="flex:1">
-                <div class="card-title">草料消耗趋势</div>
+                <div class="card-title">饲料消耗趋势</div>
                 <div class="card-sub">${subtitle}</div>
               </div>
               ${agentList.length > 1
@@ -1421,7 +1421,7 @@ export function renderOverview(props: OverviewProps) {
                 class="muted"
                 style="font-size: 12px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; display:flex; align-items:center; gap:5px"
               >
-                ${icon.wheat(13)} 今日消耗草料（Tokens）
+                ${icon.wheat(13)} 今日消耗饲料（Tokens）
               </div>
               <div
                 style="font-family: var(--mono, monospace); font-size: 32px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-strong); line-height: 1.1;"
@@ -1429,7 +1429,7 @@ export function renderOverview(props: OverviewProps) {
                 ${fmtTokens(todayTokens)}
               </div>
               <div class="muted" style="font-size: 11px; margin-top: 4px;">
-                ${todayTokens.toLocaleString()} 棵草
+                ${todayTokens.toLocaleString()} 斤饲料
               </div>
             </div>
             <div class="card" style="padding: 16px 20px;">
@@ -1437,7 +1437,7 @@ export function renderOverview(props: OverviewProps) {
                 class="muted"
                 style="font-size: 12px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; display:flex; align-items:center; gap:5px"
               >
-                ${icon.fire(13)} 累计消耗草料（Tokens）
+                ${icon.fire(13)} 累计消耗饲料（Tokens）
               </div>
               <div
                 style="font-family: var(--mono, monospace); font-size: 32px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-strong); line-height: 1.1;"
@@ -1445,7 +1445,7 @@ export function renderOverview(props: OverviewProps) {
                 ${fmtTokens(allTokens)}
               </div>
               <div class="muted" style="font-size: 11px; margin-top: 4px;">
-                ${allTokens.toLocaleString()} 棵草
+                ${allTokens.toLocaleString()} 斤饲料
               </div>
             </div>
           </div>

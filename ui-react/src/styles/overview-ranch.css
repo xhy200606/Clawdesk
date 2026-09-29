@@ -20,6 +20,32 @@
     backdrop-filter: blur(4px);
 }
 
+.ranch-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: #fff;
+    font-size: 11px;
+    margin-right: 6px;
+}
+
+.ranch-zoom-controls button {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    border: 0;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.ranch-scene__world {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 50%;
+    transition: transform 0.12s ease-out;
+}
+
 .ranch-view-toggle__btn {
     display: flex;
     align-items: center;
@@ -91,7 +117,11 @@
     user-select: none;
     image-rendering: pixelated;
     background: var(--ranch-grass, #8db651);
+    overscroll-behavior: contain;
 }
+.ranch-scene--pannable { cursor: grab; touch-action: none; }
+.ranch-scene--pannable:active { cursor: grabbing; }
+.ranch-animal--wandering .ranch-animal__sprite { animation: ranch-step .4s steps(2) infinite; }
 
 /* ── Ranch Action Buttons ── */
 .ranch-actions {
@@ -296,6 +326,33 @@
     width: 32px;
     height: 32px;
     image-rendering: pixelated;
+}
+
+.agent-appearance {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: contain;
+    user-select: none;
+}
+
+.agent-appearance--emoji {
+    font-family: system-ui, sans-serif;
+    line-height: 1;
+    image-rendering: auto;
+}
+
+.ranch-animal > .agent-appearance {
+    width: 38px;
+    height: 38px;
+    font-size: 34px;
+}
+.ranch-pixel-animal { image-rendering: pixelated; overflow: visible; }
+
+.ranch-animal__sprite--3d {
+    width: 48px;
+    height: 48px;
+    font-size: 43px;
 }
 
 /* ── Name label ── */
@@ -936,7 +993,7 @@
     position: absolute;
     top: 8px;
     left: 10px;
-    z-index: 10;
+    z-index: 58;
     pointer-events: none;
     image-rendering: auto;
 }
@@ -994,10 +1051,16 @@
 /* Agent grid — wider cards, flexible columns */
 .ov-agent-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 16px;
-    margin-top: 14px;
-    zoom: 1.15;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 205px), 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    zoom: 1.02;
+}
+
+@media (max-width: 640px) {
+    .ov-agent-grid {
+        zoom: 1;
+    }
 }
 
 /* ── Base Card ── */
@@ -1132,8 +1195,8 @@
 }
 
 .agent-card-pixel__avatar-ring {
-    width: 64px;
-    height: 64px;
+    width: 172px;
+    height: 172px;
     border-radius: 50%;
     padding: 2px;
     background: linear-gradient(135deg, rgba(255, 200, 80, 0.5), rgba(255, 150, 50, 0.25));
@@ -1518,7 +1581,7 @@
 
 
 /* ==============================================
-   RPG-THEMED SECTION CARDS — 草料消耗趋势 / 牧场大门
+   RPG-THEMED SECTION CARDS — 饲料消耗趋势 / 牧场大门
    ============================================== */
 
 /* Shared pixel RPG card overrides */
@@ -1552,7 +1615,7 @@
     letter-spacing: 0.03em;
 }
 
-/* 草料消耗趋势 — amber/orange (burning hay) */
+/* 饲料消耗趋势 — amber/orange (burning hay) */
 .ov-card--usage {
     --rpg-accent: #c88830;
     border-left-color: #c88830;
@@ -1629,8 +1692,8 @@
 
 /* ─── 牛马档案 · 编辑弹窗 ─────────────────────────── */
 .agent-edit-dialog {
-    min-width: 340px;
-    max-width: 420px;
+    min-width: min(340px, calc(100vw - 24px));
+    max-width: min(420px, calc(100vw - 24px));
 }
 
 .agent-edit-dialog__form {
@@ -2104,8 +2167,9 @@
 }
 
 .agent-animal .ranch-animal__sprite {
-    width: 68%;
-    height: 68%;
+    width: 94%;
+    height: 94%;
+    font-size: 83px;
     image-rendering: pixelated;
 }
 
@@ -2171,45 +2235,36 @@
 
 /* 休息：趴卧（压扁 + 微转）呼吸 */
 .agent-animal--rest .ranch-animal__sprite {
-    transform: translateY(6%) scaleY(0.86) scaleX(1.06);
-    transform-origin: 50% 100%;
-    animation: agent-rest-breathe 3.6s ease-in-out infinite;
-    opacity: 0.92;
+    width: 78%;
+    height: 78%;
+    animation: agent-wander 8s linear infinite;
+    opacity: 0.96;
 }
 
-@keyframes agent-rest-breathe {
-
-    0%,
-    100% {
-        transform: translateY(6%) scaleY(0.86) scaleX(1.06);
-    }
-
-    50% {
-        transform: translateY(6%) scaleY(0.9) scaleX(1.08);
-    }
+@keyframes agent-wander {
+    0%, 100% { transform: translate(-13px, 5px) scaleX(1); }
+    22% { transform: translate(12px, -12px) scaleX(1); }
+    48% { transform: translate(15px, 9px) scaleX(-1); }
+    72% { transform: translate(-9px, 11px) scaleX(-1); }
 }
 
-/* 动物小徽标（identity.emoji） */
-.agent-animal__emoji {
-    position: absolute;
-    right: 0;
-    bottom: 2px;
-    font-size: 14px;
-    line-height: 1;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+.agent-edit-dialog__appearance-preview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 92px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 12px;
 }
 
-/* 自定义头像角标 */
-.agent-card-pixel__avatar-badge {
-    position: absolute;
-    right: -2px;
-    bottom: -2px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: 2px solid var(--card, #181b22);
-    object-fit: cover;
-    background: var(--bg-hover, #262a35);
+.agent-edit-dialog__appearance-preview .agent-appearance {
+    width: 76px;
+    height: 76px;
+    font-size: 68px;
+    flex-shrink: 0;
 }
 
 /* ── 动物形象选择器（编辑弹窗） ── */
@@ -2356,4 +2411,96 @@
     border-radius: 50%;
     flex-shrink: 0;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* ─── 星露谷风像素形象描边（四向 drop-shadow 拼出 1px 深色轮廓） ─── */
+.agent-appearance.ranch-pixel-animal {
+  filter: drop-shadow(1px 0 0 rgba(43, 39, 36, 0.85))
+    drop-shadow(-1px 0 0 rgba(43, 39, 36, 0.85))
+    drop-shadow(0 1px 0 rgba(43, 39, 36, 0.85))
+    drop-shadow(0 -1px 0 rgba(43, 39, 36, 0.85));
+}
+
+/* ─── 昼夜循环层 ─── */
+.ranch-daycycle {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    transition: background 1.2s linear;
+}
+
+.ranch-scene__world {
+    z-index: 1;
+}
+
+.ranch-daycycle__sun,
+.ranch-daycycle__moon {
+    position: absolute;
+    z-index: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: left 1s linear, top 1s linear;
+}
+
+.ranch-daycycle__sun {
+    background: radial-gradient(circle, #fff8d9 0%, #ffd76e 52%, rgba(255, 215, 110, 0) 74%);
+    box-shadow: 0 0 26px rgba(255, 214, 110, 0.85);
+}
+
+.ranch-daycycle__moon {
+    background: radial-gradient(circle, #f5f7fc 0%, #d9dfec 55%, rgba(217, 223, 236, 0) 74%);
+    box-shadow: 0 0 18px rgba(220, 228, 245, 0.7);
+}
+
+.ranch-daycycle__star {
+    position: absolute;
+    z-index: 0;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: #fff;
+    pointer-events: none;
+    animation: ranch-star-twinkle 3s ease-in-out infinite;
+}
+
+@keyframes ranch-star-twinkle {
+
+    0%,
+    100% {
+        opacity: 0.2;
+        transform: scale(0.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+}
+
+.ranch-daycycle__tint {
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    transition: background 1.2s linear;
+}
+
+.ranch-daycycle__badge {
+    position: absolute;
+    z-index: 60;
+    top: 8px;
+    right: 10px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-family: var(--mono, monospace);
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(20, 24, 34, 0.5);
+    backdrop-filter: blur(3px);
+    pointer-events: none;
 }

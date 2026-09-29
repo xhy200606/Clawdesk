@@ -1125,8 +1125,9 @@
   padding: calc(var(--shell-topbar-height) + 8px) clamp(12px, 2vw, 20px) clamp(20px, 3vw, 36px);
   display: block;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .content>*+* {
@@ -1367,4 +1368,20 @@
   .list-item {
     grid-template-columns: 1fr;
   }
+}
+
+/* 会话正在执行任务的呼吸状态灯 */
+.session-item__status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok, #30d158);
+  flex: none;
+  box-shadow: 0 0 6px rgba(48, 209, 88, 0.7);
+  animation: session-working-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes session-working-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
 }

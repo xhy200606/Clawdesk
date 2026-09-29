@@ -4,8 +4,10 @@
  * thinking / tool_calling / speaking / idle / error / spawning
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { resolveAgentSpecies } from "../../lib/animals.ts";
+import { resolveAgentAppearance } from "../../lib/animals.ts";
+import { useRanchDayCycle } from "../../lib/ranch-daycycle.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
+import { AgentAppearance } from "./AgentAppearance.tsx";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -24,10 +26,9 @@ type RanchZone = {
 type AnimalData = {
   id: string;
   name: string;
-  emoji?: string;
+  appearance: ReturnType<typeof resolveAgentAppearance>;
   baseState: AgentState;
   visualStatus: RanchVisualStatus;
-  palette: { body: string; spot: string };
   zone: RanchZone;
   style: React.CSSProperties;
   activityLabel: string;
@@ -37,17 +38,6 @@ type AnimalData = {
 };
 
 // ─── Constants ──────────────────────────────────────────────────────
-
-const PALETTES = [
-  { body: "#f5f5f0", spot: "#4a4a4a" },
-  { body: "#d4915c", spot: "#fff8e7" },
-  { body: "#8B7355", spot: "#F5DEB3" },
-  { body: "#e8d5b7", spot: "#8B6914" },
-  { body: "#c9b8a3", spot: "#5c4033" },
-  { body: "#888", spot: "#ccc" },
-  { body: "#f0e68c", spot: "#cd853f" },
-  { body: "#bc8f8f", spot: "#800000" },
-];
 
 // ── Zone definitions: cada visual status tiene una zona del mapa ──
 
@@ -99,13 +89,13 @@ const PHRASES: Record<RanchVisualStatus, string[]> = {
     "电量不足，请充值 🔋",
     "别看我，去找PM 😏",
   ],
-  error: ["救命！出bug了 🐛", "系统崩溃了 💥", "需要兽医 🏥", "错误404: 草料未找到 🚫"],
+  error: ["救命！出bug了 🐛", "系统崩溃了 💥", "需要兽医 🏥", "错误404: 饲料未找到 🚫"],
   spawning: ["来了来了！🏃", "打卡上班 ⏰"],
 };
 
 const FEED_PHRASES = [
   "好吃！谢谢老板 🥺",
-  "草料真香 😋",
+  "饲料真香 😋",
   "加鸡腿！🍗",
   "饱了饱了 🫃",
   "老板大气！💰",
@@ -575,64 +565,6 @@ function PixelGate({ open }: { open: boolean }) {
   );
 }
 
-// ─── Cow/Horse Sprite ───────────────────────────────────────────────
-
-export function CowHorseSprite({ bodyColor, spotColor }: { bodyColor: string; spotColor: string }) {
-  return (
-    <svg className="ranch-animal__sprite" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="16" cy="30" rx="10" ry="3" fill="rgba(0,0,0,0.15)" />
-      <ellipse cx="16" cy="18" rx="10" ry="7" fill={bodyColor} />
-      <ellipse cx="12" cy="17" rx="3" ry="2" fill={spotColor} transform="rotate(-10 12 17)" />
-      <ellipse cx="20" cy="19" rx="2.5" ry="1.5" fill={spotColor} transform="rotate(15 20 19)" />
-      <rect x="8" y="23" width="4" height="6" rx="1.5" fill={bodyColor} opacity="0.85" />
-      <rect x="20" y="23" width="4" height="6" rx="1.5" fill={bodyColor} opacity="0.85" />
-      <rect x="8" y="27" width="4" height="3" rx="1" fill="#3d2b1f" />
-      <rect x="20" y="27" width="4" height="3" rx="1" fill="#3d2b1f" />
-      <rect x="11" y="22" width="3" height="6" rx="1" fill={bodyColor} />
-      <rect x="18" y="22" width="3" height="6" rx="1" fill={bodyColor} />
-      <rect x="11" y="26" width="3" height="3" rx="1" fill="#3d2b1f" />
-      <rect x="18" y="26" width="3" height="3" rx="1" fill="#3d2b1f" />
-      <path
-        d={`M24 14 Q30 10 28 6`}
-        stroke={bodyColor}
-        strokeWidth="2.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <circle cx="28" cy="6" r="2" fill={spotColor} />
-      <ellipse cx="16" cy="8" rx="7" ry="5.5" fill={bodyColor} />
-      <ellipse cx="13" cy="7" rx="2.5" ry="1.5" fill={spotColor} transform="rotate(-15 13 7)" />
-      <path
-        d="M10 4 Q7 0 8 -1"
-        stroke="#c4a060"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <path
-        d="M22 4 Q25 0 24 -1"
-        stroke="#c4a060"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <ellipse cx="9" cy="5" rx="2.5" ry="1.5" fill={bodyColor} transform="rotate(-25 9 5)" />
-      <ellipse cx="23" cy="5" rx="2.5" ry="1.5" fill={bodyColor} transform="rotate(25 23 5)" />
-      <ellipse cx="9" cy="5" rx="1.5" ry="0.8" fill="#e8a0a0" transform="rotate(-25 9 5)" />
-      <ellipse cx="23" cy="5" rx="1.5" ry="0.8" fill="#e8a0a0" transform="rotate(25 23 5)" />
-      <circle cx="13" cy="8" r="1.5" fill="white" />
-      <circle cx="19" cy="8" r="1.5" fill="white" />
-      <circle cx="13.3" cy="8" r="0.8" fill="#1a1a2e" />
-      <circle cx="19.3" cy="8" r="0.8" fill="#1a1a2e" />
-      <circle cx="13" cy="7.6" r="0.4" fill="white" />
-      <circle cx="19" cy="7.6" r="0.4" fill="white" />
-      <ellipse cx="16" cy="11" rx="3" ry="1.8" fill="#ffccaa" />
-      <circle cx="14.8" cy="11" r="0.5" fill="#8B6914" />
-      <circle cx="17.2" cy="11" r="0.5" fill="#8B6914" />
-    </svg>
-  );
-}
-
 // ─── Decoration Items ───────────────────────────────────────────────
 
 type DecoType =
@@ -841,10 +773,41 @@ function SpeakingIndicator() {
   );
 }
 
+// 星星坐标（百分比，确定性伪随机，避免每次渲染跳动）
+const DAYCYCLE_STARS: Array<[number, number, number]> = [
+  [4, 12, 0],
+  [9, 22, 1.2],
+  [14, 8, 0.6],
+  [19, 30, 2],
+  [24, 15, 0.3],
+  [29, 5, 1.6],
+  [34, 24, 0.9],
+  [39, 11, 0.1],
+  [44, 32, 1.8],
+  [49, 18, 0.5],
+  [54, 7, 2.2],
+  [59, 27, 1.1],
+  [64, 14, 0.7],
+  [69, 34, 1.9],
+  [74, 9, 0.2],
+  [79, 21, 1.4],
+  [84, 4, 0.8],
+  [89, 29, 2.1],
+  [94, 16, 1.0],
+  [97, 8, 0.4],
+  [12, 38, 1.5],
+  [37, 40, 0.6],
+  [62, 41, 1.7],
+  [82, 38, 0.9],
+  [47, 3, 1.3],
+  [72, 42, 0.5],
+];
+
 // ─── Animal Component ───────────────────────────────────────────────
 
 function RanchAnimal({ animal, onBubble }: { animal: AnimalData; onBubble: (id: string) => void }) {
-  const cls = `ranch-animal ranch-animal--${animal.visualStatus}`;
+  // 执行任务时附加奔跑动画（ranch-run 左右往返 + 步频）；空闲/等待静止
+  const cls = `ranch-animal ranch-animal--${animal.visualStatus}${animal.baseState === "processing" ? " ranch-animal--running" : ""}`;
 
   return (
     <div
@@ -861,11 +824,8 @@ function RanchAnimal({ animal, onBubble }: { animal: AnimalData; onBubble: (id: 
       {animal.visualStatus === "error" && <span className="ranch-error-icon">⚠️</span>}
       {animal.visualStatus === "spawning" && <span className="ranch-spawn-flash">✨</span>}
 
-      <CowHorseSprite bodyColor={animal.palette.body} spotColor={animal.palette.spot} />
-      <div className="ranch-animal__name">
-        {animal.emoji ? `${animal.emoji} ` : ""}
-        {animal.name}
-      </div>
+      <AgentAppearance {...animal.appearance} className="ranch-animal__sprite" />
+      <div className="ranch-animal__name">{animal.name}</div>
       <div className={`ranch-animal__activity ranch-animal__activity--${animal.visualStatus}`}>
         {animal.activityLabel}
       </div>
@@ -878,9 +838,92 @@ function RanchAnimal({ animal, onBubble }: { animal: AnimalData; onBubble: (id: 
 export type RanchScene2DProps = {
   agents: GatewayAgentRow[];
   sessionActivity: SessionActivityResult | null;
+  zoom: number;
+  onZoom: (next: number) => void;
 };
 
-export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
+export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchScene2DProps) {
+  const sceneRef = useRef<HTMLDivElement>(null);
+  // 牧场昼夜循环（10 分钟一天）
+  const day = useRanchDayCycle();
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const dragRef = useRef<{ x: number; y: number } | null>(null);
+  const clampPan = useCallback((x: number, y: number, level: number) => {
+    const scene = sceneRef.current;
+    if (!scene || level <= 1) return { x: 0, y: 0 };
+    return {
+      x: Math.max(
+        -((level - 1) * scene.clientWidth) / 2,
+        Math.min(((level - 1) * scene.clientWidth) / 2, x),
+      ),
+      y: Math.max(
+        -((level - 1) * scene.clientHeight) / 2,
+        Math.min(((level - 1) * scene.clientHeight) / 2, y),
+      ),
+    };
+  }, []);
+  useEffect(() => setPan((current) => clampPan(current.x, current.y, zoom)), [zoom, clampPan]);
+  // 需求：牛马档案形象不再自主游走——空闲时安静待在自己的位置，
+  // 只有执行任务（processing）时才有奔跑动画（见 RanchAnimal 的 ranch-animal--running）。
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      onZoom(Math.min(2.5, Math.max(1, zoomRef.current + (event.deltaY < 0 ? 0.1 : -0.1))));
+    };
+    let pinchDistance = 0;
+    let pinchZoom = zoomRef.current;
+    let touchPan: { x: number; y: number } | null = null;
+    const distance = (touches: TouchList) =>
+      Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 1 && zoomRef.current > 1) {
+        touchPan = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        return;
+      }
+      if (event.touches.length !== 2) return;
+      touchPan = null;
+      pinchDistance = distance(event.touches);
+      pinchZoom = zoomRef.current;
+    };
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.touches.length === 1 && touchPan && zoomRef.current > 1) {
+        event.preventDefault();
+        const touch = event.touches[0];
+        setPan((current) =>
+          clampPan(
+            current.x + touch.clientX - touchPan!.x,
+            current.y + touch.clientY - touchPan!.y,
+            zoomRef.current,
+          ),
+        );
+        touchPan = { x: touch.clientX, y: touch.clientY };
+        return;
+      }
+      if (event.touches.length !== 2 || pinchDistance === 0) return;
+      event.preventDefault();
+      onZoom(Math.min(2.5, Math.max(0.7, (pinchZoom * distance(event.touches)) / pinchDistance)));
+    };
+    scene.addEventListener("wheel", handleWheel, { passive: false });
+    scene.addEventListener("touchstart", handleTouchStart);
+    scene.addEventListener("touchmove", handleTouchMove, { passive: false });
+    const handleTouchEnd = () => {
+      touchPan = null;
+      pinchDistance = 0;
+    };
+    scene.addEventListener("touchend", handleTouchEnd);
+    return () => {
+      scene.removeEventListener("wheel", handleWheel);
+      scene.removeEventListener("touchstart", handleTouchStart);
+      scene.removeEventListener("touchmove", handleTouchMove);
+      scene.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [onZoom, clampPan]);
   const [bubbles, setBubbles] = useState<
     Map<string, { phrase: string; timer: ReturnType<typeof setTimeout> }>
   >(new Map());
@@ -982,9 +1025,7 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
       const agentId = agent.id;
       const name = agent.identity?.name ?? agent.name ?? agentId;
       const baseState = agentStateMap.get(agentId) ?? "idle";
-      // [species] 优先用 agent 选定的动物形象（identity.emoji），否则按索引回退色板
-      const species = resolveAgentSpecies(agent.identity?.emoji, idx);
-      const pal = { body: species.body, spot: species.spot };
+      const appearance = resolveAgentAppearance(agent.identity, idx);
       const sess = agentSessionMap.get(agentId);
 
       // Determina visual status
@@ -1008,21 +1049,17 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
       const offsetX = (idx % 3) * 5 - 5;
       const offsetY = Math.floor(idx / 3) * 6;
 
+      // 形象固定在各自槽位（不游走）；执行任务时奔跑动画周期错开避免整齐划一
       const style: React.CSSProperties = {
         left: `${zone.left + offsetX}%`,
         top: `${zone.top + offsetY}%`,
-        transition: "left 1.2s ease, top 1.2s ease", // walk suave al cambiar zona
+        transition: "left 1.2s ease, top 1.2s ease",
       };
 
-      // Ajusta velocidad de animación para processing hot
       if (baseState === "processing") {
         const isHot = sess?.lastActivityAgo != null && sess.lastActivityAgo < 5000;
         (style as Record<string, string>)["--work-speed"] = isHot ? "0.35s" : "0.75s";
-      }
-
-      if (baseState === "waiting") {
-        const dur = 2.5 + (idx % 3);
-        (style as Record<string, string>)["--pace-duration"] = `${dur}s`;
+        (style as Record<string, string>)["--run-duration"] = `${4.5 + (idx % 3) * 1.3}s`;
       }
 
       const activityLabel = baseState === "waiting" ? "等待接单" : ACTIVITY_LABELS[visualStatus];
@@ -1030,10 +1067,9 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
       return {
         id: agentId,
         name,
-        emoji: agent.identity?.emoji,
+        appearance,
         baseState,
         visualStatus,
-        palette: pal,
         zone,
         style,
         activityLabel,
@@ -1051,191 +1087,322 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
   const status = sessionActivity ? `▶${pc} ◷${wc} ◌${ic}` : "加载中...";
 
   return (
-    <div className="ranch-scene">
-      {/* Grass pattern */}
-      <div className="ranch-tiles" />
-
-      {/* Dirt paths */}
-      <div className="ranch-path ranch-path--h" style={{ left: 0, right: 0, top: "55%" }} />
-      <div className="ranch-path ranch-path--v" style={{ left: "45%", top: 0, bottom: 0 }} />
+    <div
+      className={`ranch-scene${zoom > 1 ? " ranch-scene--pannable" : ""}`}
+      ref={sceneRef}
+      onPointerDown={(event) => {
+        if (event.pointerType === "mouse" && zoom > 1) {
+          dragRef.current = { x: event.clientX, y: event.clientY };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }
+      }}
+      onPointerMove={(event) => {
+        if (dragRef.current) {
+          const { x, y } = dragRef.current;
+          setPan((current) =>
+            clampPan(current.x + event.clientX - x, current.y + event.clientY - y, zoom),
+          );
+          dragRef.current = { x: event.clientX, y: event.clientY };
+        }
+      }}
+      onPointerUp={() => {
+        dragRef.current = null;
+      }}
+      onPointerCancel={() => {
+        dragRef.current = null;
+      }}
+    >
+      {/* ── 昼夜循环：天空 / 日月（世界层之下） ── */}
       <div
-        className="ranch-path ranch-path--v"
-        style={{ left: "20%", top: "55%", height: "45%" }}
+        className="ranch-daycycle"
+        style={{ background: `linear-gradient(${day.skyTop} 0%, ${day.skyBottom} 100%)` }}
+        aria-hidden
       />
       <div
-        className="ranch-path ranch-path--h"
-        style={{ left: "45%", right: 0, top: "30%", width: "55%", height: 24 }}
+        className={day.showSun ? "ranch-daycycle__sun" : "ranch-daycycle__moon"}
+        style={{ left: `${day.orbX * 100}%`, top: `${day.orbY * 100}%` }}
+        aria-hidden
       />
+      {day.starAlpha > 0.02 &&
+        DAYCYCLE_STARS.map(([sx, sy, delay], i) => (
+          <span
+            key={i}
+            className="ranch-daycycle__star"
+            style={{
+              left: `${sx}%`,
+              top: `${sy}%`,
+              opacity: day.starAlpha,
+              animationDelay: `${delay}s`,
+            }}
+            aria-hidden
+          />
+        ))}
+      <div
+        className="ranch-scene__world"
+        style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+      >
+        {/* Grass pattern */}
+        <div className="ranch-tiles" />
 
-      {/* Pond */}
-      <div style={{ position: "absolute", left: "6%", top: "64%", zIndex: 2 }}>
-        <PixelPond />
-      </div>
-
-      {/* Barn */}
-      <div className="ranch-barn" style={{ left: "12%", top: "8%" }}>
-        <PixelBarn />
-      </div>
-
-      {/* Small houses */}
-      <div
-        style={{
-          position: "absolute",
-          left: "6%",
-          top: "35%",
-          zIndex: 4,
-          imageRendering: "pixelated",
-          pointerEvents: "none",
-        }}
-      >
-        <PixelSmallHouse roofColor="#7a9e4e" />
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: "28%",
-          top: "68%",
-          zIndex: 4,
-          imageRendering: "pixelated",
-          pointerEvents: "none",
-        }}
-      >
-        <PixelSmallHouse roofColor="#c87848" />
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: "72%",
-          top: "65%",
-          zIndex: 4,
-          imageRendering: "pixelated",
-          pointerEvents: "none",
-        }}
-      >
-        <PixelSmallHouse roofColor="#6a9898" />
-      </div>
-
-      {/* Signposts */}
-      <div
-        style={{ position: "absolute", left: "43%", top: "50%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelSignpost />
-      </div>
-      <div
-        style={{ position: "absolute", left: "18%", top: "52%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelSignpost />
-      </div>
-
-      {/* Water well */}
-      <div
-        style={{ position: "absolute", left: "82%", top: "48%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelWell />
-      </div>
-
-      {/* Hay bales */}
-      <div
-        style={{ position: "absolute", left: "30%", top: "12%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelHayBale />
-      </div>
-      <div
-        style={{ position: "absolute", left: "88%", top: "72%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelHayBale />
-      </div>
-
-      {/* Feed trough */}
-      <div
-        style={{ position: "absolute", left: "60%", top: "42%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelFeedTrough />
-      </div>
-
-      {/* Milk buckets */}
-      <div
-        style={{ position: "absolute", left: "38%", top: "48%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelMilkBucket />
-      </div>
-      <div
-        style={{ position: "absolute", left: "75%", top: "56%", zIndex: 4, pointerEvents: "none" }}
-      >
-        <PixelMilkBucket />
-      </div>
-
-      {/* Windmill */}
-      <div
-        style={{ position: "absolute", left: "85%", top: "8%", zIndex: 5, pointerEvents: "none" }}
-      >
-        <PixelWindmill />
-      </div>
-
-      {/* Crop patches */}
-      <div
-        style={{ position: "absolute", left: "50%", top: "72%", zIndex: 3, pointerEvents: "none" }}
-      >
-        <PixelCropPatch />
-      </div>
-      <div
-        style={{ position: "absolute", left: "8%", top: "78%", zIndex: 3, pointerEvents: "none" }}
-      >
-        <PixelCropPatch />
-      </div>
-
-      {/* Fence pen con puerta animada */}
-      <div className="ranch-fence-group" style={{ left: "52%", top: "18%" }}>
-        <PixelFenceH width={200} />
-      </div>
-      {/* Cerca inferior dividida en dos + puerta en el medio */}
-      <div
-        className="ranch-fence-group"
-        style={{ left: "52%", top: "18%", transform: "translateY(90px)" }}
-      >
-        <PixelFenceH width={80} />
-      </div>
-      <div
-        className="ranch-fence-group"
-        style={{ left: "52%", top: "18%", transform: "translateY(76px) translateX(80px)" }}
-      >
-        <PixelGate open={gateOpen} />
-      </div>
-      <div
-        className="ranch-fence-group"
-        style={{ left: "52%", top: "18%", transform: "translateY(90px) translateX(112px)" }}
-      >
-        <PixelFenceH width={88} />
-      </div>
-      <div className="ranch-fence-group" style={{ left: "52%", top: "18%" }}>
-        <PixelFenceV height={90} />
-      </div>
-      <div
-        className="ranch-fence-group"
-        style={{ left: "52%", top: "18%", transform: "translateX(200px)" }}
-      >
-        <PixelFenceV height={90} />
-      </div>
-
-      {/* Trees */}
-      {TREES.map((t, i) => (
+        {/* Dirt paths */}
+        <div className="ranch-path ranch-path--h" style={{ left: 0, right: 0, top: "55%" }} />
+        <div className="ranch-path ranch-path--v" style={{ left: "45%", top: 0, bottom: 0 }} />
         <div
-          key={`tree-${i}`}
-          className={`ranch-tree${t.size === "lg" ? " ranch-tree--large" : ""}`}
-          style={{ left: t.left, top: t.top }}
+          className="ranch-path ranch-path--v"
+          style={{ left: "20%", top: "55%", height: "45%" }}
+        />
+        <div
+          className="ranch-path ranch-path--h"
+          style={{ left: "45%", right: 0, top: "30%", width: "55%", height: 24 }}
+        />
+
+        {/* Pond */}
+        <div style={{ position: "absolute", left: "6%", top: "64%", zIndex: 2 }}>
+          <PixelPond />
+        </div>
+
+        {/* Barn */}
+        <div className="ranch-barn" style={{ left: "12%", top: "8%" }}>
+          <PixelBarn />
+        </div>
+
+        {/* Small houses */}
+        <div
+          style={{
+            position: "absolute",
+            left: "6%",
+            top: "35%",
+            zIndex: 4,
+            imageRendering: "pixelated",
+            pointerEvents: "none",
+          }}
         >
-          <PixelTree size={t.size} />
+          <PixelSmallHouse roofColor="#7a9e4e" />
         </div>
-      ))}
-
-      {/* Decorations */}
-      {DECOS.map((d, i) => (
-        <div key={`deco-${i}`} className="ranch-flower" style={{ left: d.left, top: d.top }}>
-          <DecoItem type={d.type} />
+        <div
+          style={{
+            position: "absolute",
+            left: "28%",
+            top: "68%",
+            zIndex: 4,
+            imageRendering: "pixelated",
+            pointerEvents: "none",
+          }}
+        >
+          <PixelSmallHouse roofColor="#c87848" />
         </div>
-      ))}
+        <div
+          style={{
+            position: "absolute",
+            left: "72%",
+            top: "65%",
+            zIndex: 4,
+            imageRendering: "pixelated",
+            pointerEvents: "none",
+          }}
+        >
+          <PixelSmallHouse roofColor="#6a9898" />
+        </div>
 
-      {/* Title */}
+        {/* Signposts */}
+        <div
+          style={{
+            position: "absolute",
+            left: "43%",
+            top: "50%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelSignpost />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "18%",
+            top: "52%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelSignpost />
+        </div>
+
+        {/* Water well */}
+        <div
+          style={{
+            position: "absolute",
+            left: "82%",
+            top: "48%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelWell />
+        </div>
+
+        {/* Hay bales */}
+        <div
+          style={{
+            position: "absolute",
+            left: "30%",
+            top: "12%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelHayBale />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "88%",
+            top: "72%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelHayBale />
+        </div>
+
+        {/* Feed trough */}
+        <div
+          style={{
+            position: "absolute",
+            left: "60%",
+            top: "42%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelFeedTrough />
+        </div>
+
+        {/* Milk buckets */}
+        <div
+          style={{
+            position: "absolute",
+            left: "38%",
+            top: "48%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelMilkBucket />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "75%",
+            top: "56%",
+            zIndex: 4,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelMilkBucket />
+        </div>
+
+        {/* Windmill */}
+        <div
+          style={{ position: "absolute", left: "85%", top: "8%", zIndex: 5, pointerEvents: "none" }}
+        >
+          <PixelWindmill />
+        </div>
+
+        {/* Crop patches */}
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "72%",
+            zIndex: 3,
+            pointerEvents: "none",
+          }}
+        >
+          <PixelCropPatch />
+        </div>
+        <div
+          style={{ position: "absolute", left: "8%", top: "78%", zIndex: 3, pointerEvents: "none" }}
+        >
+          <PixelCropPatch />
+        </div>
+
+        {/* Fence pen con puerta animada */}
+        <div className="ranch-fence-group" style={{ left: "52%", top: "18%" }}>
+          <PixelFenceH width={200} />
+        </div>
+        {/* Cerca inferior dividida en dos + puerta en el medio */}
+        <div
+          className="ranch-fence-group"
+          style={{ left: "52%", top: "18%", transform: "translateY(90px)" }}
+        >
+          <PixelFenceH width={80} />
+        </div>
+        <div
+          className="ranch-fence-group"
+          style={{ left: "52%", top: "18%", transform: "translateY(76px) translateX(80px)" }}
+        >
+          <PixelGate open={gateOpen} />
+        </div>
+        <div
+          className="ranch-fence-group"
+          style={{ left: "52%", top: "18%", transform: "translateY(90px) translateX(112px)" }}
+        >
+          <PixelFenceH width={88} />
+        </div>
+        <div className="ranch-fence-group" style={{ left: "52%", top: "18%" }}>
+          <PixelFenceV height={90} />
+        </div>
+        <div
+          className="ranch-fence-group"
+          style={{ left: "52%", top: "18%", transform: "translateX(200px)" }}
+        >
+          <PixelFenceV height={90} />
+        </div>
+
+        {/* Trees */}
+        {TREES.map((t, i) => (
+          <div
+            key={`tree-${i}`}
+            className={`ranch-tree${t.size === "lg" ? " ranch-tree--large" : ""}`}
+            style={{ left: t.left, top: t.top }}
+          >
+            <PixelTree size={t.size} />
+          </div>
+        ))}
+
+        {/* Decorations */}
+        {DECOS.map((d, i) => (
+          <div key={`deco-${i}`} className="ranch-flower" style={{ left: d.left, top: d.top }}>
+            <DecoItem type={d.type} />
+          </div>
+        ))}
+
+        {/* Animals + bubbles */}
+        <div className="ranch-animals">
+          {animals.map((animal) => (
+            <React.Fragment key={animal.id}>
+              {bubbles.has(animal.id) && (
+                <div
+                  className="ranch-bubble"
+                  style={{
+                    position: "absolute",
+                    left: (animal.style as Record<string, string>).left,
+                    top: (animal.style as Record<string, string>).top,
+                    transform: "translate(-50%, -100%)",
+                    marginTop: -4,
+                  }}
+                >
+                  {bubbles.get(animal.id)!.phrase}
+                </div>
+              )}
+              <RanchAnimal animal={animal} onBubble={handleBubble} />
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* Title（屏幕坐标固定：不随世界层缩放/平移） */}
       <div className="ranch-title">
         <div className="ranch-title__main">
           <svg
@@ -1253,29 +1420,6 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
           Agent 牧场
         </div>
         <div className="ranch-title__sub">{status}</div>
-      </div>
-
-      {/* Animals + bubbles */}
-      <div className="ranch-animals">
-        {animals.map((animal) => (
-          <React.Fragment key={animal.id}>
-            {bubbles.has(animal.id) && (
-              <div
-                className="ranch-bubble"
-                style={{
-                  position: "absolute",
-                  left: (animal.style as Record<string, string>).left,
-                  top: (animal.style as Record<string, string>).top,
-                  transform: "translate(-50%, -100%)",
-                  marginTop: -4,
-                }}
-              >
-                {bubbles.get(animal.id)!.phrase}
-              </div>
-            )}
-            <RanchAnimal animal={animal} onBubble={handleBubble} />
-          </React.Fragment>
-        ))}
       </div>
 
       {/* Action buttons */}
@@ -1315,6 +1459,11 @@ export function RanchScene2D({ agents, sessionActivity }: RanchScene2DProps) {
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" />
           </svg>
         </button>
+        {/* ── 昼夜循环：色调滤镜 + 牧场时钟 ── */}
+        <div className="ranch-daycycle__tint" style={{ background: day.tint }} aria-hidden />
+        <div className="ranch-daycycle__badge" aria-hidden>
+          {day.label} · {day.clock}
+        </div>
       </div>
     </div>
   );

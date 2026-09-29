@@ -1,5 +1,9 @@
 import "./styles.css";
 import React from "react";
+import { restoreSystemPrefs } from "./lib/system-prefs.ts";
+
+// 启动即恢复本机外观偏好（界面/聊天字体、强调色）
+restoreSystemPrefs();
 import { createRoot } from "react-dom/client";
 
 console.log("[main] starting...");

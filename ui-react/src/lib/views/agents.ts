@@ -56,7 +56,7 @@ const CHANNEL_ICON_MAP: Record<string, string> = {
   feishu: "/feishu-logo.svg",
 };
 
-/** Extrae los tipos de canal vinculados a un agent desde configForm.routing.bindings */
+/** Extrae los tipos de canal vinculados a un agent desde configForm.bindings */
 function resolveAgentChannelTypes(
   agentId: string,
   configForm: Record<string, unknown> | null,
@@ -64,9 +64,8 @@ function resolveAgentChannelTypes(
 ): string[] {
   const channelTypes = new Set<string>();
 
-  // Fuente 1: routing.bindings (configuración explícita)
-  const routing = (configForm?.routing ?? {}) as Record<string, unknown>;
-  const bindings = routing.bindings;
+  // Fuente 1: root bindings (configuración explícita)
+  const bindings = configForm?.bindings;
   if (Array.isArray(bindings)) {
     for (const b of bindings) {
       if (b && typeof b === "object" && "agentId" in b && "match" in b) {

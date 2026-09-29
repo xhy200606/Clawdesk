@@ -108,8 +108,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: 160px;
-    overflow: hidden;
+    min-height: 160px;
     box-shadow:
         var(--shadow-sm),
         inset 0 1px 0 var(--card-highlight);
@@ -137,6 +136,8 @@
     font-weight: 600;
     font-size: 14px;
     color: var(--text-strong);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .channel-summary-card__badge {
@@ -147,6 +148,7 @@
     padding: 2px 8px;
     border-radius: var(--radius-full);
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 .channel-summary-card__badge--active {
@@ -192,6 +194,8 @@
 .channel-summary-card__account-name {
     font-weight: 500;
     color: var(--text-strong);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .channel-summary-card__dot {
@@ -226,19 +230,53 @@
     padding: 4px 8px;
     background: var(--danger-subtle);
     border-radius: var(--radius-md);
+    overflow-wrap: anywhere;
 }
 
 /* ─── Channel Grid ──────────────────────────────────────────── */
 
 .channels-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 220px);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
     gap: 14px;
     justify-content: start;
     transition: margin-right 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.channels-view {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+    width: 100%;
+    container-type: inline-size;
+}
+
+.channels-view > section,
+.channels-view__setup > * {
+    min-width: 0;
+}
+
+.channels-view__setup {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+    gap: 18px;
+    align-items: stretch;
+}
+
+@container (max-width: 900px) {
+    .channels-view__setup {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 /* Drawer 展开时给右侧留出空间，让卡片自动换行 */
 .channels-grid--drawer-open {
     margin-right: min(560px, 90vw);
+}
+
+@container (max-width: 900px) {
+    .channels-grid--drawer-open {
+        margin-right: 0;
+    }
 }

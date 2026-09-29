@@ -1,17 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useMemo } from "react";
 import { AccessCard } from "../components/overview/AccessCard.tsx";
 import { AgentsCard } from "../components/overview/AgentsCard.tsx";
-import { OrchestrationCard } from "../components/overview/OrchestrationCard.tsx";
 import { RanchScene } from "../components/overview/RanchScene.tsx";
 // Pure React overview components
 import { SnapshotCard, OverviewIcons } from "../components/overview/SnapshotCard.tsx";
 import { SwapyLayout, getSavedCardOrder } from "../components/overview/SwapyLayout.tsx";
 import { UsageChartCard } from "../components/overview/UsageChartCard.tsx";
-import { loadOverview } from "../lib/app-settings.ts";
-import { loadSessions } from "../lib/controllers/sessions.ts";
+import { loadOverview, setTab } from "../lib/app-settings.ts";
 import type {
   SessionActivityResult,
-  GatewaySessionRow,
   GatewayAgentRow,
   CostUsageSummary,
   SessionsUsageResult,
@@ -45,7 +42,7 @@ function TokenStatsRow({ todayTokens, allTokens }: { todayTokens: number; allTok
             gap: 5,
           }}
         >
-          {OverviewIcons.wheat(13)} 今日消耗草料（Tokens）
+          {OverviewIcons.wheat(13)} 今日消耗饲料（Tokens）
         </div>
         <div
           style={{
@@ -60,7 +57,7 @@ function TokenStatsRow({ todayTokens, allTokens }: { todayTokens: number; allTok
           {fmtTokens(todayTokens)}
         </div>
         <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
-          {todayTokens.toLocaleString()} 棵草
+          {todayTokens.toLocaleString()} 斤饲料
         </div>
       </div>
       <div className="card" style={{ padding: "16px 20px" }}>
@@ -77,7 +74,7 @@ function TokenStatsRow({ todayTokens, allTokens }: { todayTokens: number; allTok
             gap: 5,
           }}
         >
-          {OverviewIcons.fire(13)} 累计消耗草料（Tokens）
+          {OverviewIcons.fire(13)} 累计消耗饲料（Tokens）
         </div>
         <div
           style={{
@@ -92,7 +89,7 @@ function TokenStatsRow({ todayTokens, allTokens }: { todayTokens: number; allTok
           {fmtTokens(allTokens)}
         </div>
         <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
-          {allTokens.toLocaleString()} 棵草
+          {allTokens.toLocaleString()} 斤饲料
         </div>
       </div>
     </div>
@@ -127,9 +124,6 @@ export function OverviewView() {
   const overviewWeekUsageResult = s((st) => st.overviewWeekUsageResult);
   const applySettings = s((st) => st.applySettings);
   const set = s((st) => st.set);
-  // 运行追踪（lifecycle 事件派生）—— 编排卡片「运行追踪」视图的数据源
-  const agentRunTraces = s((st) => st.agentRunTraces);
-
   // [version-adapt] presence 是网关/浏览器实例（每个标签页都算），不是牛马。
   // 在线牛马 = 有 running 会话的 agent 数；正在接客 = running 会话数。
   const allSessions = (sessionsResult?.sessions ?? []) as Array<{
@@ -146,7 +140,7 @@ export function OverviewView() {
   const channelsSnapshot = s((st) => st.channelsSnapshot) as ChannelsStatusSnapshot | null;
 
   // [ranch-fix] 网关 2026.9.x 无 sessions.activity RPC（恒 null → 牧场永远摸鱼中）。
-  // 用 sessions.list 派生等价的 activity 数据，供 RanchScene2D/3D 与 OrchestrationCard 使用。
+  // 用 sessions.list 派生等价的 activity 数据，供 RanchScene2D/3D 使用。
   // [orch-tok-fix] 同一 agent 的多个会话折叠到 agent:<id>:main 时按 agent 聚合：
   // token 求和、contextTokens/queueDepth 取最大、lastActivityAgo 取最小、
   // 状态任一 running 即 processing（否则有排队为 waiting），避免 Map 去重时被 0 token 行覆盖。
@@ -210,56 +204,11 @@ export function OverviewView() {
   }, [sessionsResult, allSessions]);
   const ranchActivity = (sessionActivity as SessionActivityResult | null) ?? derivedActivity;
 
-  // [orch-tree-fix] 编排卡片要的是「逐会话」视图：树节点必须一一对应真实会话，
-  // 子 Agent（parentSessionKey / childSessions）才会挂到父节点下。
-  // derivedActivity 按 agent 聚合后每个牛马只剩一个虚拟节点，
-  // 会把 subagent 会话整个吞掉 —— 这也是编排只显示 1 个节点 / 0 tok 的原因。
-  const orchActivity = React.useMemo<SessionActivityResult | null>(() => {
-    if (!sessionsResult) return null;
-    const rows = allSessions.map((x) => {
-      const row = x as {
-        status?: string;
-        hasActiveRun?: boolean;
-        queueDepth?: number;
-        updatedAt?: number | null;
-        lastActivityAgo?: number;
-        totalTokens?: number;
-        contextTokens?: number;
-      };
-      const running = row.status === "running" || row.hasActiveRun === true;
-      const lastAgo =
-        typeof row.lastActivityAgo === "number"
-          ? row.lastActivityAgo
-          : row.updatedAt
-            ? Math.max(0, Date.now() - row.updatedAt)
-            : 999999;
-      return {
-        key: x.key,
-        state: (running ? "processing" : (row.queueDepth ?? 0) > 0 ? "waiting" : "idle") as
-          | "processing"
-          | "waiting"
-          | "idle",
-        lastActivityAgo: lastAgo,
-        queueDepth: row.queueDepth ?? 0,
-        totalTokens: row.totalTokens ?? undefined,
-        contextTokens: row.contextTokens ?? undefined,
-      };
-    });
-    return {
-      ts: Date.now(),
-      processing: rows.filter((r) => r.state === "processing").length,
-      waiting: rows.filter((r) => r.state === "waiting").length,
-      idle: rows.filter((r) => r.state === "idle").length,
-      sessions: rows,
-    };
-  }, [sessionsResult, allSessions]);
-
   // Calcular qué canales están vinculados a cada agent
   const channelBindings = useMemo(() => {
     const map: Record<string, string[]> = {};
-    // Fuente 1: routing.bindings
-    const routing = (configForm?.routing ?? {}) as Record<string, unknown>;
-    const bindings = routing.bindings;
+    // Channel bindings live at the config root.
+    const bindings = configForm?.bindings;
     if (Array.isArray(bindings)) {
       for (const b of bindings) {
         if (b && typeof b === "object" && "agentId" in b && "match" in b) {
@@ -294,97 +243,7 @@ export function OverviewView() {
   const snapshot = hello?.snapshot as { authMode?: string } | undefined;
   const isTrustedProxy = snapshot?.authMode === "trusted-proxy";
 
-  // ── 编排卡片交互 ──────────────────────────────────────────────
-
-  /** 打开会话：切到该会话并跳到聊天页（与侧栏会话切换行为一致） */
-  const openSession = useCallback((key: string) => {
-    const rs = getReactiveState() as unknown as Record<string, unknown>;
-    rs.sessionKey = key;
-    rs.chatMessage = "";
-    rs.chatMessages = [];
-    rs.chatStream = null;
-    rs.chatStreamStartedAt = null;
-    rs.chatRunId = null;
-    rs.chatQueue = [];
-    void import("../lib/app-settings.ts").then(
-      ({ applySettings: apply, setTab, syncUrlWithSessionKey }) => {
-        apply(rs as never, {
-          ...useAppStore.getState().settings,
-          sessionKey: key,
-          lastActiveSessionKey: key,
-        });
-        syncUrlWithSessionKey(rs as never, key, true);
-        setTab(rs as never, "chat");
-      },
-    );
-    void import("../lib/controllers/chat.ts").then(({ loadChatHistory }) => {
-      void loadChatHistory(rs as never);
-    });
-  }, []);
-
-  /** 停止 SubAgent 运行：优先 chat.abort（带 runId），失败回退 sessions.abort */
-  const stopRun = useCallback(async (sessionKey: string, runId: string) => {
-    const rs = getReactiveState() as unknown as {
-      client: { request: (method: string, params: unknown) => Promise<unknown> } | null;
-    };
-    if (!rs.client) {
-      throw new Error("网关未连接");
-    }
-    try {
-      await rs.client.request("chat.abort", { sessionKey, runId });
-    } catch {
-      await rs.client.request("sessions.abort", { key: sessionKey });
-    }
-    await loadSessions(getReactiveState() as never);
-  }, []);
-
-  /** 发起任务：切到目标牛马的主会话并发送 */
-  const startTask = useCallback(async (agentId: string, task: string) => {
-    const rs = getReactiveState() as unknown as Record<string, unknown>;
-    rs.sessionKey = `agent:${agentId}:main`;
-    rs.chatMessages = [];
-    rs.chatStream = null;
-    rs.chatRunId = null;
-    const { sendChatMessage } = await import("../lib/controllers/chat.ts");
-    await sendChatMessage(rs as never, task);
-    await loadSessions(getReactiveState() as never);
-  }, []);
-
-  // ── 会话变更后的刷新 ──────────────────────────────────────────
-  // 1) 追踪数据（lifecycle 事件）变化 → 防抖重拉会话，让状态与草料及时跟上。
-  //    修复「追踪数据不触发界面更新」：traces 变化后必须重新拉 sessions，
-  //    否则编排视图一直停在旧快照。
-  const refreshTimer = useRef<number | null>(null);
-  useEffect(() => {
-    if (refreshTimer.current !== null) {
-      window.clearTimeout(refreshTimer.current);
-    }
-    refreshTimer.current = window.setTimeout(() => {
-      void loadSessions(getReactiveState() as never);
-    }, 700);
-    return () => {
-      if (refreshTimer.current !== null) {
-        window.clearTimeout(refreshTimer.current);
-      }
-    };
-  }, [agentRunTraces]);
-
-  // 2) 兜底轮询，保证编排视图不会长期停在旧数据
-  useEffect(() => {
-    if (!connected) {
-      return;
-    }
-    const id = window.setInterval(() => {
-      void loadSessions(getReactiveState() as never);
-    }, 10000);
-    return () => window.clearInterval(id);
-  }, [connected]);
-
-  const todayTokens =
-    (overviewUsageResult as SessionsUsageResult | null)?.sessions?.reduce(
-      (sum, s) => sum + (s.usage?.totalTokens ?? 0),
-      0,
-    ) ?? 0;
+  const todayTokens = (overviewUsageResult as SessionsUsageResult | null)?.totals?.totalTokens ?? 0;
   const allTokens = (overviewCostDaily as CostUsageSummary | null)?.totals?.totalTokens ?? 0;
 
   const cardOrder = useMemo(() => {
@@ -454,15 +313,23 @@ export function OverviewView() {
         </div>
       </div>
       <div className="overview-swapy">{cardOrder.map((slot) => cardMap[slot])}</div>
-      <OrchestrationCard
-        sessionActivity={orchActivity ?? ranchActivity}
-        sessions={(sessionsResult?.sessions ?? []) as GatewaySessionRow[]}
-        agents={agents}
-        traces={agentRunTraces}
-        onStartTask={startTask}
-        onStopRun={(sessionKey, runId) => stopRun(sessionKey, runId)}
-        onOpenSession={openSession}
-      />
+      <button
+        type="button"
+        className="overview-collaboration-entry card"
+        onClick={() => setTab(getReactiveState() as never, "teams")}
+      >
+        <span className="overview-collaboration-entry__icon" aria-hidden="true">
+          ◎
+        </span>
+        <span className="overview-collaboration-entry__content">
+          <strong>协作工作台</strong>
+          <small>主 Agent 分配任务 · 查看 Agent 执行流程</small>
+        </span>
+        <span className="overview-collaboration-entry__counts">
+          {presenceCount} 个执行中 · {sessionsCount} 个活跃会话
+        </span>
+        <span aria-hidden="true">→</span>
+      </button>
     </SwapyLayout>
   );
 }

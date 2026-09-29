@@ -6,24 +6,16 @@ import { Canvas, useFrame } from "@react-three/fiber";
  */
 import React, { useRef, useMemo, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
+import { resolveAgentAppearance, resolveAgentSpecies } from "../../lib/animals.ts";
+import { useRanchDayCycle } from "../../lib/ranch-daycycle.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
+import { AgentAppearance } from "./AgentAppearance.tsx";
 
 // ─── Constants ──────────────────────────────────────────────────────
 
 const GRASS_COLOR = new THREE.Color("#68b840");
 const DIRT_COLOR = new THREE.Color("#c8a868");
 const WATER_COLOR = new THREE.Color("#4890d0");
-
-const PALETTES_3D = [
-  { body: "#f5f5f0", spot: "#4a4a4a" },
-  { body: "#d4915c", spot: "#fff8e7" },
-  { body: "#8B7355", spot: "#F5DEB3" },
-  { body: "#e8d5b7", spot: "#8B6914" },
-  { body: "#c9b8a3", spot: "#5c4033" },
-  { body: "#888888", spot: "#cccccc" },
-  { body: "#f0e68c", spot: "#cd853f" },
-  { body: "#bc8f8f", spot: "#800000" },
-];
 
 // ── Visual status system (mirrors RanchScene2D) ──
 type RanchVisualStatus = "thinking" | "tool_calling" | "speaking" | "idle" | "error" | "spawning";
@@ -326,30 +318,111 @@ function Pond3D({ position }: { position: [number, number, number] }) {
   );
 }
 
-// ─── 3D Cow Character with State-Driven Animations ──────────────────
+// ─── Block-built species retain the ranch's original low-poly look. ───
+function BlockAnimal3D({ emoji }: { emoji: string }) {
+  const { kind, body, marking, muzzle } = resolveAgentSpecies(emoji, 0);
+  const isSmall = kind === "cat" || kind === "dog" || kind === "pig";
+  const hasHorns = kind === "cow" || kind === "goat" || kind === "deer";
+  const tall = kind === "horse" || kind === "llama" || kind === "deer";
+  return (
+    <group scale={isSmall ? 0.85 : 1}>
+      <mesh position={[0, 0.29, 0]} castShadow>
+        <boxGeometry args={[0.46, 0.33, 0.67]} />
+        <meshStandardMaterial color={body} roughness={0.85} />
+      </mesh>
+      {kind === "cow" && (
+        <mesh position={[0.23, 0.36, 0.08]}>
+          <boxGeometry args={[0.025, 0.17, 0.25]} />
+          <meshStandardMaterial color={marking} />
+        </mesh>
+      )}
+      {kind === "cat" &&
+        [-0.12, 0.12].map((x) => (
+          <mesh key={x} position={[x, 0.31, 0.34]}>
+            <boxGeometry args={[0.07, 0.27, 0.03]} />
+            <meshStandardMaterial color={marking} />
+          </mesh>
+        ))}
+      {tall && (
+        <mesh position={[0, 0.47, 0.28]} castShadow>
+          <boxGeometry args={[0.28, kind === "llama" ? 0.43 : 0.25, 0.23]} />
+          <meshStandardMaterial color={body} />
+        </mesh>
+      )}
+      <mesh position={[0, tall ? 0.62 : 0.46, tall ? 0.4 : 0.34]} castShadow>
+        <boxGeometry args={[0.34, 0.27, 0.29]} />
+        <meshStandardMaterial color={body} />
+      </mesh>
+      <mesh position={[0, tall ? 0.56 : 0.39, tall ? 0.59 : 0.53]}>
+        <boxGeometry args={[kind === "horse" ? 0.22 : 0.25, 0.13, 0.11]} />
+        <meshStandardMaterial color={muzzle} />
+      </mesh>
+      {[-0.16, 0.16].map((x) => (
+        <group key={x}>
+          <mesh position={[x, tall ? 0.68 : 0.53, tall ? 0.42 : 0.36]}>
+            <boxGeometry
+              args={[
+                0.075,
+                kind === "cat" || kind === "horse" || kind === "llama" ? 0.19 : 0.09,
+                0.08,
+              ]}
+            />
+            <meshStandardMaterial color={marking} />
+          </mesh>
+          <mesh position={[x * 0.55, tall ? 0.65 : 0.49, tall ? 0.56 : 0.48]}>
+            <boxGeometry args={[0.04, 0.04, 0.02]} />
+            <meshStandardMaterial color="#1b2023" />
+          </mesh>
+          {hasHorns && (
+            <mesh position={[x * 0.7, tall ? 0.8 : 0.7, tall ? 0.38 : 0.32]}>
+              <boxGeometry args={[0.055, kind === "deer" ? 0.3 : 0.16, 0.055]} />
+              <meshStandardMaterial color={kind === "deer" ? marking : "#d4bd8d"} />
+            </mesh>
+          )}
+        </group>
+      ))}
+      {[-0.15, 0.15].flatMap((x) =>
+        [-0.21, 0.21].map((z) => (
+          <mesh key={`${x}:${z}`} position={[x, 0.09, z]} castShadow>
+            <boxGeometry args={[0.09, 0.18, 0.1]} />
+            <meshStandardMaterial color={kind === "pig" ? marking : body} />
+          </mesh>
+        )),
+      )}
+      <mesh position={[0, 0.35, -0.41]}>
+        <boxGeometry args={[0.07, 0.07, 0.23]} />
+        <meshStandardMaterial color={marking} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─── 3D animal with state-driven animations ──────────────────
 
 type CowCharacterProps = {
   targetPosition: [number, number, number];
-  bodyColor: string;
-  spotColor: string;
+  emoji: string;
+  image: string | null;
   name: string;
   visualStatus: RanchVisualStatus;
   activityLabel: string;
   toolName: string | null;
+  /** 跑动相位错开（按 agent 序号传入），避免集体整齐划一 */
+  phase?: number;
 };
 
 function CowCharacter3D({
   targetPosition,
-  bodyColor,
-  spotColor,
+  emoji,
+  image,
   name,
   visualStatus,
   activityLabel,
   toolName,
+  phase = 0,
 }: CowCharacterProps) {
   const groupRef = useRef<THREE.Group>(null);
   const bodyGroupRef = useRef<THREE.Group>(null);
-  const headRef = useRef<THREE.Mesh>(null);
   // Ref para la posición destino (evita que React sobreescriba la posición al re-renderizar)
   const targetRef = useRef(new THREE.Vector3(...targetPosition));
   const isWalkingRef = useRef(false);
@@ -371,6 +444,17 @@ function CowCharacter3D({
       initializedRef.current = true;
     }
 
+    // 与 2D 行为一致：执行任务（thinking/tool_calling/speaking）时在牧场内
+    // 来回奔跑，空闲/等待/异常时静止在自己的槽位
+    const isWorking =
+      visualStatus === "thinking" || visualStatus === "tool_calling" || visualStatus === "speaking";
+    if (isWorking) {
+      targetRef.current.x = targetPosition[0] + Math.sin(t * 0.45 + phase) * 2.4;
+      targetRef.current.z = targetPosition[2] + Math.cos(t * 0.3 + phase) * 1.1;
+    } else {
+      targetRef.current.set(targetPosition[0], 0, targetPosition[2]);
+    }
+
     // Smooth position lerp (no usa el prop, solo targetRef)
     const dx = targetRef.current.x - pos.x;
     const dz = targetRef.current.z - pos.z;
@@ -378,8 +462,8 @@ function CowCharacter3D({
     isWalkingRef.current = dist > 0.05;
 
     if (isWalkingRef.current) {
-      // Lerp con velocidad adaptativa
-      const speed = Math.min(0.08, dist * 0.04 + 0.01);
+      // Lerp con velocidad adaptativa（执行任务时步频更快 = 奔跑感）
+      const speed = Math.min(isWorking ? 0.13 : 0.08, dist * 0.04 + 0.01);
       pos.x += dx * speed;
       pos.z += dz * speed;
 
@@ -388,9 +472,9 @@ function CowCharacter3D({
       groupRef.current.rotation.y += (angle - groupRef.current.rotation.y) * 0.1;
 
       // Animación de caminar: balanceo de patas
-      pos.y = Math.abs(Math.sin(t * 8)) * 0.04;
+      pos.y = Math.abs(Math.sin(t * (isWorking ? 12 : 8))) * 0.05;
       if (bodyGroupRef.current) {
-        bodyGroupRef.current.rotation.z = Math.sin(t * 6) * 0.06;
+        bodyGroupRef.current.rotation.z = Math.sin(t * (isWorking ? 9 : 6)) * 0.07;
       }
     } else {
       // Cuando llega al destino, resetear Y y animación
@@ -399,10 +483,6 @@ function CowCharacter3D({
       // Per-state animations (solo cuando no está caminando)
       switch (visualStatus) {
         case "thinking":
-          if (headRef.current) {
-            headRef.current.rotation.x = Math.sin(t * 1.5) * 0.15;
-            headRef.current.rotation.z = Math.sin(t * 0.8) * 0.05;
-          }
           if (bodyGroupRef.current) {
             bodyGroupRef.current.position.y = Math.sin(t * 1.5) * 0.02;
             bodyGroupRef.current.rotation.z = 0;
@@ -415,9 +495,6 @@ function CowCharacter3D({
           }
           break;
         case "speaking":
-          if (headRef.current) {
-            headRef.current.rotation.x = Math.sin(t * 4) * 0.1;
-          }
           if (bodyGroupRef.current) {
             bodyGroupRef.current.position.y = Math.sin(t * 2) * 0.015;
             bodyGroupRef.current.rotation.z = 0;
@@ -447,59 +524,29 @@ function CowCharacter3D({
 
   return (
     <group ref={groupRef}>
+      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.32, 20]} />
+        <meshBasicMaterial color="#26351f" transparent opacity={0.25} depthWrite={false} />
+      </mesh>
       <group ref={bodyGroupRef}>
-        {/* Cuerpo */}
-        <mesh position={[0, 0.25, 0]} castShadow>
-          <boxGeometry args={[0.45, 0.3, 0.7]} />
-          <meshStandardMaterial color={bodyColor} roughness={0.8} />
-        </mesh>
-        {/* Manchas */}
-        <mesh position={[0.15, 0.3, 0.1]}>
-          <boxGeometry args={[0.18, 0.15, 0.25]} />
-          <meshStandardMaterial color={spotColor} roughness={0.8} />
-        </mesh>
-        {/* Cabeza */}
-        <mesh ref={headRef} position={[0, 0.35, 0.35]} castShadow>
-          <boxGeometry args={[0.3, 0.25, 0.25]} />
-          <meshStandardMaterial color={bodyColor} roughness={0.8} />
-        </mesh>
-        {/* Hocico */}
-        <mesh position={[0, 0.3, 0.5]}>
-          <boxGeometry args={[0.2, 0.12, 0.1]} />
-          <meshStandardMaterial color="#ffccaa" />
-        </mesh>
-        {/* Ojos */}
-        <mesh position={[-0.08, 0.4, 0.48]}>
-          <sphereGeometry args={[0.03, 6, 6]} />
-          <meshStandardMaterial color="#1a1a2e" />
-        </mesh>
-        <mesh position={[0.08, 0.4, 0.48]}>
-          <sphereGeometry args={[0.03, 6, 6]} />
-          <meshStandardMaterial color="#1a1a2e" />
-        </mesh>
-        {/* Cuernos */}
-        <mesh position={[-0.12, 0.5, 0.35]} rotation={[0, 0, -0.3]}>
-          <coneGeometry args={[0.03, 0.15, 4]} />
-          <meshStandardMaterial color="#c4a060" />
-        </mesh>
-        <mesh position={[0.12, 0.5, 0.35]} rotation={[0, 0, 0.3]}>
-          <coneGeometry args={[0.03, 0.15, 4]} />
-          <meshStandardMaterial color="#c4a060" />
-        </mesh>
-        {/* Patas */}
-        {(
-          [
-            [-0.15, 0, 0.2],
-            [0.15, 0, 0.2],
-            [-0.15, 0, -0.2],
-            [0.15, 0, -0.2],
-          ] as [number, number, number][]
-        ).map((p, i) => (
-          <mesh key={i} position={p} castShadow>
-            <boxGeometry args={[0.08, 0.2, 0.08]} />
-            <meshStandardMaterial color={bodyColor} roughness={0.8} />
-          </mesh>
-        ))}
+        {image ? (
+          <Html
+            position={[0, 0.42, 0]}
+            center
+            transform
+            sprite
+            distanceFactor={8}
+            style={{ pointerEvents: "none" }}
+          >
+            <AgentAppearance
+              emoji={emoji}
+              image={image}
+              className="ranch-animal__sprite ranch-animal__sprite--3d"
+            />
+          </Html>
+        ) : (
+          <BlockAnimal3D emoji={emoji} />
+        )}
       </group>
 
       {/* Status indicator (3D) — floating ring */}
@@ -706,12 +753,13 @@ function SceneContent({
     [],
   );
 
+  const day = useRanchDayCycle(2000);
   return (
     <>
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={0.5 * day.lightLevel} />
       <directionalLight
         position={[8, 12, 8]}
-        intensity={1.2}
+        intensity={1.2 * day.lightLevel}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -765,7 +813,7 @@ function SceneContent({
         const agentId = agent.id;
         const name = agent.identity?.name ?? agent.name ?? agentId;
         const baseState = agentStateMap.get(agentId) ?? "idle";
-        const pal = PALETTES_3D[idx % PALETTES_3D.length];
+        const appearance = resolveAgentAppearance(agent.identity, idx);
 
         let visualStatus: RanchVisualStatus;
         let toolName: string | null = null;
@@ -791,8 +839,8 @@ function SceneContent({
           <CowCharacter3D
             key={agentId}
             targetPosition={pos}
-            bodyColor={pal.body}
-            spotColor={pal.spot}
+            phase={idx * 1.7}
+            {...appearance}
             name={name}
             visualStatus={visualStatus}
             activityLabel={activityLabel}
@@ -802,7 +850,7 @@ function SceneContent({
       })}
 
       {/* Luz ambiental hemisférica en lugar de Environment preset (evita carga async HDR) */}
-      <hemisphereLight args={["#87ceeb", "#8db651", 0.6]} />
+      <hemisphereLight args={[day.skyTop, "#8db651", 0.6 * day.lightLevel + 0.15]} />
     </>
   );
 }
@@ -815,16 +863,17 @@ export type RanchScene3DProps = {
 };
 
 export function RanchScene3D({ agents, sessionActivity }: RanchScene3DProps) {
+  const day = useRanchDayCycle();
   return (
-    <div className="ranch-scene ranch-scene--3d">
+    <div className="ranch-scene ranch-scene--3d" style={{ background: day.skyBottom }}>
       <Canvas
         gl={{ antialias: true, alpha: false }}
         shadows
         camera={{ fov: 40, position: [12, 10, 12], near: 0.1, far: 100 }}
         style={{ imageRendering: "auto" }}
       >
-        <color attach="background" args={["#87ceeb"]} />
-        <fog attach="fog" args={["#87ceeb", 20, 40]} />
+        <color attach="background" args={[day.skyTop]} />
+        <fog attach="fog" args={[day.skyTop, 20, 40]} />
         <SceneContent agents={agents} sessionActivity={sessionActivity} />
       </Canvas>
     </div>

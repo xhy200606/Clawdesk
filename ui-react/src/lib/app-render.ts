@@ -683,13 +683,13 @@ export function renderApp(state: AppViewState) {
                       .filter((g) => g.items.length > 0)
                   : [];
                 const agentsObj = configValue?.agents as Record<string, unknown> | undefined;
-                const agentsList = (agentsObj?.list ?? []) as Array<{
-                  id: string;
-                  identity?: { name?: string };
-                }>;
-                const availableAgents = agentsList.map((a) => ({
-                  id: a.id,
-                  name: a.identity?.name ?? a.id,
+                const entries = (agentsObj?.entries ?? {}) as Record<
+                  string,
+                  { identity?: { name?: string } }
+                >;
+                const availableAgents = Object.entries(entries).map(([id, entry]) => ({
+                  id,
+                  name: entry?.identity?.name ?? id,
                 }));
                 return renderChannelsQuickAdd({
                   form: state.channelQuickAddForm,
@@ -850,13 +850,13 @@ export function renderApp(state: AppViewState) {
                   const agentsObj = (state.configForm as Record<string, unknown>)?.agents as
                     | Record<string, unknown>
                     | undefined;
-                  const agentsList = (agentsObj?.list ?? []) as Array<{
-                    id: string;
-                    identity?: { name?: string };
-                  }>;
-                  const availableAgents = agentsList.map((a) => ({
-                    id: a.id,
-                    name: a.identity?.name ?? a.id,
+                  const entries = (agentsObj?.entries ?? {}) as Record<
+                    string,
+                    { identity?: { name?: string } }
+                  >;
+                  const availableAgents = Object.entries(entries).map(([id, entry]) => ({
+                    id,
+                    name: entry?.identity?.name ?? id,
                   }));
                   return renderChannelsQuickAdd({
                     form: state.channelQuickAddForm,
@@ -979,7 +979,6 @@ export function renderApp(state: AppViewState) {
                           }
 
                           const newAgent: Record<string, unknown> = {
-                            id: accountId,
                             identity: {
                               name: f.agentName.trim() || accountId,
                               avatar: avatarValue,
@@ -1009,12 +1008,11 @@ export function renderApp(state: AppViewState) {
                               string,
                               unknown
                             >
-                          )?.list ?? []) as unknown[];
-                          updateConfigFormValue(
-                            state,
-                            ["agents", "list"],
-                            [...currentAgents, newAgent],
-                          );
+                          )?.entries ?? {}) as Record<string, unknown>;
+                          updateConfigFormValue(state, ["agents", "entries"], {
+                            ...currentAgents,
+                            [accountId]: newAgent,
+                          });
                         }
 
                         // 3. Create binding

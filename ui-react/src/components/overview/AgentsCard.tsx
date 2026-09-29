@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { formatRelativeTimestamp } from "../../lib/format.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
-import { resolveAgentAvatarSrc } from "../../lib/views/agents-utils.ts";
 import { AgentAnimal } from "./AgentAnimal.tsx";
 import { AgentEditDialog } from "./AgentEditDialog.tsx";
 import { OverviewIcons } from "./SnapshotCard.tsx";
@@ -121,7 +120,6 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
           </div>
           <div className="ov-agent-grid">
             {agents.map((agent) => {
-              const avatarSrc = resolveAgentAvatarSrc(agent);
               const displayName = agent.identity?.name ?? agent.name ?? agent.id;
               const agentSessions = allSessions.filter(
                 (x) => (x.agentId ?? x.key.split(":")[1] ?? x.key) === agent.id,
@@ -167,7 +165,7 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
                     <div className="agent-card-pixel__id">{agent.id}</div>
                   </div>
 
-                  {/* ── Portrait: 状态动物动画（奔跑/趴卧），自定义头像缩略为角标 ── */}
+                  {/* The saved animal or custom picture is the main portrait. */}
                   <div className="agent-card-pixel__portrait">
                     <div
                       className={`agent-card-pixel__avatar-ring agent-card-pixel__avatar-ring--${agentState}`}
@@ -175,17 +173,11 @@ export function AgentsCard({ agents, sessions, channelBindings }: AgentsCardProp
                       <AgentAnimal
                         state={agentState}
                         emoji={agent.identity?.emoji}
+                        avatar={agent.identity?.avatar}
+                        avatarUrl={agent.identity?.avatarUrl}
                         idx={agents.indexOf(agent)}
-                        size={76}
+                        size={156}
                       />
-                      {avatarSrc && (
-                        <img
-                          className="agent-card-pixel__avatar-badge"
-                          src={avatarSrc}
-                          alt={displayName}
-                          title={`头像：${displayName}`}
-                        />
-                      )}
                     </div>
                   </div>
 

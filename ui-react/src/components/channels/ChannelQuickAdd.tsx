@@ -299,7 +299,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                     </span>
                   </span>
                 </div>
-                <div className="quick-add__tutorial-link" style={{ gridColumn: "span 2" }}>
+                <div className="quick-add__tutorial-link" style={{ gridColumn: "1 / -1" }}>
                   <a
                     href="https://docs.openclaw.ai/channels/telegram"
                     target="_blank"
@@ -326,16 +326,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
             {/* ── Feishu ── */}
             {channelType === "feishu" && (
               <>
-                {/* Todos los campos de credenciales en una sola fila de 4 columnas */}
-                <div
-                  style={{
-                    gridColumn: "span 2",
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                    gap: 12,
-                    alignItems: "start",
-                  }}
-                >
+                <div className="quick-add__credentials">
                   <label className="quick-add__field">
                     <span className="quick-add__label">{t("channelsQuickAdd.accountId")}</span>
                     <input
@@ -443,7 +434,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                     </span>
                   </span>
                 </div>
-                <div className="quick-add__tutorial-link" style={{ gridColumn: "span 2" }}>
+                <div className="quick-add__tutorial-link" style={{ gridColumn: "1 / -1" }}>
                   <a
                     href="https://docs.openclaw.ai/channels/feishu"
                     target="_blank"
@@ -542,7 +533,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
             {/* ── Discord ── */}
             {channelType === "discord" && (
               <>
-                <label className="quick-add__field" style={{ gridColumn: "span 2" }}>
+                <label className="quick-add__field" style={{ gridColumn: "1 / -1" }}>
                   <span className="quick-add__label">Bot Token</span>
                   <input
                     className="quick-add__input"
@@ -556,7 +547,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                     Message Content Intent。
                   </span>
                 </label>
-                <div className="quick-add__tutorial-link" style={{ gridColumn: "span 2" }}>
+                <div className="quick-add__tutorial-link" style={{ gridColumn: "1 / -1" }}>
                   <a
                     href="https://docs.openclaw.ai/channels/discord"
                     target="_blank"
@@ -625,7 +616,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                 </label>
 
                 {/* QR Login section */}
-                <div style={{ gridColumn: "span 2" }}>
+                <div style={{ gridColumn: "1 / -1" }}>
                   <div
                     className="callout"
                     style={{ marginBottom: 8, fontSize: 13, lineHeight: 1.6 }}
@@ -726,7 +717,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
             {/* ── WeChat (微信) ── */}
             {channelType === "weixin" && (
               <>
-                <div style={{ gridColumn: "span 2" }}>
+                <div style={{ gridColumn: "1 / -1" }}>
                   <div
                     className="callout"
                     style={{ marginBottom: 8, fontSize: 13, lineHeight: 1.6 }}
@@ -855,6 +846,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                         if (val && form.accountId.trim() === "") {
                           onFieldChange("accountId", val);
                         }
+                        onAgentDropdownToggle();
                       }}
                       onToggle={onAgentDropdownToggle}
                     />
@@ -889,7 +881,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                       </label>
 
                       {/* Avatar grid */}
-                      <label className="quick-add__field" style={{ gridColumn: "span 2" }}>
+                      <label className="quick-add__field" style={{ gridColumn: "1 / -1" }}>
                         <span className="quick-add__label">
                           {t("channelsQuickAdd.avatar") ?? "头像"}
                         </span>
@@ -1011,7 +1003,7 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                       </label>
 
                       {/* Model selector */}
-                      <div className="quick-add__field" style={{ gridColumn: "span 2" }}>
+                      <div className="quick-add__field quick-add__field--wide">
                         <span className="quick-add__label">{t("channelsQuickAdd.agentModel")}</span>
                         <Dropdown
                           value={form.agentModel || null}
@@ -1020,7 +1012,10 @@ export function ChannelQuickAdd(props: ChannelQuickAddProps) {
                           items={modelGroups ? undefined : availableModels}
                           open={modelDropdownOpen}
                           expandedGroups={modelDropdownExpandedGroups}
-                          onSelect={(val) => onFieldChange("agentModel", val)}
+                          onSelect={(val) => {
+                            onFieldChange("agentModel", val);
+                            onModelDropdownToggle();
+                          }}
                           onToggle={onModelDropdownToggle}
                           onGroupToggle={onModelDropdownGroupToggle}
                         />

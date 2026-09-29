@@ -678,7 +678,7 @@ export function renderRanch(props: RanchProps) {
   // Work zones aligned to actual scene elements
   // (left%, top% — matching the SVG scene overlay positions)
   const WORK_ZONES = [
-    { left: 57, top: 36, label: "消耗草料", desc: "饲料槽" }, // feed trough
+    { left: 57, top: 36, label: "消耗饲料", desc: "饲料槽" }, // feed trough
     { left: 82, top: 12, label: "疯狂运转", desc: "风车旁" }, // windmill
     { left: 11, top: 18, label: "存档整理", desc: "谷仓前" }, // barn
     { left: 48, top: 60, label: "耕种数据", desc: "农田" }, // crop patch
@@ -1054,7 +1054,7 @@ export function renderRanch(props: RanchProps) {
           @click=${() => {
             const feedPhrases = [
               "好吃！谢谢老板 🥺",
-              "草料真香 😋",
+              "饲料真香 😋",
               "加鸡腿！🍗",
               "饱了饱了 🫃",
               "老板大气！💰",

@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { CostUsageSummary, SessionsUsageResult } from "../../lib/types.ts";
+import type {
+  CostUsageSummary,
+  SessionsUsageResult,
+  SessionUsageTimeSeries,
+} from "../../lib/types.ts";
+import { getReactiveState } from "../../store/appStore.ts";
 import { DragHandle } from "./AccessCard.tsx";
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -21,17 +26,11 @@ function formatTick(val: number | string): string {
   return String(n);
 }
 
-function buildHourlyFromSessions(
-  result: SessionsUsageResult,
-): Array<{ hour: number; tokens: number }> {
-  const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, tokens: 0 }));
-  for (const s of result.sessions) {
-    if (!s.updatedAt || !s.usage) continue;
-    const h = new Date(s.updatedAt).getHours();
-    hours[h].tokens += s.usage.totalTokens ?? 0;
-  }
-  return hours;
+function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+
+type UsagePoint = { agentId: string; timestamp: number; tokens: number };
 
 // ─── Chart.js instance management ────────────────────────────
 
@@ -308,13 +307,14 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
   const [mode, setMode] = useState<ChartMode>("7d");
   const [ctxRange, setCtxRange] = useState<CtxRange>("1d");
   const [agentFilter, setAgentFilter] = useState("");
+  const [usagePoints, setUsagePoints] = useState<UsagePoint[]>([]);
+  const [pointsLoading, setPointsLoading] = useState(false);
+  const [pointsError, setPointsError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const daily = costDaily?.daily ?? [];
-  const hourly = usageResult ? buildHourlyFromSessions(usageResult) : [];
   const hasWeekData = daily.length > 0;
-  const hasDayData = hourly.some((h) => h.tokens > 0);
   const hasCtxData =
     usageResult?.sessions?.some((s: Record<string, unknown>) => s.contextWeight) ?? false;
 
@@ -328,11 +328,91 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
   }
   const agentList = Array.from(agentSet).sort();
   const hasFilter = agentFilter !== "" && agentSet.has(agentFilter);
-  const filterSessions = useCallback(
-    (sessions: SessionsUsageResult["sessions"]) =>
-      hasFilter ? sessions.filter((s) => s.agentId === agentFilter) : sessions,
-    [hasFilter, agentFilter],
-  );
+
+  // Session totals have no hourly breakdown. Request the gateway's recorded usage points.
+  useEffect(() => {
+    if (mode !== "1d" && !(mode === "7d" && hasFilter)) return;
+    const client = getReactiveState().client;
+    const entries =
+      mode === "1d" ? (usageResult?.sessions ?? []) : (weekUsageResult?.sessions ?? []);
+    if (!client || entries.length === 0) {
+      setUsagePoints([]);
+      setPointsLoading(false);
+      setPointsError(null);
+      return;
+    }
+    const selected = hasFilter ? entries.filter((entry) => entry.agentId === agentFilter) : entries;
+    const unique = [...new Map(selected.map((entry) => [entry.key, entry])).values()];
+    let canceled = false;
+    setPointsLoading(true);
+    setPointsError(null);
+    setUsagePoints([]);
+    void (async () => {
+      const points: UsagePoint[] = [];
+      let failures = 0;
+      let cursor = 0;
+      const workers = Array.from({ length: Math.min(6, unique.length) }, async () => {
+        while (cursor < unique.length) {
+          const entry = unique[cursor++];
+          try {
+            const series = await client.request<SessionUsageTimeSeries>(
+              "sessions.usage.timeseries",
+              {
+                key: entry.key,
+              },
+            );
+            for (const point of series?.points ?? []) {
+              if (Number.isFinite(point.timestamp) && Number.isFinite(point.totalTokens)) {
+                points.push({
+                  agentId: entry.agentId ?? entry.key.split(":")[1] ?? "",
+                  timestamp: point.timestamp,
+                  tokens: point.totalTokens,
+                });
+              }
+            }
+          } catch {
+            failures++;
+          }
+        }
+      });
+      await Promise.all(workers);
+      if (canceled) return;
+      const expectedToday =
+        mode === "1d"
+          ? hasFilter
+            ? selected.reduce((sum, entry) => sum + (entry.usage?.totalTokens ?? 0), 0)
+            : (usageResult?.totals.totalTokens ?? 0)
+          : 0;
+      const todayKey = localDateKey(new Date());
+      const recordedToday = points.reduce(
+        (sum, point) =>
+          localDateKey(new Date(point.timestamp)) === todayKey ? sum + point.tokens : sum,
+        0,
+      );
+      setUsagePoints(points);
+      setPointsError(
+        failures > 0
+          ? `${failures} 个会话的逐小时用量读取失败`
+          : expectedToday > 0 && Math.abs(recordedToday - expectedToday) / expectedToday > 0.1
+            ? "逐小时记录与今日总量不一致，无法准确绘图"
+            : null,
+      );
+      setPointsLoading(false);
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [mode, hasFilter, agentFilter, usageResult, weekUsageResult]);
+
+  const today = localDateKey(new Date());
+  const hourly = Array.from({ length: 24 }, (_, hour) => ({ hour, tokens: 0 }));
+  for (const point of usagePoints) {
+    const date = new Date(point.timestamp);
+    if (localDateKey(date) === today && (!hasFilter || point.agentId === agentFilter)) {
+      hourly[date.getHours()].tokens += point.tokens;
+    }
+  }
+  const hasDayData = hourly.some((hour) => hour.tokens > 0);
 
   // Compute chart data
   const isChartMode = mode !== "ctx";
@@ -345,14 +425,12 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
       const now = new Date();
       const dayMap = new Map<string, number>();
       for (let i = 0; i < 7; i++) {
-        const d = new Date(now.getTime() - (6 - i) * 86400000);
-        dayMap.set(d.toISOString().slice(0, 10), 0);
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i));
+        dayMap.set(localDateKey(d), 0);
       }
-      for (const s of filterSessions(weekUsageResult.sessions)) {
-        if (!s.updatedAt || !s.usage) continue;
-        const dateStr = new Date(s.updatedAt).toISOString().slice(0, 10);
-        if (dayMap.has(dateStr))
-          dayMap.set(dateStr, (dayMap.get(dateStr) ?? 0) + (s.usage.totalTokens ?? 0));
+      for (const point of usagePoints) {
+        const dateStr = localDateKey(new Date(point.timestamp));
+        if (dayMap.has(dateStr)) dayMap.set(dateStr, (dayMap.get(dateStr) ?? 0) + point.tokens);
       }
       labels = Array.from(dayMap.keys()).map((d) => {
         const dt = new Date(d + "T00:00:00");
@@ -369,19 +447,8 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
     const total = data.reduce((a, b) => a + b, 0);
     subtitle = `最近 ${daily.length} 天 · ${fmtT(total)} tokens`;
   } else if (mode === "1d") {
-    if (hasFilter && usageResult) {
-      const hrs = Array.from({ length: 24 }, (_, i) => ({ hour: i, tokens: 0 }));
-      for (const s of filterSessions(usageResult.sessions)) {
-        if (!s.updatedAt || !s.usage) continue;
-        const h = new Date(s.updatedAt).getHours();
-        hrs[h].tokens += s.usage.totalTokens ?? 0;
-      }
-      labels = hrs.map((h) => `${h.hour}:00`);
-      data = hrs.map((h) => h.tokens);
-    } else {
-      labels = hourly.map((h) => `${h.hour}:00`);
-      data = hourly.map((h) => h.tokens);
-    }
+    labels = hourly.map((h) => `${h.hour}:00`);
+    data = hourly.map((h) => h.tokens);
     const total = data.reduce((a, b) => a + b, 0);
     subtitle = `今日（按小时）· ${fmtT(total)} tokens`;
   } else {
@@ -492,7 +559,7 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
     setAgentFilter(agent);
   }, []);
 
-  if (!hasWeekData && !hasDayData && !hasCtxData) {
+  if (!hasWeekData && !hasDayData && !hasCtxData && !pointsLoading && !pointsError) {
     return (
       <div data-swapy-slot="usage">
         <div data-swapy-item="usage" />
@@ -514,7 +581,7 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
           <div className="card-header-row">
             <DragHandle />
             <div style={{ flex: 1 }}>
-              <div className="card-title">草料消耗趋势</div>
+              <div className="card-title">饲料消耗趋势</div>
               <div className="card-sub">{subtitle}</div>
             </div>
             <AgentFilterDropdown
@@ -537,7 +604,11 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
               </button>
             </div>
           </div>
-          {isChartMode ? (
+          {isChartMode && (mode === "1d" || hasFilter) && (pointsLoading || pointsError) ? (
+            <div className="muted" style={{ padding: 24, textAlign: "center" }}>
+              {pointsError ?? "正在读取真实用量记录…"}
+            </div>
+          ) : isChartMode ? (
             <div
               className="usage-line-chart"
               style={{ marginTop: 12, position: "relative", height: 200 }}

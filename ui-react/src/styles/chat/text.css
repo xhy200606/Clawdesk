@@ -69,6 +69,7 @@
 }
 
 .chat-text {
+  font-family: var(--font-chat);
   font-size: 14px;
   line-height: 1.5;
   word-wrap: break-word;

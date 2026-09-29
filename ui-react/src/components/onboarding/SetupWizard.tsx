@@ -431,13 +431,10 @@ function ChannelStep() {
 
   // Construir agentes disponibles
   const agentsObj = configForm?.agents as Record<string, unknown> | undefined;
-  const agentsList = (agentsObj?.list ?? []) as Array<{
-    id: string;
-    identity?: { name?: string };
-  }>;
-  const availableAgents = agentsList.map((a) => ({
-    id: a.id,
-    name: a.identity?.name ?? a.id,
+  const entries = (agentsObj?.entries ?? {}) as Record<string, { identity?: { name?: string } }>;
+  const availableAgents = Object.entries(entries).map(([id, entry]) => ({
+    id,
+    name: entry?.identity?.name ?? id,
   }));
 
   return (

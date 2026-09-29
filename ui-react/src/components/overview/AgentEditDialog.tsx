@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ANIMAL_SPECIES } from "../../lib/animals.ts";
+import { ANIMAL_SPECIES, resolveAgentAppearance } from "../../lib/animals.ts";
 import { loadAgents } from "../../lib/controllers/agents.ts";
 import { loadConfig, type ConfigState } from "../../lib/controllers/config.ts";
 import type { GatewayAgentRow } from "../../lib/types.ts";
 import { getReactiveState } from "../../store/appStore.ts";
+import { AgentAppearance } from "./AgentAppearance.tsx";
 
 // ─── 牛马档案 · Agent 信息编辑/新增弹窗 ──────────────────────────
 // 「资料」页编辑 identity.name / identity.avatar / identity.emoji（动物形象）/ model.primary。
@@ -77,6 +78,7 @@ export function AgentEditDialog({
 
   const isCreate = createMode && !agent;
   const agentId = isCreate ? newId.trim() : (agent?.id ?? "");
+  const preview = resolveAgentAppearance({ emoji, avatar }, 0);
 
   const loadFile = useCallback(async (aid: string, fileName: string) => {
     const reactive = getReactiveState() as unknown as {
@@ -398,6 +400,10 @@ export function AgentEditDialog({
             </label>
             <div className="agent-edit-dialog__row">
               <span className="agent-edit-dialog__label">动物形象</span>
+              <div className="agent-edit-dialog__appearance-preview">
+                <AgentAppearance {...preview} />
+                <span>档案与牧场中的主形象预览</span>
+              </div>
               <div className="agent-edit-dialog__species">
                 {ANIMAL_SPECIES.map((sp) => (
                   <button
@@ -406,7 +412,11 @@ export function AgentEditDialog({
                     className={`agent-edit-dialog__species-btn${emoji === sp.emoji ? " agent-edit-dialog__species-btn--active" : ""}`}
                     disabled={busy}
                     title={sp.label}
-                    onClick={() => setEmoji(sp.emoji)}
+                    onClick={() => {
+                      setEmoji(sp.emoji);
+                      // The gateway requires a non-empty avatar. An animal emoji replaces an old image.
+                      setAvatar(sp.emoji);
+                    }}
                   >
                     <span className="agent-edit-dialog__species-emoji">{sp.emoji}</span>
                     <span className="agent-edit-dialog__species-label">{sp.label}</span>
@@ -414,17 +424,17 @@ export function AgentEditDialog({
                 ))}
               </div>
               <span className="agent-edit-dialog__species-hint">
-                形象会同步到牧场 2D/3D 与档案头像动画
+                选中的动物会成为档案主形象，并同步到 2D/3D 牧场
               </span>
             </div>
             <label className="agent-edit-dialog__row">
-              <span className="agent-edit-dialog__label">头像（可选）</span>
+              <span className="agent-edit-dialog__label">自定义形象图片（可选）</span>
               <span className="agent-edit-dialog__avatar-cell">
                 <input
                   className="quick-add__input"
-                  value={avatar}
+                  value={ANIMAL_SPECIES.some((sp) => sp.emoji === avatar) ? "" : avatar}
                   disabled={busy}
-                  onChange={(e) => setAvatar(e.target.value)}
+                  onChange={(e) => setAvatar(e.target.value || emoji || "🐄")}
                   placeholder="图片 URL / 上传图片；留空则用动物形象"
                 />
                 <button

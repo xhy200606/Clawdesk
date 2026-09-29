@@ -5,7 +5,11 @@ import { resolveSessionDisplayName, isCronSessionKey } from "../../lib/app-rende
 import { setTab as setTabLib, syncUrlWithSessionKey } from "../../lib/app-settings.ts";
 import { getSessionPreview } from "../../lib/chat/session-preview.ts";
 import { loadChatHistory, type ChatState } from "../../lib/controllers/chat.ts";
-import { deleteSessionAndRefresh, patchSession } from "../../lib/controllers/sessions.ts";
+import {
+  deleteSessionAndRefresh,
+  loadSessions,
+  patchSession,
+} from "../../lib/controllers/sessions.ts";
 import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/external-link.ts";
 import { icons } from "../../lib/icons.ts";
 import {
@@ -76,6 +80,7 @@ export function NavSidebar() {
   const sessionsResult = useAppStore((s) => s.sessionsResult);
   const basePath = useAppStore((s) => s.basePath);
   const sessionKey = useAppStore((s) => s.sessionKey);
+  const connected = useAppStore((s) => s.connected);
   const applySettings = useAppStore((s) => s.applySettings);
 
   const base = normalizeBasePath(basePath ?? "");
@@ -114,6 +119,23 @@ export function NavSidebar() {
       void refreshChatAvatar(rs as never);
     });
   }, []);
+
+  // 正在执行任务的会话（hasActiveRun / status==="running"）→ 侧栏呼吸灯
+  const workingKeys = useMemo(
+    () =>
+      new Set(
+        (sessionsResult?.sessions ?? [])
+          .filter((row) => row.hasActiveRun || row.status === "running")
+          .map((row) => row.key),
+      ),
+    [sessionsResult],
+  );
+  // 保持侧栏工作状态新鲜（15s 轮询，连接时才开）
+  useEffect(() => {
+    if (!connected) return;
+    const timer = window.setInterval(() => void loadSessions(getReactiveState() as never), 15_000);
+    return () => window.clearInterval(timer);
+  }, [connected]);
 
   // 项目（客户端分组，用来收纳不同话题的会话）
   const [projects, setProjects] = useState<Project[]>(() => loadProjects());
@@ -367,6 +389,7 @@ export function NavSidebar() {
                           name={name}
                           time={time}
                           isActive={isActive}
+                          working={workingKeys.has(session.key)}
                           projectMode={Boolean(activeProjectMeta)}
                           inProject={inProjectSet.has(session.key)}
                           onToggleProject={() => onToggleProject(session.key)}
@@ -480,6 +503,8 @@ type SessionItemProps = {
   name: string;
   time: string;
   isActive: boolean;
+  /** 正在执行任务：名称前显示呼吸状态灯 */
+  working?: boolean;
   onSwitch: () => void;
   /** 当前选中了某个项目：显示加入/移出项目的小按钮 */
   projectMode?: boolean;
@@ -492,6 +517,7 @@ function SessionItem({
   name,
   time,
   isActive,
+  working,
   onSwitch,
   projectMode,
   inProject,
@@ -580,6 +606,7 @@ function SessionItem({
         role="button"
         tabIndex={0}
       >
+        {working && <span className="session-item__status" title="正在执行任务" />}
         <span className="session-item__name">{name}</span>
         {time && <span className="session-item__time">{time}</span>}
         {projectMode && (

@@ -57,7 +57,8 @@ export function renderChannelsQuickAdd(props: ChannelsQuickAddProps) {
     : form.accountId.trim() !== "" && form.appId.trim() !== "" && form.appSecret.trim() !== "";
   const hasAgentInfo =
     !form.createAgent ||
-    ((form.agentId.trim() !== "" || form.accountId.trim() !== "") && form.agentModel.trim() !== "");
+    form.agentId.trim() !== "" ||
+    (form.accountId.trim() !== "" && form.agentModel.trim() !== "");
   const canSubmit = !busy && hasChannelInfo && hasAgentInfo;
 
   return html`
@@ -119,7 +120,7 @@ export function renderChannelsQuickAdd(props: ChannelsQuickAddProps) {
 
                 ${isTelegram
                   ? html`
-                      <label class="quick-add__field" style="grid-column: span 2;">
+                      <label class="quick-add__field" style="grid-column: 1 / -1;">
                         <span class="quick-add__label">Bot Token</span>
                         <input
                           class="quick-add__input"
@@ -131,7 +132,7 @@ export function renderChannelsQuickAdd(props: ChannelsQuickAddProps) {
                         />
                         <span class="quick-add__hint">${t("channelsQuickAdd.botTokenHint")}</span>
                       </label>
-                      <div class="quick-add__tutorial-link" style="grid-column: span 2;">
+                      <div class="quick-add__tutorial-link" style="grid-column: 1 / -1;">
                         <a
                           href="https://xdclab-ai.feishu.cn/docx/VVvfdRizno06j3x9z3cc5Tc9nkh?from=from_copylink"
                           target="_blank"
@@ -186,7 +187,7 @@ export function renderChannelsQuickAdd(props: ChannelsQuickAddProps) {
                         />
                         <span class="quick-add__hint">${t("channelsQuickAdd.botNameHint")}</span>
                       </label>
-                      <div class="quick-add__tutorial-link" style="grid-column: span 2;">
+                      <div class="quick-add__tutorial-link" style="grid-column: 1 / -1;">
                         <a
                           href="https://xdclab-ai.feishu.cn/docx/TZScdTdmpoO7DPxzpGCcvAH8nRc?from=from_copylink"
                           target="_blank"
@@ -240,6 +241,7 @@ export function renderChannelsQuickAdd(props: ChannelsQuickAddProps) {
                                 if (val && form.accountId.trim() === "") {
                                   props.onFieldChange("accountId", val);
                                 }
+                                props.onAgentDropdownToggle();
                               },
                               onToggle: props.onAgentDropdownToggle,
                             })}
@@ -282,7 +284,7 @@ export function renderChannelsQuickAdd(props: ChannelsQuickAddProps) {
                                     >${t("channelsQuickAdd.agentNameHint")}</span
                                   >
                                 </label>
-                                <label class="quick-add__field" style="grid-column: span 2;">
+                                <label class="quick-add__field" style="grid-column: 1 / -1;">
                                   <span class="quick-add__label"
                                     >${t("channelsQuickAdd.avatar") ?? "头像"}</span
                                   >
@@ -428,7 +430,7 @@ export function renderChannelsQuickAdd(props: ChannelsQuickAddProps) {
                                     上传本地图片</span
                                   >
                                 </label>
-                                <div class="quick-add__field" style="grid-column: span 2;">
+                                <div class="quick-add__field" style="grid-column: 1 / -1;">
                                   <span class="quick-add__label"
                                     >${t("channelsQuickAdd.agentModel")}</span
                                   >

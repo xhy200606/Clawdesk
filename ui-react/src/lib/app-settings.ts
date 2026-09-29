@@ -455,25 +455,44 @@ async function loadOverviewUsageCost(state: {
   }
   try {
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    const weekAgo = new Date(now.getTime() - 6 * 86400000).toISOString().slice(0, 10);
-    const allTimeStart = new Date(now.getTime() - 365 * 86400000).toISOString().slice(0, 10);
-    const [weekRes, dayRes, allRes] = await Promise.all([
-      state.client.request("sessions.usage", {
-        startDate: weekAgo,
-        endDate: today,
-        includeContextWeight: true,
-      }),
-      state.client.request("sessions.usage", {
-        startDate: today,
-        endDate: today,
-        includeContextWeight: true,
-      }),
-      state.client.request("sessions.usage", {
-        startDate: allTimeStart,
-        endDate: today,
-      }),
-    ]);
+    const dateKey = (date: Date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const today = dateKey(now);
+    const weekAgo = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+    const allTimeStart = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 365));
+    const offsetMinutes = -now.getTimezoneOffset();
+    const absOffset = Math.abs(offsetMinutes);
+    const utcOffset = `UTC${offsetMinutes >= 0 ? "+" : "-"}${Math.floor(absOffset / 60)}${absOffset % 60 ? `:${String(absOffset % 60).padStart(2, "0")}` : ""}`;
+    const requestUsage = (withOffset: boolean) => {
+      const interpretation = withOffset ? { mode: "specific", utcOffset } : {};
+      return Promise.all([
+        state.client!.request("sessions.usage", {
+          startDate: weekAgo,
+          endDate: today,
+          includeContextWeight: true,
+          ...interpretation,
+        }),
+        state.client!.request("sessions.usage", {
+          startDate: today,
+          endDate: today,
+          includeContextWeight: true,
+          ...interpretation,
+        }),
+        state.client!.request("sessions.usage", {
+          startDate: allTimeStart,
+          endDate: today,
+          ...interpretation,
+        }),
+      ]);
+    };
+    let responses: Awaited<ReturnType<typeof requestUsage>>;
+    try {
+      responses = await requestUsage(true);
+    } catch (error) {
+      if (!/(mode|utcOffset)/i.test(String(error))) throw error;
+      responses = await requestUsage(false);
+    }
+    const [weekRes, dayRes, allRes] = responses;
     // All-time totals
     const allTimeTotals = allRes
       ? (allRes as import("./types.ts").SessionsUsageResult).totals
@@ -485,8 +504,8 @@ async function loadOverviewUsageCost(state: {
       // Build full 7-day array, filling missing dates with 0
       const fullDaily: Array<{ date: string; totalTokens: number }> = [];
       for (let i = 0; i < 7; i++) {
-        const d = new Date(now.getTime() - (6 - i) * 86400000);
-        const dateStr = d.toISOString().slice(0, 10);
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i));
+        const dateStr = dateKey(d);
         const entry = dailyMap.get(dateStr);
         fullDaily.push({
           date: dateStr,

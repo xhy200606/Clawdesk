@@ -4,19 +4,28 @@
  * 动物形象来自 agent.identity.emoji 选定的物种色板（lib/animals.ts）。
  */
 import React from "react";
-import { resolveAgentSpecies } from "../../lib/animals.ts";
-import { CowHorseSprite } from "./RanchScene2D.tsx";
+import { resolveAgentAppearance } from "../../lib/animals.ts";
+import { AgentAppearance } from "./AgentAppearance.tsx";
 
 export type AgentAnimalProps = {
   state: "processing" | "waiting" | "idle";
   emoji?: string;
+  avatar?: string;
+  avatarUrl?: string;
   /** 用于色板回退的稳定索引 */
   idx: number;
   size?: number;
 };
 
-export function AgentAnimal({ state, emoji, idx, size = 72 }: AgentAnimalProps) {
-  const species = resolveAgentSpecies(emoji, idx);
+export function AgentAnimal({
+  state,
+  emoji,
+  avatar,
+  avatarUrl,
+  idx,
+  size = 156,
+}: AgentAnimalProps) {
+  const appearance = resolveAgentAppearance({ emoji, avatar, avatarUrl }, idx);
   return (
     <div
       className={`agent-animal agent-animal--${state === "processing" ? "running" : "rest"}`}
@@ -26,8 +35,7 @@ export function AgentAnimal({ state, emoji, idx, size = 72 }: AgentAnimalProps) 
       {/* 奔跑时的速度线 */}
       {state === "processing" && <span className="agent-animal__speed agent-animal__speed--1" />}
       {state === "processing" && <span className="agent-animal__speed agent-animal__speed--2" />}
-      <CowHorseSprite bodyColor={species.body} spotColor={species.spot} />
-      {species.emoji && <span className="agent-animal__emoji">{species.emoji}</span>}
+      <AgentAppearance {...appearance} className="ranch-animal__sprite" />
     </div>
   );
 }
