@@ -153,9 +153,9 @@ export function useRanchDayCycle(intervalMs = 1000): DayPhaseInfo {
     skyTop: rgb(top),
     skyBottom: rgb(bot),
     tint: `rgba(${tintC[0]}, ${tintC[1]}, ${tintC[2]}, ${a.toFixed(3)})`,
-    // 需求：太阳/月亮固定在左上角，不随时间/视角移动（只随昼夜切换日/月）
+    // 2D：横轴固定在左上，纵轴渲染真实太阳高度角（早晚低、正午高）
     orbX: 0.09,
-    orbY: 0.13,
+    orbY: 0.34 - 0.24 * Math.sin(Math.PI * frac),
     showSun,
     starAlpha,
     lightLevel: light,

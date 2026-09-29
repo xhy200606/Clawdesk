@@ -406,6 +406,13 @@
   padding-bottom: 10px;
 }
 
+/* 折叠栏顶部只显示 logo，并与下方图标一列同轴对齐 */
+.nav--collapsed .brand-logo {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto;
+}
+
 .nav--collapsed .nav-item,
 .nav--collapsed .nav-item--standalone {
   justify-content: center;
@@ -419,6 +426,11 @@
 
 .nav--collapsed .nav-item__icon {
   margin: 0;
+}
+
+/* 折叠时侧栏内不再显示汉堡按钮（顶部 Topbar 已有展开按钮），只留 logo */
+.nav--collapsed .nav-collapse-toggle {
+  display: none;
 }
 
 .nav--collapsed .nav-collapse-toggle {

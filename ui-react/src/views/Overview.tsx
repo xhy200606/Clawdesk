@@ -313,23 +313,6 @@ export function OverviewView() {
         </div>
       </div>
       <div className="overview-swapy">{cardOrder.map((slot) => cardMap[slot])}</div>
-      <button
-        type="button"
-        className="overview-collaboration-entry card"
-        onClick={() => setTab(getReactiveState() as never, "teams")}
-      >
-        <span className="overview-collaboration-entry__icon" aria-hidden="true">
-          ◎
-        </span>
-        <span className="overview-collaboration-entry__content">
-          <strong>协作工作台</strong>
-          <small>主 Agent 分配任务 · 查看 Agent 执行流程</small>
-        </span>
-        <span className="overview-collaboration-entry__counts">
-          {presenceCount} 个执行中 · {sessionsCount} 个活跃会话
-        </span>
-        <span aria-hidden="true">→</span>
-      </button>
     </SwapyLayout>
   );
 }

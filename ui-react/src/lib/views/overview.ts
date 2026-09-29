@@ -14,7 +14,6 @@ import type {
 } from "../types.ts";
 import { resolveAgentAvatarSrc } from "./agents-utils.ts";
 import { shouldShowPairingHint } from "./overview-hints.ts";
-import { renderRanch } from "./overview-ranch.ts";
 
 // Module-level cache for async system stats (Electron IPC)
 let _cachedCpu = 0;
@@ -310,9 +309,17 @@ function buildHourlyFromSessions(
     }
     const startMs = Math.min(start, end);
     const endMs = Math.max(start, end);
-    const durationMs = Math.max(endMs - startMs, 1);
+    // 口径统一：只统计今日 0 点之后的活动（昨日会话不摊进今天的小时桶），
+    // 保证 Σ逐小时 === 今日总量（今日消耗饲料卡）。
+    const now0 = new Date();
+    now0.setHours(0, 0, 0, 0);
+    const floorMs = Math.max(startMs, now0.getTime());
+    if (floorMs >= endMs) {
+      continue;
+    }
+    const durationMs = Math.max(endMs - floorMs, 1);
     const totalMinutes = durationMs / 60000;
-    let cursor = startMs;
+    let cursor = floorMs;
     while (cursor < endMs) {
       const date = new Date(cursor);
       const hour = date.getHours();
@@ -1407,8 +1414,9 @@ export function renderOverview(props: OverviewProps) {
   // Token stats row (computed from usage data, displayed above cards)
   const fmtTokens = (n: number) =>
     n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n);
-  const todayTokens = (props.usageResult?.sessions ?? []).reduce(
-    (sum, s) => sum + (s.usage?.totalTokens ?? 0),
+  // 与逐小时趋势同源：今日总量 = Σ(按小时分摊的今日 token)，两处口径永远一致
+  const todayTokens = (props.usageResult ? buildHourlyFromSessions(props.usageResult) : []).reduce(
+    (sum, h) => sum + h.tokens,
     0,
   );
   const allTokens = props.costDaily?.totals?.totalTokens ?? 0;
@@ -1452,17 +1460,9 @@ export function renderOverview(props: OverviewProps) {
         `
       : nothing;
 
-  const ranchScene = renderRanch({
-    agents: props.agents,
-    sessionActivity: props.sessionActivity,
-  });
-
   return html`
     <oc-overview-layout>
-      <div class="ov-ranch-snapshot-row">
-        <div class="ov-ranch-col">${ranchScene}</div>
-        <div class="ov-snapshot-col">${cards.snapshot} ${tokenStatsRow}</div>
-      </div>
+      <div class="ov-snapshot-col">${cards.snapshot} ${tokenStatsRow}</div>
       <div class="overview-swapy">${cardOrder.map((slot) => cards[slot])}</div>
     </oc-overview-layout>
   `;

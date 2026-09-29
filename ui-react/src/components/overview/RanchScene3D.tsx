@@ -43,6 +43,73 @@ function getProcessingSubState(agentIdx: number): {
 }
 
 // ── 3D zone positions (x, z) mapped to visual status ──
+/**
+ * 天球日/月：按真实本地时间计算高度角与方位（东升西落）。
+ * 天体在世界坐标系中，旋转/环绕视角时太阳方向随观察方向一同变化。
+ */
+const SKY_R = 46;
+
+function skyBodyPosition(hour: number): {
+  sun: [number, number, number] | null;
+  moon: [number, number, number] | null;
+} {
+  const dayFrac = (hour - 6) / 12.7; // 06:00-18:42 白天
+  if (dayFrac >= 0 && dayFrac <= 1) {
+    const theta = Math.PI * dayFrac;
+    return {
+      sun: [SKY_R * Math.cos(theta) * 0.9, SKY_R * (0.18 + 0.82 * Math.sin(theta)), -SKY_R * 0.4],
+      moon: null,
+    };
+  }
+  const nightFrac = ((hour - 18.7 + 24) % 24) / 11.3; // 18:42-次日06:00
+  const theta = Math.PI * Math.min(1, Math.max(0, nightFrac));
+  return {
+    sun: null,
+    moon: [-SKY_R * Math.cos(theta) * 0.9, SKY_R * (0.18 + 0.82 * Math.sin(theta)), -SKY_R * 0.4],
+  };
+}
+
+function SkyBodies3D() {
+  const sunRef = useRef<THREE.Mesh>(null);
+  const moonRef = useRef<THREE.Mesh>(null);
+  const lastHourRef = useRef(-1);
+  useFrame(() => {
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+    if (Math.abs(hour - lastHourRef.current) < 1 / 60 && sunRef.current) return;
+    lastHourRef.current = hour;
+    const { sun, moon } = skyBodyPosition(hour);
+    if (sunRef.current) {
+      if (sun) {
+        sunRef.current.visible = true;
+        sunRef.current.position.set(...sun);
+      } else {
+        sunRef.current.visible = false;
+      }
+    }
+    if (moonRef.current) {
+      if (moon) {
+        moonRef.current.visible = true;
+        moonRef.current.position.set(...moon);
+      } else {
+        moonRef.current.visible = false;
+      }
+    }
+  });
+  return (
+    <>
+      <mesh ref={sunRef} visible={false}>
+        <sphereGeometry args={[3.2, 16, 16]} />
+        <meshBasicMaterial color="#ffd76e" fog={false} />
+      </mesh>
+      <mesh ref={moonRef} visible={false}>
+        <sphereGeometry args={[2.2, 16, 16]} />
+        <meshBasicMaterial color="#e6ecf8" fog={false} />
+      </mesh>
+    </>
+  );
+}
+
 const ZONE_3D: Record<RanchVisualStatus, [number, number]> = {
   thinking: [-3, -3], // Cerca del granero
   tool_calling: [6, -4], // Junto al molino
@@ -771,6 +838,7 @@ function SceneContent({
   const day = useRanchDayCycle(2000);
   return (
     <>
+      <SkyBodies3D />
       <ambientLight intensity={0.35 * day.lightLevel + 0.12} />
       <directionalLight
         position={[8, 12, 8]}
@@ -896,10 +964,7 @@ export function RanchScene3D({ agents, sessionActivity }: RanchScene3DProps) {
       </Canvas>
       {/* 天体 / 星空 / 色调 / 时钟（屏幕坐标，与 2D 一致） */}
       <div className="ranch-daycycle-overlay" aria-hidden>
-        <div
-          className={day.showSun ? "ranch-daycycle__sun" : "ranch-daycycle__moon"}
-          style={{ left: `${day.orbX * 100}%`, top: `${day.orbY * 100}%` }}
-        />
+        {/* 日/月已渲染为 3D 天体（SkyBodies3D），随视角旋转方向变化 */}
         {day.starAlpha > 0.02 &&
           DAYCYCLE_STARS.map(([sx, sy, delay], i) => (
             <span

@@ -281,16 +281,20 @@ export function TeamsView() {
     selection?.kind === "session" ? rows.find((row) => row.key === selection.key) : undefined;
   const hasLeadChildren = lead.children.length > 0;
   const columns = teammates.length + (hasLeadChildren ? 1 : 0);
-  const width = Math.max(760, Math.max(columns, 1) * COLUMN_W + 64);
+  // 自适应：画布宽度跟随视口，核心团队均匀铺满一行（成员数变化自动重排）
+  const width = Math.max(760, viewportWidth - 24);
   // 03 区行数：主 Agent 的 SubAgent 横向铺满一行后换行；成员 SubAgent 竖排
   const subRows = Math.max(
     1,
     Math.ceil(lead.children.length / Math.max(columns, 1)),
     ...teammates.map((member) => member.children.length),
   );
-  const height = 386 + subRows * 130 + 16;
-  const columnX = (index: number) =>
-    width / 2 - (columns * COLUMN_W) / 2 + index * COLUMN_W + (COLUMN_W - NODE_W) / 2;
+  const height = 396 + subRows * 130 + 36;
+  const columnX = (index: number) => {
+    if (columns <= 1) return (width - NODE_W) / 2;
+    const span = Math.max(width - 64 - NODE_W, 0);
+    return 32 + (index * span) / (columns - 1);
+  };
   const subCol = (index: number) => columnX(index % Math.max(columns, 1));
   const subRowOf = (index: number) => Math.floor(index / Math.max(columns, 1));
   const teammateX = (index: number) => columnX(index + (hasLeadChildren ? 1 : 0));
@@ -401,17 +405,16 @@ export function TeamsView() {
                     </defs>
                     {/* 主 Agent 的 SubAgent：从 01 主节点直接拉到 03 区（绕过 02） */}
                     {lead.children.map((child, index) => {
-                      const x = subCol(index) + NODE_W / 2;
-                      const y = 386 + subRowOf(index) * 130;
+                      const y = 396 + subRowOf(index) * 130;
+                      const midY = y + 50; // 进入 SubAgent 卡片左侧中部
                       const linked =
                         child.parentSessionKey === leadKey || child.spawnedBy === leadKey;
-                      // 肘形走线：主节点下方竖直下行 → 02 行卡片下方水平 → 落到 03 卡片
-                      const midY = 352;
+                      // 侧面走线：主卡左侧出 → 沿画布左缘空带竖直下行 → 横向进 SubAgent 左侧
                       return (
                         <path
                           key={child.key}
                           className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
-                          d={`M ${width / 2} 160 L ${width / 2} ${midY} L ${x} ${midY} L ${x} ${y}`}
+                          d={`M ${width / 2 - NODE_W / 2} 130 L 24 ${130} L 24 ${midY} L ${subCol(index)} ${midY}`}
                         />
                       );
                     })}
@@ -447,13 +450,12 @@ export function TeamsView() {
                     })}
                     {teammates.flatMap((member, index) =>
                       member.children.map((child, childIndex) => {
-                        const x = teammateX(index) + NODE_W / 2;
                         const linked = Boolean(child.parentSessionKey || child.spawnedBy);
                         return (
                           <path
                             key={child.key}
                             className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
-                            d={`M ${x} 340 L ${x} ${386 + childIndex * 130}`}
+                            d={`M ${teammateX(index)} 290 L ${teammateX(index) - 10} 290 L ${teammateX(index) - 10} ${396 + childIndex * 130 + 50} L ${teammateX(index)} ${396 + childIndex * 130 + 50}`}
                           />
                         );
                       }),
@@ -489,7 +491,7 @@ export function TeamsView() {
                     <div
                       className="team-flow__position"
                       key={child.key}
-                      style={{ left: subCol(index), top: 386 + subRowOf(index) * 130 }}
+                      style={{ left: subCol(index), top: 396 + subRowOf(index) * 130 }}
                     >
                       <NodeCard
                         title={sessionName(child)}
@@ -523,7 +525,7 @@ export function TeamsView() {
                         <div
                           className="team-flow__position"
                           key={child.key}
-                          style={{ left: teammateX(index), top: 386 + childIndex * 130 }}
+                          style={{ left: teammateX(index), top: 396 + childIndex * 130 }}
                         >
                           <NodeCard
                             title={sessionName(child)}
