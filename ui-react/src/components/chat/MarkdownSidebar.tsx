@@ -1,5 +1,5 @@
 import React from "react";
-import { toSanitizedMarkdownHtml } from "../../lib/markdown.ts";
+import { toSanitizedMarkdownHtml } from "../../lib/util/markdown.ts";
 
 type MarkdownSidebarProps = {
   content: string | null;

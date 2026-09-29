@@ -1,3 +1,28 @@
+import { loadAgentIdentities, loadAgentIdentity } from "../controllers/agent-identity.ts";
+import { loadAgentSkills } from "../controllers/agent-skills.ts";
+import { loadAgents, loadToolsCatalog } from "../controllers/agents.ts";
+import { loadChannelPairings } from "../controllers/channel-pairing.ts";
+import { loadChannels } from "../controllers/channels.ts";
+import { loadConfig, loadConfigSchema } from "../controllers/config.ts";
+import {
+  loadCronJobs,
+  loadCronModelSuggestions,
+  loadCronRuns,
+  loadCronStatus,
+} from "../controllers/cron.ts";
+import { loadDebug } from "../controllers/debug.ts";
+import { loadDevices } from "../controllers/devices.ts";
+import { loadExecApprovals } from "../controllers/exec-approvals.ts";
+import { loadLogs } from "../controllers/logs.ts";
+import { loadNodes } from "../controllers/nodes.ts";
+import { loadPresence } from "../controllers/presence.ts";
+import { loadSessions, loadSessionActivity } from "../controllers/sessions.ts";
+import { loadSkills } from "../controllers/skills.ts";
+import { loadUsage } from "../controllers/usage.ts";
+import { startThemeTransition, type ThemeTransitionContext } from "../theme/theme-transition.ts";
+import { resolveTheme, type ResolvedTheme, type ThemeMode } from "../theme/theme.ts";
+import type { AgentsListResult } from "../types/types.ts";
+import { saveSettings, type UiSettings } from "../util/storage.ts";
 import { refreshChat } from "./app-chat.ts";
 import {
   startLogsPolling,
@@ -9,27 +34,6 @@ import {
 } from "./app-polling.ts";
 import { scheduleChatScroll, scheduleLogsScroll } from "./app-scroll.ts";
 import type { OpenClawApp } from "./app.ts";
-import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
-import { loadAgentSkills } from "./controllers/agent-skills.ts";
-import { loadAgents, loadToolsCatalog } from "./controllers/agents.ts";
-import { loadChannelPairings } from "./controllers/channel-pairing.ts";
-import { loadChannels } from "./controllers/channels.ts";
-import { loadConfig, loadConfigSchema } from "./controllers/config.ts";
-import {
-  loadCronJobs,
-  loadCronModelSuggestions,
-  loadCronRuns,
-  loadCronStatus,
-} from "./controllers/cron.ts";
-import { loadDebug } from "./controllers/debug.ts";
-import { loadDevices } from "./controllers/devices.ts";
-import { loadExecApprovals } from "./controllers/exec-approvals.ts";
-import { loadLogs } from "./controllers/logs.ts";
-import { loadNodes } from "./controllers/nodes.ts";
-import { loadPresence } from "./controllers/presence.ts";
-import { loadSessions, loadSessionActivity } from "./controllers/sessions.ts";
-import { loadSkills } from "./controllers/skills.ts";
-import { loadUsage } from "./controllers/usage.ts";
 import {
   inferBasePathFromPathname,
   normalizeBasePath,
@@ -38,10 +42,6 @@ import {
   tabFromPath,
   type Tab,
 } from "./navigation.ts";
-import { saveSettings, type UiSettings } from "./storage.ts";
-import { startThemeTransition, type ThemeTransitionContext } from "./theme-transition.ts";
-import { resolveTheme, type ResolvedTheme, type ThemeMode } from "./theme.ts";
-import type { AgentsListResult } from "./types.ts";
 
 type SettingsHost = {
   settings: UiSettings;
@@ -444,11 +444,11 @@ export async function loadOverview(host: SettingsHost) {
 }
 
 async function loadOverviewUsageCost(state: {
-  client: import("./gateway.ts").GatewayBrowserClient | null;
+  client: import("../gateway/gateway.ts").GatewayBrowserClient | null;
   connected: boolean;
-  overviewCostDaily: import("./types.ts").CostUsageSummary | null;
-  overviewUsageResult: import("./types.ts").SessionsUsageResult | null;
-  overviewWeekUsageResult: import("./types.ts").SessionsUsageResult | null;
+  overviewCostDaily: import("../types/types.ts").CostUsageSummary | null;
+  overviewUsageResult: import("../types/types.ts").SessionsUsageResult | null;
+  overviewWeekUsageResult: import("../types/types.ts").SessionsUsageResult | null;
 }) {
   if (!state.client || !state.connected) {
     return;
@@ -495,10 +495,10 @@ async function loadOverviewUsageCost(state: {
     const [weekRes, dayRes, allRes] = responses;
     // All-time totals
     const allTimeTotals = allRes
-      ? (allRes as import("./types.ts").SessionsUsageResult).totals
+      ? (allRes as import("../types/types.ts").SessionsUsageResult).totals
       : undefined;
     if (weekRes) {
-      const result = weekRes as import("./types.ts").SessionsUsageResult;
+      const result = weekRes as import("../types/types.ts").SessionsUsageResult;
       const apiDaily = result.aggregates?.daily ?? [];
       const dailyMap = new Map(apiDaily.map((d) => [d.date, d]));
       // Build full 7-day array, filling missing dates with 0
@@ -517,11 +517,11 @@ async function loadOverviewUsageCost(state: {
         days: 7,
         daily: fullDaily,
         totals: allTimeTotals ?? result.totals,
-      } as import("./types.ts").CostUsageSummary;
+      } as import("../types/types.ts").CostUsageSummary;
       state.overviewWeekUsageResult = result;
     }
     if (dayRes) {
-      state.overviewUsageResult = dayRes as import("./types.ts").SessionsUsageResult;
+      state.overviewUsageResult = dayRes as import("../types/types.ts").SessionsUsageResult;
     }
   } catch (err) {
     console.warn("[overview] sessions.usage failed", err);

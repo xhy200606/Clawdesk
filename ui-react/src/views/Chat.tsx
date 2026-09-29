@@ -10,19 +10,19 @@ import { ContextUsage } from "../components/chat/ContextUsage.tsx";
 import { MarkdownSidebar } from "../components/chat/MarkdownSidebar.tsx";
 import { Queue, QueueSection, QueueList, QueueItem } from "../components/chat/Queue.tsx";
 import { t } from "../i18n/index.ts";
-import { handleSendChat, refreshChat, type ChatHost } from "../lib/app-chat.ts";
-import { resolveAssistantAvatarUrl } from "../lib/app-render.ts";
-import { handleChatScroll } from "../lib/app-scroll.ts";
+import { handleSendChat, refreshChat, type ChatHost } from "../lib/app/app-chat.ts";
+import { resolveAssistantAvatarUrl } from "../lib/app/app-render.ts";
+import { handleChatScroll } from "../lib/app/app-scroll.ts";
 import { highlightCodeBlocks } from "../lib/chat/code-highlight.ts";
 import { normalizeMessage } from "../lib/chat/message-normalizer.ts";
 import { normalizeRoleForGrouping } from "../lib/chat/message-normalizer.ts";
 import { abortChatRun, loadChatHistory, type ChatState } from "../lib/controllers/chat.ts";
 import { loadConfig } from "../lib/controllers/config.ts";
 import { loadSessions, patchSession } from "../lib/controllers/sessions.ts";
-import { detectTextDirection } from "../lib/text-direction.ts";
+import { detectTextDirection } from "../lib/theme/text-direction.ts";
+import { getUserProfile } from "../lib/theme/user-profile.ts";
 import type { ChatItem, MessageGroup } from "../lib/types/chat-types.ts";
-import type { ChatAttachment } from "../lib/ui-types.ts";
-import { getUserProfile } from "../lib/user-profile.ts";
+import type { ChatAttachment } from "../lib/types/ui-types.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 const CloseIcon = () => (

@@ -3,7 +3,7 @@ import type {
   CostUsageSummary,
   SessionsUsageResult,
   SessionUsageTimeSeries,
-} from "../../lib/types.ts";
+} from "../../lib/types/types.ts";
 import { getReactiveState } from "../../store/appStore.ts";
 import { DragHandle } from "./AccessCard.tsx";
 

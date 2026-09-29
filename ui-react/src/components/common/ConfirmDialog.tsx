@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { t } from "../i18n/index.ts";
+import { t } from "../../i18n/index.ts";
 
 interface ConfirmDialogProps {
   open: boolean;

@@ -3,7 +3,7 @@ import {
   buildUsageAggregateTail,
   mergeUsageDailyLatency,
   mergeUsageLatency,
-} from "../../../client-core/shared/usage-aggregates.js";
+} from "../../../client-core/shared/usage-aggregates.ts";
 import { t } from "../../i18n/index.ts";
 import { UsageSessionEntry, UsageTotals, UsageAggregates } from "./usageTypes.ts";
 

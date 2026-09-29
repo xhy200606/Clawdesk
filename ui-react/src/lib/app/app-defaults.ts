@@ -1,5 +1,5 @@
-import type { LogLevel } from "./types.ts";
-import type { CronFormState } from "./ui-types.ts";
+import type { LogLevel } from "../types/types.ts";
+import type { CronFormState } from "../types/ui-types.ts";
 
 export const DEFAULT_LOG_LEVEL_FILTERS: Record<LogLevel, boolean> = {
   trace: true,

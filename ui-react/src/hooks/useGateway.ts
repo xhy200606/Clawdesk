@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
-import { flushChatQueueForEvent, CHAT_SESSIONS_ACTIVE_MINUTES } from "../lib/app-chat.ts";
-import { refreshActiveTab, setLastActiveSessionKey } from "../lib/app-settings.ts";
+import { flushChatQueueForEvent, CHAT_SESSIONS_ACTIVE_MINUTES } from "../lib/app/app-chat.ts";
+import { refreshActiveTab, setLastActiveSessionKey } from "../lib/app/app-settings.ts";
 import {
   handleAgentEvent,
   resetToolStream,
   type AgentEventPayload,
-} from "../lib/app-tool-stream.ts";
-import { shouldReloadHistoryForFinalEvent } from "../lib/chat-event-reload.ts";
+} from "../lib/app/app-tool-stream.ts";
+import { shouldReloadHistoryForFinalEvent } from "../lib/app/chat-event-reload.ts";
+import { applyAgentRunEvent } from "../lib/app/orchestration-traces.ts";
 import { loadAgents, loadToolsCatalog } from "../lib/controllers/agents.ts";
 import { loadAssistantIdentity } from "../lib/controllers/assistant-identity.ts";
 import {
@@ -29,9 +30,8 @@ import {
   resolveGatewayErrorDetailCode,
   type GatewayEventFrame,
   type GatewayHelloOk,
-} from "../lib/gateway.ts";
-import { applyAgentRunEvent } from "../lib/orchestration-traces.ts";
-import { generateUUID } from "../lib/uuid.ts";
+} from "../lib/gateway/gateway.ts";
+import { generateUUID } from "../lib/util/uuid.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 /** Gateway WebSocket hook — connects on mount, cleans up on unmount */

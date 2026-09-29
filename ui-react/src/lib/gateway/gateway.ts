@@ -1,3 +1,4 @@
+import { generateUUID } from "../util/uuid.ts";
 import { clearDeviceAuthToken, loadDeviceAuthToken, storeDeviceAuthToken } from "./device-auth.ts";
 import { loadOrCreateDeviceIdentity, signDevicePayload } from "./device-identity.ts";
 import { buildDeviceAuthPayload } from "./gateway-protocol.ts";
@@ -8,7 +9,6 @@ import {
   type GatewayClientName,
 } from "./gateway-protocol.ts";
 import { readConnectErrorDetailCode } from "./gateway-protocol.ts";
-import { generateUUID } from "./uuid.ts";
 
 export type GatewayEventFrame = {
   type: "event";

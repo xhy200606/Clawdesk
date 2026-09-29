@@ -1,7 +1,7 @@
 import React, { useCallback, useRef } from "react";
 import { t } from "../i18n/index.ts";
 import { loadLogs } from "../lib/controllers/logs.ts";
-import type { LogEntry, LogLevel } from "../lib/types.ts";
+import type { LogEntry, LogLevel } from "../lib/types/types.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 const LEVELS: LogLevel[] = ["trace", "debug", "info", "warn", "error", "fatal"];

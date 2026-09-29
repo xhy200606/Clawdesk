@@ -1,4 +1,4 @@
-export type { UpdateAvailable } from "./gateway-protocol.ts";
+export type { UpdateAvailable } from "../gateway/gateway-protocol.ts";
 
 export type ChannelsStatusSnapshot = {
   ts: number;

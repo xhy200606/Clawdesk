@@ -1,8 +1,8 @@
 import React, { useCallback } from "react";
 import { t } from "../i18n/index.ts";
 import { loadPresence } from "../lib/controllers/presence.ts";
-import { formatPresenceAge, formatPresenceSummary } from "../lib/presenter.ts";
-import type { PresenceEntry } from "../lib/types.ts";
+import type { PresenceEntry } from "../lib/types/types.ts";
+import { formatPresenceAge, formatPresenceSummary } from "../lib/views/presenter.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 export function InstancesView() {

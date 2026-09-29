@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useEffect } from "react";
 import { t } from "../../i18n/index.ts";
-import { extractQueryTerms, filterSessionsByQuery } from "../../lib/usage-helpers.ts";
+import { extractQueryTerms, filterSessionsByQuery } from "../../lib/views/usage-helpers.ts";
 import { formatCost, formatIsoDate, formatTokens } from "../../lib/views/usage-metrics.ts";
 import {
   addQueryToken,

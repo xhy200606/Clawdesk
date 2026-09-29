@@ -1,5 +1,5 @@
 import React from "react";
-import { resolveToolDisplay } from "../../lib/tool-display.ts";
+import { resolveToolDisplay } from "../../lib/chat/tool-display.ts";
 import type { ToolCard as ToolCardType } from "../../lib/types/chat-types.ts";
 
 // ─── Helpers ─────────────────────────────────────────────────

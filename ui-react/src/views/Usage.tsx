@@ -7,7 +7,7 @@ import { UsageSessionDetail } from "../components/usage/UsageSessionDetail.tsx";
 import { UsageSessionList } from "../components/usage/UsageSessionList.tsx";
 import { useUsageStore } from "../components/usage/useUsageStore.ts";
 import { t } from "../i18n/index.ts";
-import { extractQueryTerms, filterSessionsByQuery } from "../lib/usage-helpers.ts";
+import { extractQueryTerms, filterSessionsByQuery } from "../lib/views/usage-helpers.ts";
 import {
   buildAggregatesFromSessions,
   getZonedHour,

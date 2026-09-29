@@ -1,14 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Dropdown, MultiDropdown } from "../components/common/Dropdown.tsx";
-import { LitBridge } from "../components/LitBridge.tsx";
+import { LitBridge } from "../components/common/LitBridge.tsx";
 import { t } from "../i18n/index.ts";
-import {
-  readAgentConfigEntries,
-  setAgentEntryValue,
-  removeAgentEntryValue,
-} from "../lib/agents-config.ts";
-import { loadCron } from "../lib/app-settings.ts";
+import { loadCron } from "../lib/app/app-settings.ts";
 import {
   loadAgentFiles,
   loadAgentFileContent,
@@ -25,6 +20,11 @@ import {
   updateConfigFormValue,
   removeConfigFormValue,
 } from "../lib/controllers/config.ts";
+import {
+  readAgentConfigEntries,
+  setAgentEntryValue,
+  removeAgentEntryValue,
+} from "../lib/views/agents-config.ts";
 import {
   resolveGroupedModels,
   resolveAgentConfig,

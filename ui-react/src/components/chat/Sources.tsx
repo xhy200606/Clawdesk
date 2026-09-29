@@ -1,6 +1,6 @@
 import React from "react";
 import { t } from "../../i18n/index.ts";
-import { openExternalUrlSafe } from "../../lib/open-external-url.ts";
+import { openExternalUrlSafe } from "../../lib/util/open-external-url.ts";
 
 // ─── Types ───────────────────────────────────────────────────
 

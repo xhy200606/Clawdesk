@@ -1,8 +1,8 @@
 const KEY = "openclaw.control.settings.v1";
 
-import { isSupportedLocale } from "../i18n/index.ts";
-import { inferBasePathFromPathname, normalizeBasePath } from "./navigation.ts";
-import type { ThemeMode } from "./theme.ts";
+import { isSupportedLocale } from "../../i18n/index.ts";
+import { inferBasePathFromPathname, normalizeBasePath } from "../app/navigation.ts";
+import type { ThemeMode } from "../theme/theme.ts";
 
 /** 可用主题色（与 base.css 中 data-accent 色板一一对应） */
 export const ACCENT_IDS = [

@@ -1,4 +1,4 @@
-import { ConnectErrorDetailCodes } from "../gateway-protocol.ts";
+import { ConnectErrorDetailCodes } from "../gateway/gateway-protocol.ts";
 
 /** Whether the overview should show device-pairing guidance for this error. */
 export function shouldShowPairingHint(

@@ -4,7 +4,7 @@
  * Tile-based map with trees, paths, barn, pond, fence, and cow-horse agents.
  */
 import { html, nothing } from "lit";
-import type { GatewayAgentRow, SessionActivityResult } from "../types.ts";
+import type { GatewayAgentRow, SessionActivityResult } from "../types/types.ts";
 
 // ─── Pixel Art SVG Helpers ──────────────────────────────────────────
 

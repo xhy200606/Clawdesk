@@ -1,5 +1,5 @@
 import { t } from "../../i18n/index.ts";
-import type { GatewayBrowserClient } from "../gateway.ts";
+import type { GatewayBrowserClient } from "../gateway/gateway.ts";
 
 export type ClawhubState = {
   client: GatewayBrowserClient | null;

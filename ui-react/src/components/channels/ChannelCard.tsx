@@ -1,7 +1,7 @@
 import React from "react";
 import { t } from "../../i18n/index.ts";
-import { formatRelativeTimestamp } from "../../lib/format.ts";
-import type { ChannelAccountSnapshot } from "../../lib/types.ts";
+import type { ChannelAccountSnapshot } from "../../lib/types/types.ts";
+import { formatRelativeTimestamp } from "../../lib/util/format.ts";
 
 // ─── Types ───────────────────────────────────────────────────
 

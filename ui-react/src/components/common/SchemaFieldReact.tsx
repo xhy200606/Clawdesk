@@ -4,15 +4,15 @@
  * string, number, boolean, enum, object, array, anyOf/oneOf, additionalProperties.
  */
 import React, { useState, useCallback } from "react";
-import { t } from "../i18n/index.ts";
-import type { ConfigUiHints } from "../lib/types.ts";
+import { t } from "../../i18n/index.ts";
+import type { ConfigUiHints } from "../../lib/types/types.ts";
 import {
   schemaType,
   hintForPath,
   humanize,
   defaultValue,
   type JsonSchema,
-} from "../lib/views/config-form.shared.ts";
+} from "../../lib/views/config-form.shared.ts";
 
 // ── SVG Icons (Lucide-style) ──
 export const SchemaIcons = {

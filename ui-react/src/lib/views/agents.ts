@@ -1,6 +1,6 @@
 import { html, nothing } from "lit";
 import { t } from "../../i18n/index.ts";
-import type { ConfigUiHints } from "../types.ts";
+import type { ConfigUiHints } from "../types/types.ts";
 import type {
   AgentIdentityResult,
   AgentsFilesListResult,
@@ -10,7 +10,7 @@ import type {
   CronStatus,
   SkillStatusReport,
   ToolsCatalogResult,
-} from "../types.ts";
+} from "../types/types.ts";
 import {
   renderAgentFiles,
   renderAgentChannels,
@@ -112,7 +112,7 @@ export type AgentsProps = {
   configForm: Record<string, unknown> | null;
   configSchema: unknown;
   configSchemaLoading: boolean;
-  configUiHints: import("../types.ts").ConfigUiHints;
+  configUiHints: import("../types/types.ts").ConfigUiHints;
   configLoading: boolean;
   configSaving: boolean;
   configDirty: boolean;

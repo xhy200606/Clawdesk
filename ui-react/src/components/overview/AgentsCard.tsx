@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { formatRelativeTimestamp } from "../../lib/format.ts";
-import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
+import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types/types.ts";
+import { formatRelativeTimestamp } from "../../lib/util/format.ts";
 import { AgentAnimal } from "./AgentAnimal.tsx";
 import { AgentEditDialog } from "./AgentEditDialog.tsx";
 import { OverviewIcons } from "./SnapshotCard.tsx";

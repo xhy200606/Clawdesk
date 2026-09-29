@@ -1,7 +1,7 @@
 import { html, nothing } from "lit";
 import { t } from "../../i18n/index.ts";
-import type { EventLogEntry } from "../app-events.ts";
-import { formatEventPayload } from "../presenter.ts";
+import type { EventLogEntry } from "../app/app-events.ts";
+import { formatEventPayload } from "./presenter.ts";
 
 export type DebugProps = {
   loading: boolean;

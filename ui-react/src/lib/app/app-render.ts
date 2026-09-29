@@ -1,25 +1,19 @@
 import { html, nothing } from "lit";
-import { parseAgentSessionKey } from "../../client-core/routing/session-key.js";
-import { t } from "../i18n/index.ts";
-import { refreshChatAvatar } from "./app-chat.ts";
-import { renderUsageTab } from "./app-render-usage-tab.ts";
-import { renderChatControls, renderTab, renderThemeToggle } from "./app-render.helpers.ts";
-import { resolveSessionDisplayName, isCronSessionKey } from "./app-render.helpers.ts";
-import { syncUrlWithSessionKey } from "./app-settings.ts";
-import type { AppViewState } from "./app-view-state.ts";
-import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
-import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
-import { loadAgentSkills } from "./controllers/agent-skills.ts";
-import { loadAgents, loadToolsCatalog } from "./controllers/agents.ts";
-import { approveChannelPairing, loadChannelPairings } from "./controllers/channel-pairing.ts";
-import { loadChannels } from "./controllers/channels.ts";
-import { ChatState, loadChatHistory } from "./controllers/chat.ts";
+import { parseAgentSessionKey } from "../../../client-core/routing/session-key.ts";
+import { t } from "../../i18n/index.ts";
+import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "../controllers/agent-files.ts";
+import { loadAgentIdentities, loadAgentIdentity } from "../controllers/agent-identity.ts";
+import { loadAgentSkills } from "../controllers/agent-skills.ts";
+import { loadAgents, loadToolsCatalog } from "../controllers/agents.ts";
+import { approveChannelPairing, loadChannelPairings } from "../controllers/channel-pairing.ts";
+import { loadChannels } from "../controllers/channels.ts";
+import { ChatState, loadChatHistory } from "../controllers/chat.ts";
 import {
   installClawhubSkill,
   loadClawhubToken,
   saveClawhubToken,
   searchClawhub,
-} from "./controllers/clawhub.ts";
+} from "../controllers/clawhub.ts";
 import {
   applyConfig,
   loadConfig,
@@ -28,7 +22,7 @@ import {
   saveConfig,
   updateConfigFormValue,
   removeConfigFormValue,
-} from "./controllers/config.ts";
+} from "../controllers/config.ts";
 import {
   loadCronRuns,
   loadMoreCronJobs,
@@ -47,57 +41,63 @@ import {
   getVisibleCronJobs,
   updateCronJobsFilter,
   updateCronRunsFilter,
-} from "./controllers/cron.ts";
-import { loadDebug, callDebugMethod } from "./controllers/debug.ts";
+} from "../controllers/cron.ts";
+import { loadDebug, callDebugMethod } from "../controllers/debug.ts";
 import {
   approveDevicePairing,
   loadDevices,
   rejectDevicePairing,
   revokeDeviceToken,
   rotateDeviceToken,
-} from "./controllers/devices.ts";
+} from "../controllers/devices.ts";
 import {
   loadExecApprovals,
   removeExecApprovalsFormValue,
   saveExecApprovals,
   updateExecApprovalsFormValue,
-} from "./controllers/exec-approvals.ts";
-import { loadLogs } from "./controllers/logs.ts";
-import { loadNodes } from "./controllers/nodes.ts";
-import { loadPresence } from "./controllers/presence.ts";
-import { deleteSessionAndRefresh, loadSessions, patchSession } from "./controllers/sessions.ts";
+} from "../controllers/exec-approvals.ts";
+import { loadLogs } from "../controllers/logs.ts";
+import { loadNodes } from "../controllers/nodes.ts";
+import { loadPresence } from "../controllers/presence.ts";
+import { deleteSessionAndRefresh, loadSessions, patchSession } from "../controllers/sessions.ts";
 import {
   installSkill,
   loadSkills,
   saveSkillApiKey,
   updateSkillEdit,
   updateSkillEnabled,
-} from "./controllers/skills.ts";
-import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "./external-link.ts";
-import { translateError } from "./helpers/translate-error.ts";
-import { icons } from "./icons.ts";
+} from "../controllers/skills.ts";
+import { translateError } from "../helpers/translate-error.ts";
+import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../util/external-link.ts";
+import { icons } from "../util/icons.ts";
+import { resolveConfiguredCronModelSuggestions } from "../views/agents-utils.ts";
+import { renderAgents, type AgentsPanel } from "../views/agents.ts";
+import { renderChannelsQuickAdd } from "../views/channels-quick-add.ts";
+import { renderChannels } from "../views/channels.ts";
+import { renderChat } from "../views/chat.ts";
+import { renderClawhubMarket, type ClawhubSkill } from "../views/clawhub-market.ts";
+import { renderConfig } from "../views/config.ts";
+import { renderCron } from "../views/cron.ts";
+import { renderDebug } from "../views/debug.ts";
+import { renderExecApprovalPrompt } from "../views/exec-approval.ts";
+import { renderGatewayUrlConfirmation } from "../views/gateway-url-confirmation.ts";
+import { renderInstances } from "../views/instances.ts";
+import { renderLogs } from "../views/logs.ts";
+import { renderModelsQuickAdd, PROVIDER_PRESETS } from "../views/models-quick-add.ts";
+import { renderNodes, renderChannelPairings } from "../views/nodes.ts";
+import { renderOverview } from "../views/overview.ts";
+import { renderSessions } from "../views/sessions.ts";
+import { renderSetupWizard } from "../views/setup-wizard.ts";
+import { renderSkills } from "../views/skills.ts";
+import "../views/models-default-config.ts";
+import { refreshChatAvatar } from "./app-chat.ts";
+import { renderUsageTab } from "./app-render-usage-tab.ts";
+import { renderChatControls, renderTab, renderThemeToggle } from "./app-render.helpers.ts";
+import "../views/overview-swapy.ts";
+import { resolveSessionDisplayName, isCronSessionKey } from "./app-render.helpers.ts";
+import { syncUrlWithSessionKey } from "./app-settings.ts";
+import type { AppViewState } from "./app-view-state.ts";
 import { normalizeBasePath, TAB_GROUPS, subtitleForTab, titleForTab } from "./navigation.ts";
-import { resolveConfiguredCronModelSuggestions } from "./views/agents-utils.ts";
-import { renderAgents, type AgentsPanel } from "./views/agents.ts";
-import { renderChannelsQuickAdd } from "./views/channels-quick-add.ts";
-import { renderChannels } from "./views/channels.ts";
-import { renderChat } from "./views/chat.ts";
-import { renderClawhubMarket, type ClawhubSkill } from "./views/clawhub-market.ts";
-import { renderConfig } from "./views/config.ts";
-import { renderCron } from "./views/cron.ts";
-import { renderDebug } from "./views/debug.ts";
-import { renderExecApprovalPrompt } from "./views/exec-approval.ts";
-import { renderGatewayUrlConfirmation } from "./views/gateway-url-confirmation.ts";
-import { renderInstances } from "./views/instances.ts";
-import "./views/models-default-config.ts";
-import { renderLogs } from "./views/logs.ts";
-import { renderModelsQuickAdd, PROVIDER_PRESETS } from "./views/models-quick-add.ts";
-import { renderNodes, renderChannelPairings } from "./views/nodes.ts";
-import "./views/overview-swapy.ts";
-import { renderOverview } from "./views/overview.ts";
-import { renderSessions } from "./views/sessions.ts";
-import { renderSetupWizard } from "./views/setup-wizard.ts";
-import { renderSkills } from "./views/skills.ts";
 
 const AVATAR_DATA_RE = /^data:/i;
 const AVATAR_HTTP_RE = /^https?:\/\//i;

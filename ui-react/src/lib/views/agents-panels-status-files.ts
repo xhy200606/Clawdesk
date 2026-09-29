@@ -1,12 +1,5 @@
 import { html, nothing } from "lit";
 import { t } from "../../i18n/index.ts";
-import { formatRelativeTimestamp } from "../format.ts";
-import {
-  formatCronPayload,
-  formatCronSchedule,
-  formatCronState,
-  formatNextRun,
-} from "../presenter.ts";
 import type {
   AgentFileEntry,
   AgentsFilesListResult,
@@ -14,8 +7,15 @@ import type {
   ChannelsStatusSnapshot,
   CronJob,
   CronStatus,
-} from "../types.ts";
+} from "../types/types.ts";
+import { formatRelativeTimestamp } from "../util/format.ts";
 import { formatBytes, type AgentContext } from "./agents-utils.ts";
+import {
+  formatCronPayload,
+  formatCronSchedule,
+  formatCronState,
+  formatNextRun,
+} from "./presenter.ts";
 
 function renderAgentContextCard(context: AgentContext, subtitle: string) {
   return html`

@@ -1,6 +1,6 @@
 import { html, nothing } from "lit";
 import { t } from "../../i18n/index.ts";
-import { extractQueryTerms, filterSessionsByQuery } from "../usage-helpers.ts";
+import { extractQueryTerms, filterSessionsByQuery } from "./usage-helpers.ts";
 import {
   buildAggregatesFromSessions,
   buildPeakErrorHours,

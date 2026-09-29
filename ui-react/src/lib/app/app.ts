@@ -1,6 +1,39 @@
 import { LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { i18n, I18nController, isSupportedLocale } from "../i18n/index.ts";
+import { i18n, I18nController, isSupportedLocale } from "../../i18n/index.ts";
+import { loadAssistantIdentity as loadAssistantIdentityInternal } from "../controllers/assistant-identity.ts";
+import type { CronFieldErrors } from "../controllers/cron.ts";
+import type { DevicePairingList } from "../controllers/devices.ts";
+import type { ExecApprovalRequest } from "../controllers/exec-approval.ts";
+import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "../controllers/exec-approvals.ts";
+import type { SkillMessage } from "../controllers/skills.ts";
+import type { GatewayBrowserClient, GatewayHelloOk } from "../gateway/gateway.ts";
+import type { ResolvedTheme, ThemeMode } from "../theme/theme.ts";
+import type {
+  AgentsListResult,
+  AgentsFilesListResult,
+  AgentIdentityResult,
+  ConfigSnapshot,
+  ConfigUiHints,
+  CronJob,
+  CronRunLogEntry,
+  CronStatus,
+  HealthSnapshot,
+  LogEntry,
+  LogLevel,
+  PresenceEntry,
+  ChannelsStatusSnapshot,
+  SessionsListResult,
+  SkillStatusReport,
+  ToolsCatalogResult,
+  StatusSummary,
+  NostrProfile,
+} from "../types/types.ts";
+import { type ChatAttachment, type ChatQueueItem, type CronFormState } from "../types/ui-types.ts";
+import { loadSettings, type UiSettings } from "../util/storage.ts";
+import { generateUUID } from "../util/uuid.ts";
+import { normalizeAssistantIdentity } from "../views/assistant-identity.ts";
+import type { NostrProfileFormState } from "../views/channels.nostr-profile-form.ts";
 import {
   handleChannelConfigReload as handleChannelConfigReloadInternal,
   handleChannelConfigSave as handleChannelConfigSaveInternal,
@@ -51,40 +84,7 @@ import {
   type FallbackStatus,
 } from "./app-tool-stream.ts";
 import type { AppViewState } from "./app-view-state.ts";
-import { normalizeAssistantIdentity } from "./assistant-identity.ts";
-import { loadAssistantIdentity as loadAssistantIdentityInternal } from "./controllers/assistant-identity.ts";
-import type { CronFieldErrors } from "./controllers/cron.ts";
-import type { DevicePairingList } from "./controllers/devices.ts";
-import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
-import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
-import type { SkillMessage } from "./controllers/skills.ts";
-import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
 import type { Tab } from "./navigation.ts";
-import { loadSettings, type UiSettings } from "./storage.ts";
-import type { ResolvedTheme, ThemeMode } from "./theme.ts";
-import type {
-  AgentsListResult,
-  AgentsFilesListResult,
-  AgentIdentityResult,
-  ConfigSnapshot,
-  ConfigUiHints,
-  CronJob,
-  CronRunLogEntry,
-  CronStatus,
-  HealthSnapshot,
-  LogEntry,
-  LogLevel,
-  PresenceEntry,
-  ChannelsStatusSnapshot,
-  SessionsListResult,
-  SkillStatusReport,
-  ToolsCatalogResult,
-  StatusSummary,
-  NostrProfile,
-} from "./types.ts";
-import { type ChatAttachment, type ChatQueueItem, type CronFormState } from "./ui-types.ts";
-import { generateUUID } from "./uuid.ts";
-import type { NostrProfileFormState } from "./views/channels.nostr-profile-form.ts";
 
 declare global {
   interface Window {
@@ -264,7 +264,7 @@ export class OpenClawApp extends LitElement {
   @state() presenceStatus: string | null = null;
 
   @state() channelPairingsLoading = false;
-  @state() channelPairings: import("./controllers/channel-pairing.ts").ChannelPairingGroup[] = [];
+  @state() channelPairings: import("../controllers/channel-pairing.ts").ChannelPairingGroup[] = [];
   @state() channelPairingsError: string | null = null;
 
   @state() agentsLoading = false;
@@ -301,10 +301,10 @@ export class OpenClawApp extends LitElement {
   @state() sessionsLoading = false;
   @state() sessionsResult: SessionsListResult | null = null;
   @state() sessionsError: string | null = null;
-  @state() sessionActivity: import("./types.js").SessionActivityResult | null = null;
-  @state() overviewCostDaily: import("./types.js").CostUsageSummary | null = null;
-  @state() overviewUsageResult: import("./types.js").SessionsUsageResult | null = null;
-  @state() overviewWeekUsageResult: import("./types.js").SessionsUsageResult | null = null;
+  @state() sessionActivity: import("../types/types.ts").SessionActivityResult | null = null;
+  @state() overviewCostDaily: import("../types/types.ts").CostUsageSummary | null = null;
+  @state() overviewUsageResult: import("../types/types.ts").SessionsUsageResult | null = null;
+  @state() overviewWeekUsageResult: import("../types/types.ts").SessionsUsageResult | null = null;
   @state() sessionsFilterActive = "";
   @state() sessionsFilterLimit = "120";
   @state() sessionsIncludeGlobal = true;
@@ -312,8 +312,8 @@ export class OpenClawApp extends LitElement {
   @state() sessionsHideCron = true;
 
   @state() usageLoading = false;
-  @state() usageResult: import("./types.js").SessionsUsageResult | null = null;
-  @state() usageCostSummary: import("./types.js").CostUsageSummary | null = null;
+  @state() usageResult: import("../types/types.ts").SessionsUsageResult | null = null;
+  @state() usageCostSummary: import("../types/types.ts").CostUsageSummary | null = null;
   @state() usageError: string | null = null;
   @state() usageStartDate = (() => {
     const d = new Date();
@@ -330,11 +330,11 @@ export class OpenClawApp extends LitElement {
   @state() usageDailyChartMode: "total" | "by-type" = "by-type";
   @state() usageTimeSeriesMode: "cumulative" | "per-turn" = "per-turn";
   @state() usageTimeSeriesBreakdownMode: "total" | "by-type" = "by-type";
-  @state() usageTimeSeries: import("./types.js").SessionUsageTimeSeries | null = null;
+  @state() usageTimeSeries: import("../types/types.ts").SessionUsageTimeSeries | null = null;
   @state() usageTimeSeriesLoading = false;
   @state() usageTimeSeriesCursorStart: number | null = null;
   @state() usageTimeSeriesCursorEnd: number | null = null;
-  @state() usageSessionLogs: import("./views/usage.js").SessionLogEntry[] | null = null;
+  @state() usageSessionLogs: import("../views/usage.ts").SessionLogEntry[] | null = null;
   @state() usageSessionLogsLoading = false;
   @state() usageSessionLogsExpanded = false;
   // Applied query (used to filter the already-loaded sessions list client-side).
@@ -358,7 +358,7 @@ export class OpenClawApp extends LitElement {
     "errors",
     "duration",
   ];
-  @state() usageLogFilterRoles: import("./views/usage.js").SessionLogRole[] = [];
+  @state() usageLogFilterRoles: import("../views/usage.ts").SessionLogRole[] = [];
   @state() usageLogFilterTools: string[] = [];
   @state() usageLogFilterHasTools = false;
   @state() usageLogFilterQuery = "";
@@ -374,13 +374,13 @@ export class OpenClawApp extends LitElement {
   @state() cronJobsNextOffset: number | null = null;
   @state() cronJobsLimit = 50;
   @state() cronJobsQuery = "";
-  @state() cronJobsEnabledFilter: import("./types.js").CronJobsEnabledFilter = "all";
-  @state() cronJobsScheduleKindFilter: import("./controllers/cron.js").CronJobsScheduleKindFilter =
+  @state() cronJobsEnabledFilter: import("../types/types.ts").CronJobsEnabledFilter = "all";
+  @state() cronJobsScheduleKindFilter: import("../controllers/cron.ts").CronJobsScheduleKindFilter =
     "all";
-  @state() cronJobsLastStatusFilter: import("./controllers/cron.js").CronJobsLastStatusFilter =
+  @state() cronJobsLastStatusFilter: import("../controllers/cron.ts").CronJobsLastStatusFilter =
     "all";
-  @state() cronJobsSortBy: import("./types.js").CronJobsSortBy = "nextRunAtMs";
-  @state() cronJobsSortDir: import("./types.js").CronSortDir = "asc";
+  @state() cronJobsSortBy: import("../types/types.ts").CronJobsSortBy = "nextRunAtMs";
+  @state() cronJobsSortDir: import("../types/types.ts").CronSortDir = "asc";
   @state() cronStatus: CronStatus | null = null;
   @state() cronError: string | null = null;
   @state() cronForm: CronFormState = { ...DEFAULT_CRON_FORM };
@@ -393,16 +393,16 @@ export class OpenClawApp extends LitElement {
   @state() cronRunsHasMore = false;
   @state() cronRunsNextOffset: number | null = null;
   @state() cronRunsLimit = 50;
-  @state() cronRunsScope: import("./types.js").CronRunScope = "all";
-  @state() cronRunsStatuses: import("./types.js").CronRunsStatusValue[] = [];
-  @state() cronRunsDeliveryStatuses: import("./types.js").CronDeliveryStatus[] = [];
-  @state() cronRunsStatusFilter: import("./types.js").CronRunsStatusFilter = "all";
+  @state() cronRunsScope: import("../types/types.ts").CronRunScope = "all";
+  @state() cronRunsStatuses: import("../types/types.ts").CronRunsStatusValue[] = [];
+  @state() cronRunsDeliveryStatuses: import("../types/types.ts").CronDeliveryStatus[] = [];
+  @state() cronRunsStatusFilter: import("../types/types.ts").CronRunsStatusFilter = "all";
   @state() cronRunsQuery = "";
-  @state() cronRunsSortDir: import("./types.js").CronSortDir = "desc";
+  @state() cronRunsSortDir: import("../types/types.ts").CronSortDir = "desc";
   @state() cronModelSuggestions: string[] = [];
   @state() cronBusy = false;
 
-  @state() updateAvailable: import("./types.js").UpdateAvailable | null = null;
+  @state() updateAvailable: import("../types/types.ts").UpdateAvailable | null = null;
 
   @state() skillsLoading = false;
   @state() skillsReport: SkillStatusReport | null = null;

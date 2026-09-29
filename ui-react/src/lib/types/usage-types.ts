@@ -1,8 +1,8 @@
 import type {
   SessionUsageTimePoint as SharedSessionUsageTimePoint,
   SessionUsageTimeSeries as SharedSessionUsageTimeSeries,
-} from "../../client-core/shared/session-usage-timeseries-types.js";
-import type { SessionsUsageResult as SharedSessionsUsageResult } from "../../client-core/shared/usage-types.js";
+} from "../../../client-core/shared/session-usage-timeseries-types.ts";
+import type { SessionsUsageResult as SharedSessionsUsageResult } from "../../../client-core/shared/usage-types.ts";
 
 export type SessionsUsageEntry = SharedSessionsUsageResult["sessions"][number];
 export type SessionsUsageTotals = SharedSessionsUsageResult["totals"];

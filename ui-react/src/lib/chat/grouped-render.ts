@@ -1,14 +1,14 @@
 import { html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { t } from "../../i18n/index.ts";
-import type { AssistantIdentity } from "../assistant-identity.ts";
 import { avatarFromName } from "../helpers/multiavatar.ts";
-import { icons } from "../icons.ts";
-import { toSanitizedMarkdownHtml, toSanitizedMarkdownHtmlBlocks } from "../markdown.ts";
-import { openExternalUrlSafe } from "../open-external-url.ts";
-import { detectTextDirection } from "../text-direction.ts";
+import { detectTextDirection } from "../theme/text-direction.ts";
+import { getUserProfile } from "../theme/user-profile.ts";
 import type { MessageGroup } from "../types/chat-types.ts";
-import { getUserProfile } from "../user-profile.ts";
+import { icons } from "../util/icons.ts";
+import { toSanitizedMarkdownHtml, toSanitizedMarkdownHtmlBlocks } from "../util/markdown.ts";
+import { openExternalUrlSafe } from "../util/open-external-url.ts";
+import type { AssistantIdentity } from "../views/assistant-identity.ts";
 import { renderCopyAsMarkdownButton } from "./copy-as-markdown.ts";
 import {
   extractTextCached,

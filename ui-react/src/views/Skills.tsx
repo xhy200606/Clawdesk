@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { LitBridge } from "../components/LitBridge.tsx";
+import { LitBridge } from "../components/common/LitBridge.tsx";
 import {
   loadSkills,
   installSkill,

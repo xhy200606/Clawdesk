@@ -4,7 +4,7 @@
  * 动物形象来自 agent.identity.emoji 选定的物种色板（lib/animals.ts）。
  */
 import React from "react";
-import { resolveAgentAppearance } from "../../lib/animals.ts";
+import { resolveAgentAppearance } from "../../lib/ranch/animals.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 
 export type AgentAnimalProps = {

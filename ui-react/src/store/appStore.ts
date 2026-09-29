@@ -1,7 +1,13 @@
 import { create } from "zustand";
-import { DEFAULT_CRON_FORM, DEFAULT_LOG_LEVEL_FILTERS } from "../lib/app-defaults.ts";
-import type { ToolStreamEntry, CompactionStatus, FallbackStatus } from "../lib/app-tool-stream.ts";
-import { normalizeAssistantIdentity } from "../lib/assistant-identity.ts";
+import { DEFAULT_CRON_FORM, DEFAULT_LOG_LEVEL_FILTERS } from "../lib/app/app-defaults.ts";
+import type {
+  ToolStreamEntry,
+  CompactionStatus,
+  FallbackStatus,
+} from "../lib/app/app-tool-stream.ts";
+// NOTE: applySettings is imported lazily to avoid pulling in the Lit-dependent module tree at evaluation time
+import type { Tab } from "../lib/app/navigation.ts";
+import type { AgentRunTrace } from "../lib/app/orchestration-traces.ts";
 import type { ChannelPairingGroup } from "../lib/controllers/channel-pairing.ts";
 import type { CronFieldErrors } from "../lib/controllers/cron.ts";
 import type { DevicePairingList } from "../lib/controllers/devices.ts";
@@ -11,12 +17,8 @@ import type {
   ExecApprovalsSnapshot,
 } from "../lib/controllers/exec-approvals.ts";
 import type { SkillMessage } from "../lib/controllers/skills.ts";
-import type { GatewayBrowserClient, GatewayHelloOk } from "../lib/gateway.ts";
-// NOTE: applySettings is imported lazily to avoid pulling in the Lit-dependent module tree at evaluation time
-import type { Tab } from "../lib/navigation.ts";
-import type { AgentRunTrace } from "../lib/orchestration-traces.ts";
-import { loadSettings, saveSettings, type UiSettings } from "../lib/storage.ts";
-import type { ResolvedTheme, ThemeMode } from "../lib/theme.ts";
+import type { GatewayBrowserClient, GatewayHelloOk } from "../lib/gateway/gateway.ts";
+import type { ResolvedTheme, ThemeMode } from "../lib/theme/theme.ts";
 import type {
   AgentsListResult,
   AgentsFilesListResult,
@@ -35,8 +37,10 @@ import type {
   SkillStatusReport,
   ToolsCatalogResult,
   StatusSummary,
-} from "../lib/types.ts";
-import type { ChatAttachment, ChatQueueItem, CronFormState } from "../lib/ui-types.ts";
+} from "../lib/types/types.ts";
+import type { ChatAttachment, ChatQueueItem, CronFormState } from "../lib/types/ui-types.ts";
+import { loadSettings, saveSettings, type UiSettings } from "../lib/util/storage.ts";
+import { normalizeAssistantIdentity } from "../lib/views/assistant-identity.ts";
 import type { NostrProfileFormState } from "../lib/views/channels.nostr-profile-form.ts";
 
 // ---------------------------------------------------------------------------
@@ -769,13 +773,13 @@ export const useAppStore = create<AppState & AppActions>()((setState) => ({
   },
   /** resetToolStream — imported lazily to avoid circular deps */
   resetToolStream() {
-    void import("../lib/app-tool-stream.ts").then(({ resetToolStream: rst }) => {
+    void import("../lib/app/app-tool-stream.ts").then(({ resetToolStream: rst }) => {
       rst(useAppStore.getState() as never);
     });
   },
   /** scrollToBottom — use scheduleChatScroll */
   scrollToBottom(opts?: { smooth?: boolean }) {
-    void import("../lib/app-scroll.ts").then(({ resetChatScroll, scheduleChatScroll }) => {
+    void import("../lib/app/app-scroll.ts").then(({ resetChatScroll, scheduleChatScroll }) => {
       const host = useAppStore.getState() as never;
       resetChatScroll(host);
       scheduleChatScroll(host, true, Boolean(opts?.smooth));
@@ -784,7 +788,7 @@ export const useAppStore = create<AppState & AppActions>()((setState) => ({
   /** connect — reconnect the gateway */
   connect() {
     // The React version reconnects by having useGateway re-mount; this is best-effort.
-    void import("../lib/app-gateway.ts").then(({ connectGateway }) => {
+    void import("../lib/app/app-gateway.ts").then(({ connectGateway }) => {
       connectGateway(useAppStore.getState() as never);
     });
   },
@@ -811,7 +815,7 @@ export const useAppStore = create<AppState & AppActions>()((setState) => ({
     setState((s) => ({ ...s, settings: next, theme: next.theme, themeResolved: resolved }));
 
     // Async: run full lib applySettings for side-effects (polling, tab sync, etc.)
-    void import("../lib/app-settings.ts").then(({ applySettings: libApplySettings }) => {
+    void import("../lib/app/app-settings.ts").then(({ applySettings: libApplySettings }) => {
       const host = useAppStore.getState() as Record<string, unknown>;
       libApplySettings(host as never, next);
       setState((s) => ({

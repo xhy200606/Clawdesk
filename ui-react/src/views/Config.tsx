@@ -1,5 +1,5 @@
 import React from "react";
-import { LitBridge } from "../components/LitBridge.tsx";
+import { LitBridge } from "../components/common/LitBridge.tsx";
 import {
   applyConfig,
   loadConfig,

@@ -10,7 +10,7 @@ import {
   syncTabWithLocation,
   syncThemeWithSettings,
   applySettingsFromUrl,
-} from "./lib/app-settings.ts";
+} from "./lib/app/app-settings.ts";
 import { loadControlUiBootstrapConfig } from "./lib/controllers/control-ui-bootstrap.ts";
 import { useAppStore, getReactiveState } from "./store/appStore.ts";
 

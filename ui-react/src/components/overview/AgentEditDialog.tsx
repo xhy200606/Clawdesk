@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ANIMAL_SPECIES, resolveAgentAppearance } from "../../lib/animals.ts";
 import { loadAgents } from "../../lib/controllers/agents.ts";
 import { loadConfig, type ConfigState } from "../../lib/controllers/config.ts";
-import type { GatewayAgentRow } from "../../lib/types.ts";
+import { ANIMAL_SPECIES, resolveAgentAppearance } from "../../lib/ranch/animals.ts";
+import type { GatewayAgentRow } from "../../lib/types/types.ts";
 import { getReactiveState } from "../../store/appStore.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 

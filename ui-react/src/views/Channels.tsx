@@ -6,7 +6,7 @@ import {
   ChannelQuickAdd,
   type ChannelQuickAddForm,
 } from "../components/channels/ChannelQuickAdd.tsx";
-import type { DropdownGroup } from "../components/Dropdown.tsx";
+import type { DropdownGroup } from "../components/common/DropdownControlled.tsx";
 import { t } from "../i18n/index.ts";
 import { loadAgents } from "../lib/controllers/agents.ts";
 import { approveChannelPairing, loadChannelPairings } from "../lib/controllers/channel-pairing.ts";
@@ -18,8 +18,8 @@ import {
   type ConfigState,
 } from "../lib/controllers/config.ts";
 import { serializeConfigForm } from "../lib/controllers/config/form-utils.ts";
-import { formatRelativeTimestamp } from "../lib/format.ts";
-import type { ChannelAccountSnapshot } from "../lib/types.ts";
+import type { ChannelAccountSnapshot } from "../lib/types/types.ts";
+import { formatRelativeTimestamp } from "../lib/util/format.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 export function ChannelsView() {

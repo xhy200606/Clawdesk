@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { t } from "../../i18n/index.ts";
-import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/external-link.ts";
-import { formatDurationHuman } from "../../lib/format.ts";
-import { ConnectErrorDetailCodes } from "../../lib/gateway-protocol.ts";
-import type { GatewayHelloOk } from "../../lib/gateway.ts";
-import { openExternalUrlSafe } from "../../lib/open-external-url.ts";
+import { ConnectErrorDetailCodes } from "../../lib/gateway/gateway-protocol.ts";
+import type { GatewayHelloOk } from "../../lib/gateway/gateway.ts";
+import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/util/external-link.ts";
+import { formatDurationHuman } from "../../lib/util/format.ts";
+import { openExternalUrlSafe } from "../../lib/util/open-external-url.ts";
 import { shouldShowPairingHint } from "../../lib/views/overview-hints.ts";
 import { useAppStore } from "../../store/appStore.ts";
 

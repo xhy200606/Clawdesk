@@ -9,7 +9,7 @@ import {
   updateConfigFormValue,
   removeConfigFormValue,
   type ConfigState,
-} from "./controllers/config.ts";
+} from "../controllers/config.ts";
 
 export type AgentConfigEntry = Record<string, unknown>;
 

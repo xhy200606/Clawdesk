@@ -1,6 +1,6 @@
 import { html } from "lit";
 import React, { useCallback, useMemo } from "react";
-import { LitBridge } from "../components/LitBridge.tsx";
+import { LitBridge } from "../components/common/LitBridge.tsx";
 import type { DropdownGroup } from "../lib/components/dropdown.ts";
 import { applyConfig, updateConfigFormValue } from "../lib/controllers/config.ts";
 import "../lib/views/models-default-config.ts"; // registers <oc-default-model-config>

@@ -1,17 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { t } from "../../i18n/index.ts";
-import { resolveSessionDisplayName, isCronSessionKey } from "../../lib/app-render.helpers.ts";
-import { setTab as setTabLib, syncUrlWithSessionKey } from "../../lib/app-settings.ts";
-import { getSessionPreview } from "../../lib/chat/session-preview.ts";
-import { loadChatHistory, type ChatState } from "../../lib/controllers/chat.ts";
-import {
-  deleteSessionAndRefresh,
-  loadSessions,
-  patchSession,
-} from "../../lib/controllers/sessions.ts";
-import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/external-link.ts";
-import { icons } from "../../lib/icons.ts";
+import { resolveSessionDisplayName, isCronSessionKey } from "../../lib/app/app-render.helpers.ts";
+import { setTab as setTabLib, syncUrlWithSessionKey } from "../../lib/app/app-settings.ts";
 import {
   TAB_GROUPS,
   titleForTab,
@@ -19,7 +10,16 @@ import {
   pathForTab,
   normalizeBasePath,
   type Tab,
-} from "../../lib/navigation.ts";
+} from "../../lib/app/navigation.ts";
+import { getSessionPreview } from "../../lib/chat/session-preview.ts";
+import { loadChatHistory, type ChatState } from "../../lib/controllers/chat.ts";
+import {
+  deleteSessionAndRefresh,
+  loadSessions,
+  patchSession,
+} from "../../lib/controllers/sessions.ts";
+import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/util/external-link.ts";
+import { icons } from "../../lib/util/icons.ts";
 import {
   createProject,
   deleteProject,
@@ -28,7 +28,7 @@ import {
   setActiveProjectId,
   toggleSessionInProject,
   type Project,
-} from "../../lib/projects.ts";
+} from "../../lib/views/projects.ts";
 import { useAppStore, getReactiveState } from "../../store/appStore.ts";
 import { UserProfileBar } from "./UserProfileBar.tsx";
 
@@ -102,7 +102,7 @@ export function NavSidebar() {
     (rs as Record<string, unknown>).chatRunId = null;
     (rs as Record<string, unknown>).chatQueue = [];
     // Apply settings & sync URL
-    void import("../../lib/app-settings.ts").then(({ applySettings: applySettingsLib }) => {
+    void import("../../lib/app/app-settings.ts").then(({ applySettings: applySettingsLib }) => {
       applySettingsLib(rs as never, {
         ...useAppStore.getState().settings,
         sessionKey: newKey,
@@ -115,7 +115,7 @@ export function NavSidebar() {
       void loadAssistantIdentity(rs as never);
     });
     void loadChatHistory(rs as unknown as ChatState);
-    void import("../../lib/app-chat.ts").then(({ refreshChatAvatar }) => {
+    void import("../../lib/app/app-chat.ts").then(({ refreshChatAvatar }) => {
       void refreshChatAvatar(rs as never);
     });
   }, []);

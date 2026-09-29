@@ -1,8 +1,8 @@
 import React from "react";
 import { t } from "../i18n/index.ts";
-import type { EventLogEntry } from "../lib/app-events.ts";
+import type { EventLogEntry } from "../lib/app/app-events.ts";
 import { loadDebug, callDebugMethod } from "../lib/controllers/debug.ts";
-import { formatEventPayload } from "../lib/presenter.ts";
+import { formatEventPayload } from "../lib/views/presenter.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 export function DebugView() {

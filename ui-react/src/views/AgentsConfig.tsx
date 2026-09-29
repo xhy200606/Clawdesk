@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { SchemaField, SchemaIcons, getFieldMeta } from "../components/SchemaFieldReact.tsx";
+import { SchemaField, SchemaIcons, getFieldMeta } from "../components/common/SchemaFieldReact.tsx";
 import { t } from "../i18n/index.ts";
 import {
   applyConfig,
@@ -9,7 +9,7 @@ import {
   saveConfig,
   updateConfigFormValue,
 } from "../lib/controllers/config.ts";
-import type { ConfigUiHints } from "../lib/types.ts";
+import type { ConfigUiHints } from "../lib/types/types.ts";
 import { schemaType, humanize, type JsonSchema } from "../lib/views/config-form.shared.ts";
 import { analyzeConfigSchema } from "../lib/views/config-form.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";

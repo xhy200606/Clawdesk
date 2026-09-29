@@ -1,7 +1,6 @@
 import { t } from "../../i18n/index.ts";
-import { DEFAULT_CRON_FORM } from "../app-defaults.ts";
-import { toNumber } from "../format.ts";
-import type { GatewayBrowserClient } from "../gateway.ts";
+import { DEFAULT_CRON_FORM } from "../app/app-defaults.ts";
+import type { GatewayBrowserClient } from "../gateway/gateway.ts";
 import type {
   CronJob,
   CronDeliveryStatus,
@@ -15,9 +14,10 @@ import type {
   CronRunsStatusValue,
   CronSortDir,
   CronStatus,
-} from "../types.ts";
-import { CRON_CHANNEL_LAST } from "../ui-types.ts";
-import type { CronFormState } from "../ui-types.ts";
+} from "../types/types.ts";
+import { CRON_CHANNEL_LAST } from "../types/ui-types.ts";
+import type { CronFormState } from "../types/ui-types.ts";
+import { toNumber } from "../util/format.ts";
 
 export type CronFieldKey =
   | "name"

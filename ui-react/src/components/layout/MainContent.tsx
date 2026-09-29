@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { syncUrlWithSessionKey } from "../../lib/app-settings.ts";
+import { syncUrlWithSessionKey } from "../../lib/app/app-settings.ts";
+import { titleForTab, subtitleForTab } from "../../lib/app/navigation.ts";
 import { loadChatHistory, type ChatState } from "../../lib/controllers/chat.ts";
 import { patchSession, deleteSessionAndRefresh } from "../../lib/controllers/sessions.ts";
 import { translateError } from "../../lib/helpers/translate-error.ts";
-import { titleForTab, subtitleForTab } from "../../lib/navigation.ts";
 import { useAppStore, getReactiveState } from "../../store/appStore.ts";
 import { AgentsView } from "../../views/Agents.tsx";
 import { ChannelsView } from "../../views/Channels.tsx";

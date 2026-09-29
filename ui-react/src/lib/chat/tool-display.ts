@@ -5,9 +5,9 @@ import {
   resolveActionArg,
   resolveToolVerbAndDetail,
   type ToolDisplaySpec as ToolDisplaySpecBase,
-} from "../../client-core/agents/tool-display-common.js";
-import SHARED_TOOL_DISPLAY_JSON from "../../client-core/assets/tool-display.json" with { type: "json" };
-import type { IconName } from "./icons.ts";
+} from "../../../client-core/agents/tool-display-common.ts";
+import SHARED_TOOL_DISPLAY_JSON from "../../../client-core/assets/tool-display.json" with { type: "json" };
+import type { IconName } from "../util/icons.ts";
 
 type ToolDisplaySpec = ToolDisplaySpecBase & {
   icon?: string;

@@ -1,9 +1,9 @@
+import { loadDebug } from "../controllers/debug.ts";
+import { loadLogs } from "../controllers/logs.ts";
+import { loadNodes } from "../controllers/nodes.ts";
+import { loadSessionActivity, loadSessions } from "../controllers/sessions.ts";
+import { gatewaySupportsMethod } from "../gateway/gateway.ts";
 import type { OpenClawApp } from "./app.ts";
-import { loadDebug } from "./controllers/debug.ts";
-import { loadLogs } from "./controllers/logs.ts";
-import { loadNodes } from "./controllers/nodes.ts";
-import { loadSessionActivity, loadSessions } from "./controllers/sessions.ts";
-import { gatewaySupportsMethod } from "./gateway.ts";
 
 type PollingHost = {
   nodesPollInterval: number | null;

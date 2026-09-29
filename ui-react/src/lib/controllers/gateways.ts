@@ -2,7 +2,7 @@
 // 本客户端是独立容器，可接入任意数量的 OpenClaw 网关；切换网关即改写
 // settings.gatewayUrl / token 并触发重连（connectGateway 由调用方执行）。
 
-import type { GatewayProfile, UiSettings } from "../storage.ts";
+import type { GatewayProfile, UiSettings } from "../util/storage.ts";
 
 function newId(): string {
   return `gw-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;

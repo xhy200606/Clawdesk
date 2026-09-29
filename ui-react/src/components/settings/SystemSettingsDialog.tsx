@@ -7,8 +7,8 @@ import {
   loadSystemPrefs,
   saveSystemPrefs,
   type SystemPrefs,
-} from "../../lib/system-prefs.ts";
-import type { ThemeMode } from "../../lib/theme.ts";
+} from "../../lib/theme/system-prefs.ts";
+import type { ThemeMode } from "../../lib/theme/theme.ts";
 import { useAppStore } from "../../store/appStore.ts";
 
 const THEME_OPTIONS: Array<{ mode: ThemeMode; label: string }> = [

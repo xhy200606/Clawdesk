@@ -1,5 +1,5 @@
 import React from "react";
-import { LitBridge } from "../components/LitBridge.tsx";
+import { LitBridge } from "../components/common/LitBridge.tsx";
 import {
   loadCronRuns,
   loadMoreCronJobs,
@@ -19,8 +19,8 @@ import {
   updateCronRunsFilter,
   getVisibleCronJobs,
 } from "../lib/controllers/cron.ts";
-import type { CronJob } from "../lib/types.ts";
-import type { CronFormState } from "../lib/ui-types.ts";
+import type { CronJob } from "../lib/types/types.ts";
+import type { CronFormState } from "../lib/types/ui-types.ts";
 import { resolveConfiguredCronModelSuggestions } from "../lib/views/agents-utils.ts";
 import { renderCron } from "../lib/views/cron.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
@@ -212,7 +212,7 @@ export function CronView() {
         onRefresh: () => {
           const rs = getReactiveState();
           // Usa loadCron que es la función del store
-          void import("../lib/app-settings.ts").then(({ loadCron }) => {
+          void import("../lib/app/app-settings.ts").then(({ loadCron }) => {
             void loadCron(rs as never);
           });
         },

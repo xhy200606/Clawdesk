@@ -1,5 +1,5 @@
 import React, { useState, Suspense } from "react";
-import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
+import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types/types.ts";
 import { RanchScene2D } from "./RanchScene2D.tsx";
 
 // Carga lazy del 3D para evitar importar three.js en el bundle principal

@@ -1,4 +1,4 @@
-import type { ChatEventPayload } from "./controllers/chat.ts";
+import type { ChatEventPayload } from "../controllers/chat.ts";
 
 export function shouldReloadHistoryForFinalEvent(payload?: ChatEventPayload): boolean {
   if (!payload || payload.state !== "final") {

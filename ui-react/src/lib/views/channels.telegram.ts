@@ -1,7 +1,7 @@
 import { html, nothing } from "lit";
 import { t } from "../../i18n/index.ts";
-import { formatRelativeTimestamp } from "../format.ts";
-import type { ChannelAccountSnapshot, TelegramStatus } from "../types.ts";
+import type { ChannelAccountSnapshot, TelegramStatus } from "../types/types.ts";
+import { formatRelativeTimestamp } from "../util/format.ts";
 import { renderChannelConfigSection } from "./channels.config.ts";
 import type { ChannelsProps } from "./channels.types.ts";
 

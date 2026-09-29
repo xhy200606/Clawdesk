@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { setTab, syncUrlWithSessionKey } from "../lib/app-settings.ts";
+import { setTab, syncUrlWithSessionKey } from "../lib/app/app-settings.ts";
 import { loadAgents } from "../lib/controllers/agents.ts";
 import { loadChatHistory } from "../lib/controllers/chat.ts";
 import { loadSessions } from "../lib/controllers/sessions.ts";
-import { readA2aEnabled, setA2aEnabled, useTeamGroupChat } from "../lib/team-comm.ts";
-import type { GatewayAgentRow, GatewaySessionRow } from "../lib/types.ts";
+import type { GatewayAgentRow, GatewaySessionRow } from "../lib/types/types.ts";
+import { readA2aEnabled, setA2aEnabled, useTeamGroupChat } from "../lib/views/team-comm.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 type WorkState = "working" | "waiting" | "idle" | "completed" | "failed";

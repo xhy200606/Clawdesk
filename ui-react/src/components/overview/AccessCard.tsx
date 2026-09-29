@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import { t, i18n, SUPPORTED_LOCALES, type Locale } from "../../i18n/index.ts";
-import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/external-link.ts";
-import type { UiSettings } from "../../lib/storage.ts";
+import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../../lib/util/external-link.ts";
+import type { UiSettings } from "../../lib/util/storage.ts";
 import { GatewayFields } from "./GatewayCard.tsx";
 
 // ─── Drag Handle SVG ─────────────────────────────────────────

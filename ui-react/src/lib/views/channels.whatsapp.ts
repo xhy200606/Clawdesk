@@ -1,7 +1,7 @@
 import { html, nothing } from "lit";
 import { t } from "../../i18n/index.ts";
-import { formatRelativeTimestamp, formatDurationHuman } from "../format.ts";
-import type { WhatsAppStatus } from "../types.ts";
+import type { WhatsAppStatus } from "../types/types.ts";
+import { formatRelativeTimestamp, formatDurationHuman } from "../util/format.ts";
 import { renderChannelConfigSection } from "./channels.config.ts";
 import type { ChannelsProps } from "./channels.types.ts";
 

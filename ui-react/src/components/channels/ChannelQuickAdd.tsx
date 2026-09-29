@@ -1,8 +1,8 @@
 import React, { useCallback, useRef, useState } from "react";
 import { t } from "../../i18n/index.ts";
 import { generateRandomAvatars } from "../../lib/helpers/multiavatar.ts";
+import { Dropdown, type DropdownGroup, type DropdownItem } from "../common/DropdownControlled.tsx";
 import { QrCode } from "../common/QrCode.tsx";
-import { Dropdown, type DropdownGroup, type DropdownItem } from "../Dropdown.tsx";
 
 // ─── Types ───────────────────────────────────────────────────
 

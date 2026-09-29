@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { t } from "../i18n/index.ts";
+import { t } from "../../i18n/index.ts";
 
 // ─── Types ───────────────────────────────────────────────────
 

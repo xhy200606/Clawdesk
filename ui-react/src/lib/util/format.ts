@@ -1,6 +1,6 @@
-import { formatDurationHuman } from "../../client-core/infra/format-time/format-duration.ts";
-import { formatRelativeTimestamp } from "../../client-core/infra/format-time/format-relative.ts";
-import { stripAssistantInternalScaffolding } from "../../client-core/shared/text/assistant-visible-text.js";
+import { formatDurationHuman } from "../../../client-core/infra/format-time/format-duration.ts";
+import { formatRelativeTimestamp } from "../../../client-core/infra/format-time/format-relative.ts";
+import { stripAssistantInternalScaffolding } from "../../../client-core/shared/text/assistant-visible-text.ts";
 
 export { formatRelativeTimestamp, formatDurationHuman };
 

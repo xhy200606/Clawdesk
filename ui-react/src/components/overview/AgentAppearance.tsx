@@ -1,5 +1,5 @@
 import React from "react";
-import { resolveAgentSpecies } from "../../lib/animals.ts";
+import { resolveAgentSpecies } from "../../lib/ranch/animals.ts";
 
 export function AgentAppearance({
   emoji,

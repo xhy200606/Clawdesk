@@ -1,5 +1,5 @@
-import type { GatewayBrowserClient } from "../gateway.ts";
-import type { AgentsListResult, ToolsCatalogResult } from "../types.ts";
+import type { GatewayBrowserClient } from "../gateway/gateway.ts";
+import type { AgentsListResult, ToolsCatalogResult } from "../types/types.ts";
 
 export type AgentsState = {
   client: GatewayBrowserClient | null;

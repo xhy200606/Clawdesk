@@ -1,8 +1,8 @@
 import { html } from "lit";
 import React, { useEffect, useMemo } from "react";
-import type { ConfigUiHints } from "../../lib/types.ts";
+import type { ConfigUiHints } from "../../lib/types/types.ts";
 import { renderChannelConfigForm } from "../../lib/views/channels.config.ts";
-import { LitBridge } from "../LitBridge.tsx";
+import { LitBridge } from "../common/LitBridge.tsx";
 
 // ─── Types ───────────────────────────────────────────────────
 

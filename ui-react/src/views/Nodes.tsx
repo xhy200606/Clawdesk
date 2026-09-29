@@ -1,6 +1,5 @@
 import React from "react";
-import { LitBridge } from "../components/LitBridge.tsx";
-import { setAgentEntryValue, removeAgentEntryValue } from "../lib/agents-config.ts";
+import { LitBridge } from "../components/common/LitBridge.tsx";
 import { approveChannelPairing, loadChannelPairings } from "../lib/controllers/channel-pairing.ts";
 import {
   loadConfig,
@@ -22,6 +21,7 @@ import {
   removeExecApprovalsFormValue,
 } from "../lib/controllers/exec-approvals.ts";
 import { loadNodes } from "../lib/controllers/nodes.ts";
+import { setAgentEntryValue, removeAgentEntryValue } from "../lib/views/agents-config.ts";
 import { renderNodes, renderChannelPairings } from "../lib/views/nodes.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 

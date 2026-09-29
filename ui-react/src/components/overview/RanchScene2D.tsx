@@ -4,11 +4,11 @@
  * thinking / tool_calling / speaking / idle / error / spawning
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { resolveAgentAppearance } from "../../lib/animals.ts";
-import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch-daycycle.ts";
-import { useRanchWeather, seededRand } from "../../lib/ranch-weather.ts";
-import type { RanchWeather } from "../../lib/ranch-weather.ts";
-import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
+import { resolveAgentAppearance } from "../../lib/ranch/animals.ts";
+import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch/ranch-daycycle.ts";
+import { useRanchWeather, seededRand } from "../../lib/ranch/ranch-weather.ts";
+import type { RanchWeather } from "../../lib/ranch/ranch-weather.ts";
+import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 
 // ─── Types ──────────────────────────────────────────────────────────

@@ -7,14 +7,14 @@ import { RanchScene } from "../components/overview/RanchScene.tsx";
 import { SnapshotCard, OverviewIcons } from "../components/overview/SnapshotCard.tsx";
 import { SwapyLayout, getSavedCardOrder } from "../components/overview/SwapyLayout.tsx";
 import { UsageChartCard } from "../components/overview/UsageChartCard.tsx";
-import { setTab } from "../lib/app-settings.ts";
+import { setTab } from "../lib/app/app-settings.ts";
 import type {
   SessionActivityResult,
   GatewayAgentRow,
   CostUsageSummary,
   SessionsUsageResult,
   ChannelsStatusSnapshot,
-} from "../lib/types.ts";
+} from "../lib/types/types.ts";
 import { useAppStore } from "../store/appStore.ts";
 
 // ─── Token Stats Row ─────────────────────────────────────────
@@ -111,7 +111,7 @@ export function OverviewView() {
   const lastError = s((st) => st.lastError);
   const lastErrorCode = s((st) => st.lastErrorCode);
   const reconnect = useCallback(() => {
-    void import("../lib/app-gateway.ts").then(({ connectGateway }) => {
+    void import("../lib/app/app-gateway.ts").then(({ connectGateway }) => {
       connectGateway(useAppStore.getState() as never);
     });
   }, []);

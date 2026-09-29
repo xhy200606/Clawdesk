@@ -1,9 +1,9 @@
-import { normalizeAssistantIdentity } from "../assistant-identity.ts";
+import { normalizeBasePath } from "../app/navigation.ts";
 import {
   CONTROL_UI_BOOTSTRAP_CONFIG_PATH,
   type ControlUiBootstrapConfig,
-} from "../gateway-protocol.ts";
-import { normalizeBasePath } from "../navigation.ts";
+} from "../gateway/gateway-protocol.ts";
+import { normalizeAssistantIdentity } from "../views/assistant-identity.ts";
 
 export type ControlUiBootstrapState = {
   basePath: string;

@@ -5,7 +5,7 @@ import type {
   SessionsUsageResult,
   CostUsageSummary,
   SessionUsageTimeSeries,
-} from "../../lib/types.ts";
+} from "../../lib/types/types.ts";
 import type { UsageColumnId, SessionLogEntry, SessionLogRole } from "../../lib/views/usageTypes.ts";
 import { useAppStore, getReactiveState } from "../../store/appStore.ts";
 

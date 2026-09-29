@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { t } from "../../i18n/index.ts";
-import type { IconName } from "../../lib/icons.ts";
-import { toSanitizedMarkdownHtml } from "../../lib/markdown.ts";
-import { resolveToolDisplay, formatToolDetail } from "../../lib/tool-display.ts";
+import { resolveToolDisplay, formatToolDetail } from "../../lib/chat/tool-display.ts";
 import type { ToolCard as ToolCardType } from "../../lib/types/chat-types.ts";
+import type { IconName } from "../../lib/util/icons.ts";
+import { toSanitizedMarkdownHtml } from "../../lib/util/markdown.ts";
 import { ApprovalCard, parseLobsterApproval } from "./ApprovalCard.tsx";
 import { Sources, extractSearchSources, type SearchSource } from "./Sources.tsx";
 

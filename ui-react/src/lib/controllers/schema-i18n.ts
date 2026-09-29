@@ -8,7 +8,7 @@
  * Only applied when locale !== "en".
  */
 import { i18n } from "../../i18n/index.ts";
-import type { ConfigUiHints } from "../types.ts";
+import type { ConfigUiHints } from "../types/types.ts";
 
 type HintOverride = {
   label?: string;

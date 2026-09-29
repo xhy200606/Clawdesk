@@ -1,4 +1,4 @@
-import type { GatewayBrowserClient } from "../gateway.ts";
+import type { GatewayBrowserClient } from "../gateway/gateway.ts";
 
 export type ChannelPairingRequest = {
   /** 网关配对请求 ID（channels.pairing.approve 需要） */

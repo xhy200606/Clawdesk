@@ -1,17 +1,17 @@
 import { html, nothing } from "lit";
 import { t, i18n, SUPPORTED_LOCALES, type Locale } from "../../i18n/index.ts";
-import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../external-link.ts";
-import { formatRelativeTimestamp, formatDurationHuman } from "../format.ts";
-import { ConnectErrorDetailCodes } from "../gateway-protocol.ts";
-import type { GatewayHelloOk } from "../gateway.ts";
+import { ConnectErrorDetailCodes } from "../gateway/gateway-protocol.ts";
+import type { GatewayHelloOk } from "../gateway/gateway.ts";
 import { avatarFromName } from "../helpers/multiavatar.ts";
-import type { UiSettings } from "../storage.ts";
 import type {
   GatewayAgentRow,
   SessionActivityResult,
   CostUsageSummary,
   SessionsUsageResult,
-} from "../types.ts";
+} from "../types/types.ts";
+import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../util/external-link.ts";
+import { formatRelativeTimestamp, formatDurationHuman } from "../util/format.ts";
+import type { UiSettings } from "../util/storage.ts";
 import { resolveAgentAvatarSrc } from "./agents-utils.ts";
 import { shouldShowPairingHint } from "./overview-hints.ts";
 

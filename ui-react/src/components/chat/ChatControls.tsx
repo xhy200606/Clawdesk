@@ -1,12 +1,12 @@
 import React, { useCallback } from "react";
 import { t } from "../../i18n/index.ts";
-import { refreshChat } from "../../lib/app-chat.ts";
+import { refreshChat } from "../../lib/app/app-chat.ts";
 import {
   resolveMainSessionKey,
   resolveSessionOptions,
   countHiddenCronSessions,
-} from "../../lib/app-render.helpers.ts";
-import { syncUrlWithSessionKey } from "../../lib/app-settings.ts";
+} from "../../lib/app/app-render.helpers.ts";
+import { syncUrlWithSessionKey } from "../../lib/app/app-settings.ts";
 import { loadAssistantIdentity } from "../../lib/controllers/assistant-identity.ts";
 import { loadChatHistory, type ChatState } from "../../lib/controllers/chat.ts";
 import { useAppStore, getReactiveState } from "../../store/appStore.ts";
@@ -131,10 +131,10 @@ export function ChatControls() {
     (rs as Record<string, unknown>).chatStream = null;
     (rs as Record<string, unknown>).chatStreamStartedAt = null;
     (rs as Record<string, unknown>).chatRunId = null;
-    import("../../lib/app-tool-stream.ts").then(({ resetToolStream }) => {
+    import("../../lib/app/app-tool-stream.ts").then(({ resetToolStream }) => {
       resetToolStream(rs as never);
     });
-    import("../../lib/app-scroll.ts").then(({ resetChatScroll }) => {
+    import("../../lib/app/app-scroll.ts").then(({ resetChatScroll }) => {
       resetChatScroll(rs as never);
     });
     rs.applySettings({
@@ -151,7 +151,7 @@ export function ChatControls() {
     const rs = getReactiveState();
     (rs as Record<string, unknown>).chatManualRefreshInFlight = true;
     (rs as Record<string, unknown>).chatNewMessagesBelow = false;
-    const { resetToolStream } = await import("../../lib/app-tool-stream.ts");
+    const { resetToolStream } = await import("../../lib/app/app-tool-stream.ts");
     resetToolStream(rs as never);
     try {
       await refreshChat(rs as never, { scheduleScroll: false });

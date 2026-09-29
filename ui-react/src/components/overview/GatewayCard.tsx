@@ -6,7 +6,7 @@ import {
   saveCurrentAsGateway,
   upsertGateway,
 } from "../../lib/controllers/gateways.ts";
-import type { UiSettings } from "../../lib/storage.ts";
+import type { UiSettings } from "../../lib/util/storage.ts";
 import { DragHandle } from "./AccessCard.tsx";
 
 // ─── 最新版本检测（npm registry） ────────────────────────────

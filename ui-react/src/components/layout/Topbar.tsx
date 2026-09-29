@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../../i18n/index.ts";
-import { ACCENT_COLORS, ACCENT_IDS, ACCENT_LABELS } from "../../lib/storage.ts";
+import { ACCENT_COLORS, ACCENT_IDS, ACCENT_LABELS } from "../../lib/util/storage.ts";
 import { useAppStore } from "../../store/appStore.ts";
 
 // ─── 主题色选择器（多主题色切换） ────────────────────────────

@@ -1,6 +1,6 @@
 import { html, nothing, type TemplateResult } from "lit";
 import { t } from "../../i18n/index.ts";
-import type { ConfigUiHints } from "../types.ts";
+import type { ConfigUiHints } from "../types/types.ts";
 import {
   defaultValue,
   hintForPath,

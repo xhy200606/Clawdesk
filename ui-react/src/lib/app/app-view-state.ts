@@ -1,15 +1,11 @@
-import type { EventLogEntry } from "./app-events.ts";
-import type { CompactionStatus, FallbackStatus } from "./app-tool-stream.ts";
-import type { CronModelSuggestionsState, CronState } from "./controllers/cron.ts";
-import type { DevicePairingList } from "./controllers/devices.ts";
-import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
-import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
-import type { SkillMessage } from "./controllers/skills.ts";
-import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
-import type { Tab } from "./navigation.ts";
-import type { UiSettings } from "./storage.ts";
-import type { ThemeTransitionContext } from "./theme-transition.ts";
-import type { ThemeMode } from "./theme.ts";
+import type { CronModelSuggestionsState, CronState } from "../controllers/cron.ts";
+import type { DevicePairingList } from "../controllers/devices.ts";
+import type { ExecApprovalRequest } from "../controllers/exec-approval.ts";
+import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "../controllers/exec-approvals.ts";
+import type { SkillMessage } from "../controllers/skills.ts";
+import type { GatewayBrowserClient, GatewayHelloOk } from "../gateway/gateway.ts";
+import type { ThemeTransitionContext } from "../theme/theme-transition.ts";
+import type { ThemeMode } from "../theme/theme.ts";
 import type {
   AgentsListResult,
   AgentsFilesListResult,
@@ -30,10 +26,14 @@ import type {
   SkillStatusReport,
   ToolsCatalogResult,
   StatusSummary,
-} from "./types.ts";
-import type { ChatAttachment, ChatQueueItem } from "./ui-types.ts";
-import type { NostrProfileFormState } from "./views/channels.nostr-profile-form.ts";
-import type { SessionLogEntry } from "./views/usage.ts";
+} from "../types/types.ts";
+import type { ChatAttachment, ChatQueueItem } from "../types/ui-types.ts";
+import type { UiSettings } from "../util/storage.ts";
+import type { NostrProfileFormState } from "../views/channels.nostr-profile-form.ts";
+import type { SessionLogEntry } from "../views/usage.ts";
+import type { EventLogEntry } from "./app-events.ts";
+import type { CompactionStatus, FallbackStatus } from "./app-tool-stream.ts";
+import type { Tab } from "./navigation.ts";
 
 export type AppViewState = {
   settings: UiSettings;
@@ -166,7 +166,7 @@ export type AppViewState = {
   presenceError: string | null;
   presenceStatus: string | null;
   channelPairingsLoading: boolean;
-  channelPairings: import("./controllers/channel-pairing.ts").ChannelPairingGroup[];
+  channelPairings: import("../controllers/channel-pairing.ts").ChannelPairingGroup[];
   channelPairingsError: string | null;
   agentsLoading: boolean;
   agentsList: AgentsListResult | null;
@@ -240,7 +240,7 @@ export type AppViewState = {
   usageHeaderPinned: boolean;
   usageSessionsTab: "all" | "recent";
   usageVisibleColumns: string[];
-  usageLogFilterRoles: import("./views/usage.js").SessionLogRole[];
+  usageLogFilterRoles: import("../views/usage.ts").SessionLogRole[];
   usageLogFilterTools: string[];
   usageLogFilterHasTools: boolean;
   usageLogFilterQuery: string;
@@ -319,7 +319,7 @@ export type AppViewState = {
     logsLimit: number;
     logsMaxBytes: number;
     logsAtBottom: boolean;
-    updateAvailable: import("./types.js").UpdateAvailable | null;
+    updateAvailable: import("../types/types.ts").UpdateAvailable | null;
     client: GatewayBrowserClient | null;
     refreshSessionsAfterChat: Set<string>;
     connect: () => void;

@@ -1,16 +1,16 @@
 import React, { useCallback, useState } from "react";
-import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
-import { InlineSelect } from "../components/InlineSelect.tsx";
+import { ConfirmDialog } from "../components/common/ConfirmDialog.tsx";
+import { InlineSelect } from "../components/common/InlineSelect.tsx";
 import { t } from "../i18n/index.ts";
+import { pathForTab } from "../lib/app/navigation.ts";
 import {
   deleteSessionAndRefresh,
   loadSessions,
   patchSession,
 } from "../lib/controllers/sessions.ts";
-import { formatRelativeTimestamp } from "../lib/format.ts";
-import { pathForTab } from "../lib/navigation.ts";
-import { formatSessionTokens } from "../lib/presenter.ts";
-import type { GatewaySessionRow } from "../lib/types.ts";
+import type { GatewaySessionRow } from "../lib/types/types.ts";
+import { formatRelativeTimestamp } from "../lib/util/format.ts";
+import { formatSessionTokens } from "../lib/views/presenter.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
 const THINK_LEVELS = ["", "off", "minimal", "low", "medium", "high", "xhigh"] as const;

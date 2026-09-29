@@ -1,6 +1,6 @@
 import React, { type ReactNode } from "react";
 import { t } from "../../i18n/index.ts";
-import { resolveToolDisplay } from "../../lib/tool-display.ts";
+import { resolveToolDisplay } from "../../lib/chat/tool-display.ts";
 import type { ToolCard as ToolCardType } from "../../lib/types/chat-types.ts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./primitives/Collapsible.tsx";
 import { ToolCard } from "./ToolCard.tsx";

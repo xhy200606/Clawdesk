@@ -1,6 +1,5 @@
 import React from "react";
 import { t } from "../../i18n/index.ts";
-import type { AssistantIdentity } from "../../lib/assistant-identity.ts";
 import {
   extractTextCached,
   extractThinkingCached,
@@ -12,11 +11,12 @@ import {
 } from "../../lib/chat/message-normalizer.ts";
 import { extractToolCards, pairToolCards } from "../../lib/chat/tool-cards.ts";
 import { avatarFromName } from "../../lib/helpers/multiavatar.ts";
-import { toSanitizedMarkdownHtml, toSanitizedMarkdownHtmlBlocks } from "../../lib/markdown.ts";
-import { openExternalUrlSafe } from "../../lib/open-external-url.ts";
-import { detectTextDirection } from "../../lib/text-direction.ts";
+import { detectTextDirection } from "../../lib/theme/text-direction.ts";
+import { getUserProfile } from "../../lib/theme/user-profile.ts";
 import type { MessageGroup } from "../../lib/types/chat-types.ts";
-import { getUserProfile } from "../../lib/user-profile.ts";
+import { toSanitizedMarkdownHtml, toSanitizedMarkdownHtmlBlocks } from "../../lib/util/markdown.ts";
+import { openExternalUrlSafe } from "../../lib/util/open-external-url.ts";
+import type { AssistantIdentity } from "../../lib/views/assistant-identity.ts";
 import { ChainOfThought } from "./ChainOfThought.tsx";
 import { CopyButton } from "./CopyButton.tsx";
 import { TaskStepList } from "./TaskStepList.tsx";

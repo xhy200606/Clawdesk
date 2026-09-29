@@ -4,8 +4,8 @@ import { PROVIDER_PRESETS } from "../../lib/views/models-quick-add.ts";
 import type { QuickAddProviderForm } from "../../lib/views/models-quick-add.ts";
 import { useAppStore } from "../../store/appStore.ts";
 import { ChannelQuickAdd } from "../channels/ChannelQuickAdd.tsx";
-import { Dropdown } from "../Dropdown.tsx";
-import { MultiDropdown } from "../MultiDropdown.tsx";
+import { Dropdown } from "../common/DropdownControlled.tsx";
+import { MultiDropdown } from "../common/MultiDropdown.tsx";
 
 // Carga diferida de helpers de configuración para evitar dependencias circulares
 async function getConfigHelpers() {

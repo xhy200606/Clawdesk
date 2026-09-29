@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { parseAgentSessionKey } from "../../../client-core/sessions/session-key-utils.js";
+import { parseAgentSessionKey } from "../../../client-core/sessions/session-key-utils.ts";
 import { useAppStore } from "../../store/appStore.ts";
 
 // ─── 网关 RPC 类型 ──────────────────────────────────────────

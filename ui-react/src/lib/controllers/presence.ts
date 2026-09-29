@@ -1,5 +1,5 @@
-import type { GatewayBrowserClient } from "../gateway.ts";
-import type { PresenceEntry } from "../types.ts";
+import type { GatewayBrowserClient } from "../gateway/gateway.ts";
+import type { PresenceEntry } from "../types/types.ts";
 
 export type PresenceState = {
   client: GatewayBrowserClient | null;

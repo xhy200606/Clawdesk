@@ -2,11 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { i18n, t, type Locale } from "../../i18n/index.ts";
 import { SUPPORTED_LOCALES } from "../../i18n/lib/registry.ts";
-import { setTab as setTabLib } from "../../lib/app-settings.ts";
+import { setTab as setTabLib } from "../../lib/app/app-settings.ts";
+import { titleForTab, iconForTab, type Tab } from "../../lib/app/navigation.ts";
 import { avatarFromName } from "../../lib/helpers/multiavatar.ts";
-import { icons } from "../../lib/icons.ts";
-import { titleForTab, iconForTab, type Tab } from "../../lib/navigation.ts";
-import type { ThemeMode } from "../../lib/theme.ts";
+import type { ThemeMode } from "../../lib/theme/theme.ts";
 import {
   getUserProfile,
   removeUserAvatar,
@@ -14,7 +13,8 @@ import {
   setUserAvatar,
   setUserName,
   type UserProfile,
-} from "../../lib/user-profile.ts";
+} from "../../lib/theme/user-profile.ts";
+import { icons } from "../../lib/util/icons.ts";
 import { useAppStore, getReactiveState } from "../../store/appStore.ts";
 
 const THEME_ORDER: ThemeMode[] = ["system", "light", "dark"];

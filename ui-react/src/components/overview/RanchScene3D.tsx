@@ -6,11 +6,11 @@ import { Canvas, useFrame } from "@react-three/fiber";
  */
 import React, { useRef, useMemo, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
-import { resolveAgentAppearance, resolveAgentSpecies } from "../../lib/animals.ts";
-import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch-daycycle.ts";
-import { useRanchWeather, seededRand } from "../../lib/ranch-weather.ts";
-import type { RanchWeatherInfo } from "../../lib/ranch-weather.ts";
-import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
+import { resolveAgentAppearance, resolveAgentSpecies } from "../../lib/ranch/animals.ts";
+import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch/ranch-daycycle.ts";
+import { useRanchWeather, seededRand } from "../../lib/ranch/ranch-weather.ts";
+import type { RanchWeatherInfo } from "../../lib/ranch/ranch-weather.ts";
+import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 
 // ─── Constants ──────────────────────────────────────────────────────
