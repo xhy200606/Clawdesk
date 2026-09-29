@@ -6,6 +6,8 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { resolveAgentAppearance } from "../../lib/animals.ts";
 import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch-daycycle.ts";
+import { useRanchWeather, seededRand } from "../../lib/ranch-weather.ts";
+import type { RanchWeather } from "../../lib/ranch-weather.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 
@@ -274,63 +276,123 @@ function PixelPond() {
   );
 }
 
-// ── 像素河 + 木桥（左上角区域） ──
+// ── 像素河 + 木桥（左上角区域，贯穿整个角落） ──
+// 河道：从顶部右缘蜿蜒流向左侧边缘（viewBox 180x620），桥架在中段近直线处、
+// 与河道切线垂直（rotate 82°），树已全部移出河道区。
 function PixelRiver() {
+  const FLOW = "M 128 0 C 82 105, 50 235, 40 370 S 12 520, 0 600";
   return (
     <svg
       width="100%"
       height="100%"
-      viewBox="0 0 160 300"
+      viewBox="0 0 180 620"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"
       style={{ imageRendering: "pixelated", display: "block" }}
     >
       {/* 河岸 */}
-      <path
-        d="M 130 0 C 95 55, 62 115, 42 175 S 12 240, 0 262"
-        fill="none"
-        stroke="#3d7b6a"
-        strokeWidth="34"
-        strokeLinecap="round"
-      />
+      <path d={FLOW} fill="none" stroke="#3d7b6a" strokeWidth="36" strokeLinecap="round" />
       {/* 水面 */}
+      <path d={FLOW} fill="none" stroke="#4a9e8a" strokeWidth="26" strokeLinecap="round" />
       <path
-        d="M 130 0 C 95 55, 62 115, 42 175 S 12 240, 0 262"
-        fill="none"
-        stroke="#4a9e8a"
-        strokeWidth="24"
-        strokeLinecap="round"
-      />
-      <path
-        d="M 130 0 C 95 55, 62 115, 42 175 S 12 240, 0 262"
+        d={FLOW}
         fill="none"
         stroke="#5cb8a4"
-        strokeWidth="10"
+        strokeWidth="11"
         strokeLinecap="round"
         opacity="0.7"
       />
-      {/* 波光 */}
+      {/* 波光（沿河道分布） */}
       <path
-        d="M 118 18 q 8 6 0 12 M 84 74 q 8 6 0 12 M 58 128 q 8 6 0 12 M 40 182 q 8 6 0 12 M 20 232 q 8 6 0 12"
+        d="M 112 60 q 8 6 0 12 M 90 132 q 8 6 0 12 M 72 208 q 8 6 0 12 M 56 288 q 8 6 0 12 M 42 372 q 8 6 0 12 M 28 462 q 8 6 0 12 M 14 546 q 8 6 0 12"
         stroke="#8ad8c8"
         strokeWidth="3"
         fill="none"
         opacity="0.6"
       />
-      {/* 木桥（横跨河面） */}
-      <g transform="translate(52 146) rotate(52)">
-        <rect x="-11" y="-24" width="22" height="48" rx="2" fill="#a07020" />
-        <rect x="-8" y="-21" width="16" height="42" fill="#c09040" />
-        <rect x="-8" y="-13" width="16" height="2.5" fill="#a07020" opacity="0.6" />
-        <rect x="-8" y="-2" width="16" height="2.5" fill="#a07020" opacity="0.6" />
-        <rect x="-8" y="9" width="16" height="2.5" fill="#a07020" opacity="0.6" />
+      {/* 木桥（横跨河面，与河道切线垂直） */}
+      <g transform="translate(47 300) rotate(82)">
+        <rect x="-10" y="-27" width="20" height="54" rx="2" fill="#a07020" />
+        <rect x="-7.5" y="-24" width="15" height="48" fill="#c09040" />
+        <rect x="-7.5" y="-15" width="15" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-7.5" y="-4" width="15" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-7.5" y="7" width="15" height="2.5" fill="#a07020" opacity="0.6" />
         {/* 桥头桩 */}
-        <rect x="-13" y="-24" width="5" height="7" fill="#8b5a2b" />
-        <rect x="8" y="-24" width="5" height="7" fill="#8b5a2b" />
-        <rect x="-13" y="17" width="5" height="7" fill="#8b5a2b" />
-        <rect x="8" y="17" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-12" y="-27" width="5" height="7" fill="#8b5a2b" />
+        <rect x="7" y="-27" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-12" y="20" width="5" height="7" fill="#8b5a2b" />
+        <rect x="7" y="20" width="5" height="7" fill="#8b5a2b" />
       </g>
     </svg>
+  );
+}
+
+// ── 2D 天气层（雨 / 雪 / 雾；晴朗无覆盖层） ──
+const WEATHER_TINT_2D: Record<RanchWeather, string | null> = {
+  sunny: null,
+  rain: "rgba(40, 60, 92, 0.20)",
+  snow: "rgba(205, 220, 240, 0.14)",
+  fog: "rgba(196, 206, 216, 0.24)",
+};
+
+function RanchWeather2D({ weather, seed }: { weather: RanchWeather; seed: number }) {
+  const drops = useMemo(() => {
+    if (weather !== "rain" && weather !== "snow") return [];
+    const count = weather === "rain" ? 64 : 46;
+    return Array.from({ length: count }, (_, i) => ({
+      left: seededRand(seed, i) * 100,
+      delay: seededRand(seed, i + 1000) * (weather === "rain" ? 1.6 : 6),
+      duration:
+        weather === "rain"
+          ? 0.65 + seededRand(seed, i + 2000) * 0.5
+          : 4.5 + seededRand(seed, i + 2000) * 3.5,
+      scale: 0.75 + seededRand(seed, i + 3000) * 0.6,
+    }));
+  }, [weather, seed]);
+
+  if (weather === "sunny") return null;
+  return (
+    <div className={`ranch-weather ranch-weather--${weather}`} aria-hidden>
+      {weather === "rain" &&
+        drops.map((d, i) => (
+          <i
+            key={i}
+            className="ranch-weather__drop"
+            style={{
+              left: `${d.left}%`,
+              animationDelay: `${d.delay}s`,
+              animationDuration: `${d.duration}s`,
+              transform: `scale(${d.scale})`,
+            }}
+          />
+        ))}
+      {weather === "snow" &&
+        drops.map((d, i) => (
+          <i
+            key={i}
+            className="ranch-weather__flake"
+            style={{
+              left: `${d.left}%`,
+              animationDelay: `${d.delay}s`,
+              animationDuration: `${d.duration}s`,
+              transform: `scale(${d.scale})`,
+            }}
+          />
+        ))}
+      {weather === "fog" && (
+        <>
+          <span className="ranch-weather__fog-band" style={{ top: "6%", animationDelay: "0s" }} />
+          <span className="ranch-weather__fog-band" style={{ top: "34%", animationDelay: "-6s" }} />
+          <span
+            className="ranch-weather__fog-band"
+            style={{ top: "62%", animationDelay: "-12s" }}
+          />
+        </>
+      )}
+      {WEATHER_TINT_2D[weather] && (
+        <div className="ranch-weather__tint" style={{ background: WEATHER_TINT_2D[weather] }} />
+      )}
+    </div>
   );
 }
 
@@ -721,14 +783,15 @@ function DecoItem({ type }: { type: DecoType }) {
 // ─── Scene Layout Data ──────────────────────────────────────────────
 
 const TREES: Array<{ left: string; top: string; size: "sm" | "lg" }> = [
-  { left: "0%", top: "0%", size: "lg" },
-  { left: "6%", top: "-1%", size: "sm" },
+  // 左上角河道区（left<18% 且 top<62%）不放树；以下树全部移到河岸右侧/边缘之外
+  { left: "22%", top: "-2%", size: "lg" },
+  { left: "16%", top: "-2%", size: "sm" },
   { left: "30%", top: "0%", size: "sm" },
   { left: "36%", top: "-2%", size: "lg" },
   { left: "90%", top: "0%", size: "lg" },
   { left: "95%", top: "2%", size: "sm" },
-  { left: "0%", top: "25%", size: "sm" },
-  { left: "-1%", top: "45%", size: "lg" },
+  { left: "9%", top: "28%", size: "sm" },
+  { left: "10%", top: "47%", size: "lg" },
   { left: "2%", top: "65%", size: "sm" },
   { left: "94%", top: "30%", size: "sm" },
   { left: "96%", top: "55%", size: "lg" },
@@ -879,6 +942,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
   const sceneRef = useRef<HTMLDivElement>(null);
   // 牧场昼夜循环（10 分钟一天）
   const day = useRanchDayCycle();
+  const weather = useRanchWeather();
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const panRef = useRef(pan);
   panRef.current = pan;
@@ -1237,14 +1301,14 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
           style={{ left: "45%", right: 0, top: "30%", width: "55%", height: 24 }}
         />
 
-        {/* River + bridge（左上角区域，装饰；牛马活动区不受影响） */}
+        {/* River + bridge（左上角区域，贯穿角落；牛马活动区不受影响） */}
         <div
           style={{
             position: "absolute",
             left: 0,
             top: 0,
-            width: "16%",
-            height: "32%",
+            width: "18%",
+            height: "62%",
             zIndex: 1,
             pointerEvents: "none",
           }}
@@ -1266,8 +1330,8 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         <div
           style={{
             position: "absolute",
-            left: "6%",
-            top: "35%",
+            left: "8%",
+            top: "36%",
             zIndex: 4,
             imageRendering: "pixelated",
             pointerEvents: "none",
@@ -1498,6 +1562,9 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         </div>
       </div>
 
+      {/* ── 天气层（雨/雪/雾，覆盖在世界之上、屏幕坐标） ── */}
+      <RanchWeather2D weather={weather.weather} seed={weather.seed} />
+
       {/* Title（屏幕坐标固定：不随世界层缩放/平移） */}
       <div className="ranch-title">
         <div className="ranch-title__main">
@@ -1558,7 +1625,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         {/* ── 昼夜循环：色调滤镜 + 牧场时钟 ── */}
         <div className="ranch-daycycle__tint" style={{ background: day.tint }} aria-hidden />
         <div className="ranch-daycycle__badge" aria-hidden>
-          {day.label} · {day.clock}
+          {day.label} · {day.clock} · {weather.icon} {weather.label}
         </div>
       </div>
     </div>

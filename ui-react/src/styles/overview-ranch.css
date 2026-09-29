@@ -2517,11 +2517,120 @@
     overflow: hidden;
 }
 
-/* ─── 牛马档案形象：完全静止（禁一切位移动画） ─── */
+/* ─── 牛马档案形象：完全静止（禁一切位移动画） ───
+   像素画在 32x32 viewBox 内整体偏左（x≈0..26，中心≈13），
+   translate(8%, -4%) 将各物种形象居中到圆形头像环内并轻微放大。 */
 .agent-animal--static .ranch-animal__sprite {
     animation: none !important;
+    transform: translate(8%, -4%) scale(1.06);
 }
 
 .agent-animal--static .agent-animal__speed {
     display: none !important;
+}
+
+/* ─── 牧场天气层（2D）：雨 / 雪 / 雾 ─── */
+.ranch-weather {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 30;
+}
+
+.ranch-weather__tint {
+    position: absolute;
+    inset: 0;
+}
+
+/* 雨滴：细长渐变条，自上而下 */
+.ranch-weather__drop {
+    position: absolute;
+    top: -12%;
+    width: 2px;
+    height: 15px;
+    border-radius: 1px;
+    background: linear-gradient(to bottom, rgba(157, 184, 216, 0), rgba(170, 196, 224, 0.85));
+    animation-name: ranch-rain-fall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+@keyframes ranch-rain-fall {
+    0% {
+        top: -12%;
+        opacity: 0;
+    }
+
+    8% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 112%;
+        opacity: 0.9;
+    }
+}
+
+/* 雪花：白色圆点，缓慢下落 + 左右轻摆 */
+.ranch-weather__flake {
+    position: absolute;
+    top: -8%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.55);
+    animation-name: ranch-snow-fall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+@keyframes ranch-snow-fall {
+    0% {
+        top: -8%;
+        margin-left: 0;
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    50% {
+        margin-left: 16px;
+    }
+
+    100% {
+        top: 110%;
+        margin-left: 0;
+        opacity: 0.85;
+    }
+}
+
+/* 雾带：大面积模糊横带，左右缓慢漂移 */
+.ranch-weather__fog-band {
+    position: absolute;
+    left: -12%;
+    width: 124%;
+    height: 26%;
+    background: linear-gradient(
+        to bottom,
+        rgba(202, 212, 222, 0) 0%,
+        rgba(202, 212, 222, 0.5) 45%,
+        rgba(202, 212, 222, 0.22) 70%,
+        rgba(202, 212, 222, 0) 100%
+    );
+    filter: blur(6px);
+    animation: ranch-fog-drift 26s ease-in-out infinite alternate;
+}
+
+@keyframes ranch-fog-drift {
+    0% {
+        transform: translateX(-6%);
+    }
+
+    100% {
+        transform: translateX(6%);
+    }
 }

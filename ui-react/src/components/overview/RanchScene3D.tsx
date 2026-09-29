@@ -8,6 +8,8 @@ import React, { useRef, useMemo, useState, useEffect, useCallback } from "react"
 import * as THREE from "three";
 import { resolveAgentAppearance, resolveAgentSpecies } from "../../lib/animals.ts";
 import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch-daycycle.ts";
+import { useRanchWeather, seededRand } from "../../lib/ranch-weather.ts";
+import type { RanchWeatherInfo } from "../../lib/ranch-weather.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 
@@ -46,8 +48,10 @@ function getProcessingSubState(agentIdx: number): {
 /**
  * 天球日/月：按真实本地时间计算高度角与方位（东升西落）。
  * 天体在世界坐标系中，旋转/环绕视角时太阳方向随观察方向一同变化。
+ * 弧线压低（最高 ~28°）并放在 -z 远空：保证环绕/抬头时天体落在视野内，
+ * 而不是升到头顶永远看不见。
  */
-const SKY_R = 46;
+const SKY_R = 44;
 
 function skyBodyPosition(hour: number): {
   sun: [number, number, number] | null;
@@ -57,7 +61,7 @@ function skyBodyPosition(hour: number): {
   if (dayFrac >= 0 && dayFrac <= 1) {
     const theta = Math.PI * dayFrac;
     return {
-      sun: [SKY_R * Math.cos(theta) * 0.9, SKY_R * (0.18 + 0.82 * Math.sin(theta)), -SKY_R * 0.4],
+      sun: [SKY_R * 0.9 * Math.cos(theta), SKY_R * 0.22 * Math.sin(theta), -SKY_R * 0.42],
       moon: null,
     };
   }
@@ -65,13 +69,15 @@ function skyBodyPosition(hour: number): {
   const theta = Math.PI * Math.min(1, Math.max(0, nightFrac));
   return {
     sun: null,
-    moon: [-SKY_R * Math.cos(theta) * 0.9, SKY_R * (0.18 + 0.82 * Math.sin(theta)), -SKY_R * 0.4],
+    moon: [-SKY_R * 0.9 * Math.cos(theta), SKY_R * 0.22 * Math.sin(theta), -SKY_R * 0.42],
   };
 }
 
 function SkyBodies3D() {
   const sunRef = useRef<THREE.Mesh>(null);
   const moonRef = useRef<THREE.Mesh>(null);
+  const moonGlowRef = useRef<THREE.Mesh>(null);
+  const moonLightRef = useRef<THREE.PointLight>(null);
   const lastHourRef = useRef(-1);
   useFrame(() => {
     const now = new Date();
@@ -87,25 +93,45 @@ function SkyBodies3D() {
         sunRef.current.visible = false;
       }
     }
+    const moonVisible = Boolean(moon);
     if (moonRef.current) {
-      if (moon) {
-        moonRef.current.visible = true;
-        moonRef.current.position.set(...moon);
-      } else {
-        moonRef.current.visible = false;
-      }
+      moonRef.current.visible = moonVisible;
+      if (moon) moonRef.current.position.set(...moon);
+    }
+    if (moonGlowRef.current) {
+      moonGlowRef.current.visible = moonVisible;
+      if (moon) moonGlowRef.current.position.set(...moon);
+    }
+    if (moonLightRef.current) {
+      // 月光：随月亮移动的冷色点光源，夜晚给牧场一层星光月色照明
+      moonLightRef.current.visible = moonVisible;
+      if (moon)
+        moonLightRef.current.position.set(moon[0] * 0.55, moon[1] * 0.55 + 4, moon[2] * 0.55);
     }
   });
   return (
     <>
       <mesh ref={sunRef} visible={false}>
-        <sphereGeometry args={[3.2, 16, 16]} />
+        <sphereGeometry args={[4.4, 16, 16]} />
         <meshBasicMaterial color="#ffd76e" fog={false} />
       </mesh>
       <mesh ref={moonRef} visible={false}>
-        <sphereGeometry args={[2.4, 16, 16]} />
+        <sphereGeometry args={[3.4, 16, 16]} />
         <meshBasicMaterial color="#e6ecf8" fog={false} />
       </mesh>
+      {/* 月晕（柔光外圈） */}
+      <mesh ref={moonGlowRef} visible={false}>
+        <sphereGeometry args={[5.4, 16, 16]} />
+        <meshBasicMaterial color="#c8d8ff" transparent opacity={0.16} fog={false} />
+      </mesh>
+      <pointLight
+        ref={moonLightRef}
+        visible={false}
+        color="#a9c4ff"
+        intensity={26}
+        distance={38}
+        decay={1.4}
+      />
     </>
   );
 }
@@ -120,8 +146,9 @@ function StarField3D({ alpha }: { alpha: number }) {
     const positions: number[] = [];
     for (const [sx, sy] of DAYCYCLE_STARS) {
       const az = (sx / 100) * Math.PI * 2;
-      // sy=0（屏幕顶部）→ 高仰角；sy=100 → 接近地平线
-      const el = (Math.PI / 2) * (0.12 + (1 - sy / 100) * 0.78);
+      // 仰角压到 4°~26° 的低空带：相机环绕/微抬头即可看到（高仰角会出视野）
+      const elDeg = 4 + (1 - sy / 100) * 22;
+      const el = (elDeg * Math.PI) / 180;
       const r = 44;
       positions.push(
         r * Math.cos(el) * Math.sin(az),
@@ -137,11 +164,68 @@ function StarField3D({ alpha }: { alpha: number }) {
   return (
     <points geometry={geometry} frustumCulled={false}>
       <pointsMaterial
-        size={0.45}
+        size={1.1}
         color="#ffffff"
         transparent
         opacity={alpha}
         fog={false}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
+/**
+ * 3D 天气粒子：雨（细密快速下落）/ 雪（缓慢飘落带横向摆动）。
+ * 粒子布局由天气时段种子确定性生成，位置每帧更新、落地回收到顶部。
+ */
+function WeatherParticles3D({ kind, seed }: { kind: "rain" | "snow"; seed: number }) {
+  const pointsRef = useRef<THREE.Points>(null);
+  const count = kind === "rain" ? 320 : 240;
+  const { geometry, speeds } = useMemo(() => {
+    const positions = new Float32Array(count * 3);
+    const spd = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (seededRand(seed, i) - 0.5) * 26;
+      positions[i * 3 + 1] = seededRand(seed, i + 500) * 12;
+      positions[i * 3 + 2] = (seededRand(seed, i + 900) - 0.5) * 26;
+      spd[i] =
+        kind === "rain"
+          ? 10 + seededRand(seed, i + 1300) * 6
+          : 1.1 + seededRand(seed, i + 1300) * 0.9;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    return { geometry: geo, speeds: spd };
+  }, [kind, seed, count]);
+
+  useFrame((_, delta) => {
+    const pts = pointsRef.current;
+    if (!pts) return;
+    const attr = pts.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const arr = attr.array as Float32Array;
+    const dt = Math.min(delta, 0.1);
+    const t = performance.now() / 1000;
+    for (let i = 0; i < count; i++) {
+      arr[i * 3 + 1] -= speeds[i] * dt;
+      if (kind === "snow") arr[i * 3] += Math.sin(t * 0.9 + i) * 0.25 * dt;
+      if (arr[i * 3 + 1] < -0.4) {
+        arr[i * 3 + 1] = 11 + Math.random() * 2;
+        arr[i * 3] = (Math.random() - 0.5) * 26;
+        arr[i * 3 + 2] = (Math.random() - 0.5) * 26;
+      }
+    }
+    attr.needsUpdate = true;
+  });
+
+  const isRain = kind === "rain";
+  return (
+    <points ref={pointsRef} geometry={geometry} frustumCulled={false}>
+      <pointsMaterial
+        size={isRain ? 0.09 : 0.22}
+        color={isRain ? "#9db8d8" : "#ffffff"}
+        transparent
+        opacity={isRain ? 0.55 : 0.9}
         sizeAttenuation
       />
     </points>
@@ -497,19 +581,23 @@ function Bridge3D({ at, angle }: { at: [number, number]; angle: number }) {
 }
 
 function River3D() {
-  // 与 2D 对应：左上角（默认视角的远左区域），从场地后缘流向左侧
+  // 与 2D 新河道对应：从后缘 (z=-10) 蜿蜒流向左缘 (x=-10, z≈+2)，
+  // 2D 场景 x% → 3D x=-10+x*0.2，y% → 3D z=-10+y*0.2
   const segments: { from: [number, number]; to: [number, number] }[] = [
-    { from: [-4.6, -8.2], to: [-6.0, -5.8] },
-    { from: [-6.0, -5.8], to: [-7.2, -4.0] },
-    { from: [-7.2, -4.0], to: [-8.4, -1.6] },
+    { from: [-7.4, -10.0], to: [-8.1, -7.9] },
+    { from: [-8.1, -7.9], to: [-8.8, -5.8] },
+    { from: [-8.8, -5.8], to: [-9.1, -4.0] },
+    { from: [-9.1, -4.0], to: [-9.2, -3.0] },
+    { from: [-9.2, -3.0], to: [-9.6, 0.0] },
+    { from: [-9.6, 0.0], to: [-10.0, 2.0] },
   ];
-  // 桥架在第二段上，横跨河面
-  const bridgeAt: [number, number] = [-6.6, -4.9];
-  const bridgeAngle = Math.atan2(-1.2, -1.8) + Math.PI / 2;
+  // 桥架在 2D (47,300) 对应处，横跨河面（与该段河道切线垂直）
+  const bridgeAt: [number, number] = [-9.06, -4.0];
+  const bridgeAngle = -0.13;
   return (
     <group>
       {segments.map((seg, i) => (
-        <RiverSegment3D key={i} from={seg.from} to={seg.to} />
+        <RiverSegment3D key={i} from={seg.from} to={seg.to} width={0.9} />
       ))}
       <Bridge3D at={bridgeAt} angle={bridgeAngle} />
     </group>
@@ -902,9 +990,11 @@ function CowCharacter3D({
 function SceneContent({
   agents,
   sessionActivity,
+  weather,
 }: {
   agents: GatewayAgentRow[];
   sessionActivity: SessionActivityResult | null;
+  weather: RanchWeatherInfo;
 }) {
   // Re-render periódico para cycling
   const [, setTick] = useState(0);
@@ -940,12 +1030,12 @@ function SceneContent({
     return false;
   }, [agents, agentStateMap]);
 
-  // Tree positions
+  // Tree positions（避开新河道：河道沿 x≈-7.4→-10, z=-10→+2 一带）
   const treePositions = useMemo<[number, number, number][]>(
     () => [
-      [-8, 0, -8],
-      [-6, 0, -9],
-      [-3, 0, -8.5],
+      [-5.5, 0, -8],
+      [-3.5, 0, -9],
+      [-2, 0, -8.5],
       [2, 0, -9],
       [5, 0, -8],
       [8, 0, -7],
@@ -953,9 +1043,9 @@ function SceneContent({
       [9, 0, 0],
       [9, 0, 4],
       [9, 0, 7],
-      [-9, 0, -4],
-      [-9, 0, 2],
-      [-9, 0, 6],
+      [-7.6, 0, -2.2],
+      [-6.8, 0, 0.5],
+      [-7.5, 0, 5],
       [-8, 0, 8],
       [-4, 0, 9],
       [0, 0, 9],
@@ -967,14 +1057,25 @@ function SceneContent({
   );
 
   const day = useRanchDayCycle(2000);
+  // 雨天/大雾时环境光略降（阴天氛围），但夜晚基础亮度已整体调高
+  const lightLevel =
+    weather.weather === "rain" || weather.weather === "fog"
+      ? day.lightLevel * 0.85
+      : day.lightLevel;
   return (
     <>
       <SkyBodies3D />
       <StarField3D alpha={day.starAlpha} />
-      <ambientLight intensity={0.35 * day.lightLevel + 0.12} />
+      {(weather.weather === "rain" || weather.weather === "snow") && (
+        <WeatherParticles3D
+          kind={weather.weather === "rain" ? "rain" : "snow"}
+          seed={weather.seed}
+        />
+      )}
+      <ambientLight intensity={0.35 * lightLevel + 0.12} />
       <directionalLight
         position={[8, 12, 8]}
-        intensity={1.1 * day.lightLevel + 0.15}
+        intensity={1.1 * lightLevel + 0.15}
         color={day.isNight ? "#b9c9ff" : "#fff6e8"}
         castShadow
         shadow-mapSize-width={1024}
@@ -991,7 +1092,8 @@ function SceneContent({
         enablePan
         enableZoom
         minPolarAngle={Math.PI / 8}
-        maxPolarAngle={Math.PI / 2.5}
+        // 允许压到接近地平线视角：抬头可见天球星月（不会钻到地面以下）
+        maxPolarAngle={1.45}
         minDistance={5}
         maxDistance={25}
         target={[0, 0, 0]}
@@ -1071,7 +1173,7 @@ function SceneContent({
 
       {/* Luz ambiental hemisférica en lugar de Environment preset (evita carga async HDR) */}
       <hemisphereLight
-        args={[day.skyTop, day.isNight ? "#2c3a26" : "#8db651", 0.6 * day.lightLevel + 0.15]}
+        args={[day.skyTop, day.isNight ? "#2c3a26" : "#8db651", 0.6 * lightLevel + 0.15]}
       />
     </>
   );
@@ -1086,22 +1188,32 @@ export type RanchScene3DProps = {
 
 export function RanchScene3D({ agents, sessionActivity }: RanchScene3DProps) {
   const day = useRanchDayCycle();
+  const weather = useRanchWeather();
+  // 天气影响雾：大雾浓、雨雪次之，晴天保持原有远雾
+  const fogArgs =
+    weather.weather === "fog"
+      ? ["#c4ced8", 5, 17]
+      : weather.weather === "rain"
+        ? [day.skyTop, 9, 26]
+        : weather.weather === "snow"
+          ? [day.skyTop, 11, 28]
+          : [day.skyTop, 20, 40];
   return (
     <div className="ranch-scene ranch-scene--3d" style={{ background: day.skyBottom }}>
       <Canvas
         gl={{ antialias: true, alpha: false }}
         shadows
-        camera={{ fov: 40, position: [12, 10, 12], near: 0.1, far: 100 }}
+        camera={{ fov: 50, position: [13, 8.5, 13], near: 0.1, far: 100 }}
         style={{ imageRendering: "auto" }}
       >
         <color attach="background" args={[day.skyTop]} />
-        <fog attach="fog" args={[day.skyTop, 20, 40]} />
-        <SceneContent agents={agents} sessionActivity={sessionActivity} />
+        <fog attach="fog" args={fogArgs as [string, number, number]} />
+        <SceneContent agents={agents} sessionActivity={sessionActivity} weather={weather} />
       </Canvas>
       {/* 星空已渲染为 3D 天球星点（StarField3D），随视角旋转保持空间关系 */}
       <div className="ranch-daycycle__tint" style={{ background: day.tint }} aria-hidden />
       <div className="ranch-daycycle__badge" aria-hidden>
-        {day.label} · {day.clock}
+        {day.label} · {day.clock} · {weather.icon} {weather.label}
       </div>
     </div>
   );
