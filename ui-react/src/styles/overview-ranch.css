@@ -2493,9 +2493,11 @@
 .ranch-daycycle__badge {
     position: absolute;
     z-index: 60;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
+    /* 需求：时钟牌放在 2D/3D 切换按钮正下方（切换按钮在 top:8 right:10） */
+    top: 46px;
+    right: 10px;
+    left: auto;
+    transform: none;
     padding: 2px 9px;
     border-radius: 999px;
     font-size: 11px;

@@ -19,7 +19,7 @@ export type DayPhaseInfo = {
   skyBottom: string;
   /** 全场景色调滤镜色（multiply 叠加） */
   tint: string;
-  /** 日/月位置（视口比例 0..1），showSun 决定画哪个 */
+  /** 日/月固定位置（视口比例 0..1），showSun 决定画哪个 */
   orbX: number;
   orbY: number;
   showSun: boolean;
@@ -153,8 +153,9 @@ export function useRanchDayCycle(intervalMs = 1000): DayPhaseInfo {
     skyTop: rgb(top),
     skyBottom: rgb(bot),
     tint: `rgba(${tintC[0]}, ${tintC[1]}, ${tintC[2]}, ${a.toFixed(3)})`,
-    orbX: 0.08 + frac * 0.84,
-    orbY: 0.6 - Math.sin(frac * Math.PI) * 0.5,
+    // 需求：太阳/月亮固定在左上角，不随时间/视角移动（只随昼夜切换日/月）
+    orbX: 0.09,
+    orbY: 0.13,
     showSun,
     starAlpha,
     lightLevel: light,

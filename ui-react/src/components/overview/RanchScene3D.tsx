@@ -425,6 +425,9 @@ function CowCharacter3D({
   const bodyGroupRef = useRef<THREE.Group>(null);
   // Ref para la posición destino (evita que React sobreescriba la posición al re-renderizar)
   const targetRef = useRef(new THREE.Vector3(...targetPosition));
+  // 空闲随机游走：当前随机目标点 + 下一次换目标的时间戳
+  const idleTargetRef = useRef<{ x: number; z: number } | null>(null);
+  const idleNextPickRef = useRef(0);
   const isWalkingRef = useRef(false);
   const initializedRef = useRef(false);
 
@@ -452,10 +455,17 @@ function CowCharacter3D({
       targetRef.current.x = targetPosition[0] + Math.sin(t * 0.5 + phase) * 1.2;
       targetRef.current.z = targetPosition[2] + Math.cos(t * 0.35 + phase) * 0.8;
     } else {
-      // 圈内游走：圈中心约 (5, -4)（围栏区 x2~8 / z-6~-2），半径按个体相位错开
-      targetRef.current.x =
-        5 + Math.sin(t * 0.11 + phase) * (1.6 + Math.abs(Math.sin(phase)) * 0.8);
-      targetRef.current.z = -4 + Math.cos(t * 0.09 + phase) * 1.3;
+      // 圈内随机游走：围栏区 x2~8 / z-6~-2，随机取目标点，
+      // 到达/超时后停顿片刻再换新目标（随机游走 + 随机固定）
+      if (!idleTargetRef.current || t >= idleNextPickRef.current) {
+        idleTargetRef.current = {
+          x: 2.8 + Math.random() * 4.4,
+          z: -5.2 + Math.random() * 2.4,
+        };
+        idleNextPickRef.current = t + 3 + Math.random() * 4;
+      }
+      targetRef.current.x = idleTargetRef.current.x;
+      targetRef.current.z = idleTargetRef.current.z;
     }
 
     // Smooth position lerp (no usa el prop, solo targetRef)

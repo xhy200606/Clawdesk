@@ -1054,7 +1054,8 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
               transition: "left 3.4s ease-in-out, top 3.4s ease-in-out",
             }
           : {
-              // 圈内游走：以围栏中心 (52%, 18%) 为基准的横向带状区域
+              // 圈内随机游走：以围栏圈左上角 (52%, 18%) 为基准，
+              // dx/dy 已被限制在圈内区（28~172 / 24~66 px）
               left: `calc(52% + ${walk.dx}px)`,
               top: `calc(18% + ${walk.dy}px)`,
               transition: "left 3.4s ease-in-out, top 3.4s ease-in-out",
