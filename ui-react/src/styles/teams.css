@@ -641,3 +641,92 @@
 .teams-workbench__session-child span:nth-child(2) {
   opacity: 0.85;
 }
+
+/* ─── Agent 间自动通信（A2A 群聊视图） ─── */
+.teams-comm-a2a {
+    margin-top: 10px;
+}
+
+.teams-comm-a2a__switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.teams-comm-a2a small {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--muted);
+}
+
+.teams-comm-a2a__err {
+    color: #e05a5a;
+}
+
+.teams-comm-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 340px;
+    margin-top: 10px;
+    overflow-y: auto;
+}
+
+.teams-comm-msg {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-elevated);
+}
+
+.teams-comm-msg--user {
+    border-style: dashed;
+    opacity: 0.8;
+}
+
+.teams-comm-msg__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.teams-comm-msg__head strong {
+    font-size: 12px;
+}
+
+.teams-comm-msg__dir {
+    font-size: 11px;
+    color: var(--accent);
+}
+
+.teams-comm-msg__head small {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.teams-comm-msg p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.teams-comm-feed__empty {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* ─── 流程图上的有向通信边（橙色弧线 + 箭头） ─── */
+.team-flow__comm-edge {
+    stroke: #e8862c;
+    stroke-dasharray: 6 4;
+    fill: none;
+    opacity: 0.9;
+}

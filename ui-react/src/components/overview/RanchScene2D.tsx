@@ -5,7 +5,7 @@
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { resolveAgentAppearance } from "../../lib/animals.ts";
-import { useRanchDayCycle } from "../../lib/ranch-daycycle.ts";
+import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch-daycycle.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 
@@ -774,34 +774,7 @@ function SpeakingIndicator() {
 }
 
 // 星星坐标（百分比，确定性伪随机，避免每次渲染跳动）
-const DAYCYCLE_STARS: Array<[number, number, number]> = [
-  [4, 12, 0],
-  [9, 22, 1.2],
-  [14, 8, 0.6],
-  [19, 30, 2],
-  [24, 15, 0.3],
-  [29, 5, 1.6],
-  [34, 24, 0.9],
-  [39, 11, 0.1],
-  [44, 32, 1.8],
-  [49, 18, 0.5],
-  [54, 7, 2.2],
-  [59, 27, 1.1],
-  [64, 14, 0.7],
-  [69, 34, 1.9],
-  [74, 9, 0.2],
-  [79, 21, 1.4],
-  [84, 4, 0.8],
-  [89, 29, 2.1],
-  [94, 16, 1.0],
-  [97, 8, 0.4],
-  [12, 38, 1.5],
-  [37, 40, 0.6],
-  [62, 41, 1.7],
-  [82, 38, 0.9],
-  [47, 3, 1.3],
-  [72, 42, 0.5],
-];
+// 星空数据已移入 lib/ranch-daycycle.ts（2D/3D 共用）
 
 // ─── Animal Component ───────────────────────────────────────────────
 
@@ -1019,6 +992,27 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
     return false;
   }, [agents, agentStateMap]);
 
+  // 游走目标（相对偏移 px）：空闲在围栏圈内悠闲走动，工作在槽位附近小范围活动。
+  // 每 ~3.6s 换一次目标点，配合 CSS transition 平滑移动；个体间隔随机自然。
+  const [wander, setWander] = useState<Record<string, { dx: number; dy: number }>>({});
+  useEffect(() => {
+    const step = () =>
+      setWander((current) => {
+        const next: Record<string, { dx: number; dy: number }> = { ...current };
+        const rnd = (range: number) => Math.round((Math.random() - 0.5) * range);
+        for (let idx = 0; idx < agents.length; idx++) {
+          const agent = agents[idx];
+          const base = agentStateMap.get(agent.id) ?? "idle";
+          next[agent.id] =
+            base === "processing" ? { dx: rnd(40), dy: rnd(26) } : { dx: rnd(250), dy: rnd(52) };
+        }
+        return next;
+      });
+    step();
+    const timer = window.setInterval(step, 3600);
+    return () => window.clearInterval(timer);
+  }, [agents, agentStateMap]);
+
   // Construir lista de animales con visual status y zona
   const animals = useMemo<AnimalData[]>(() => {
     return agents.map((agent, idx) => {
@@ -1049,12 +1043,22 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
       const offsetX = (idx % 3) * 5 - 5;
       const offsetY = Math.floor(idx / 3) * 6;
 
-      // 形象固定在各自槽位（不游走）；执行任务时奔跑动画周期错开避免整齐划一
-      const style: React.CSSProperties = {
-        left: `${zone.left + offsetX}%`,
-        top: `${zone.top + offsetY}%`,
-        transition: "left 1.2s ease, top 1.2s ease",
-      };
+      // 游走模型：空闲（含等待/异常）在圈内悠闲走动；
+      // 执行任务时在对应工作位置的槽位附近小范围活动。
+      const walk = wander[agentId] ?? { dx: 0, dy: 0 };
+      const style: React.CSSProperties =
+        baseState === "processing"
+          ? {
+              left: `calc(${zone.left + offsetX}% + ${walk.dx}px)`,
+              top: `calc(${zone.top + offsetY}% + ${walk.dy}px)`,
+              transition: "left 3.4s ease-in-out, top 3.4s ease-in-out",
+            }
+          : {
+              // 圈内游走：以围栏中心 (52%, 18%) 为基准的横向带状区域
+              left: `calc(52% + ${walk.dx}px)`,
+              top: `calc(18% + ${walk.dy}px)`,
+              transition: "left 3.4s ease-in-out, top 3.4s ease-in-out",
+            };
 
       if (baseState === "processing") {
         const isHot = sess?.lastActivityAgo != null && sess.lastActivityAgo < 5000;
@@ -1077,7 +1081,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         ...sess,
       };
     });
-  }, [agents, agentStateMap, agentSessionMap]);
+  }, [agents, agentStateMap, agentSessionMap, wander]);
 
   if (!agents || agents.length === 0) return null;
 

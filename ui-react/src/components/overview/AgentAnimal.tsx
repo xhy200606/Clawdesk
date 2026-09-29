@@ -1,6 +1,6 @@
 /**
- * AgentAnimal.tsx — 牛马档案的状态动画头像
- * running（有 running 会话）→ 奔跑动画；idle → 趴卧休息（呼吸）动画。
+ * AgentAnimal.tsx — 牛马档案的形象头像（静止）
+ * 形象不再移动/奔跑：是否在工作由外层头像环颜色与呼吸灯表达。
  * 动物形象来自 agent.identity.emoji 选定的物种色板（lib/animals.ts）。
  */
 import React from "react";
@@ -27,14 +27,12 @@ export function AgentAnimal({
 }: AgentAnimalProps) {
   const appearance = resolveAgentAppearance({ emoji, avatar, avatarUrl }, idx);
   return (
+    // 档案中的形象保持完全静止（是否在工作由头像环颜色表达），不加位移动画
     <div
-      className={`agent-animal agent-animal--${state === "processing" ? "running" : "rest"}`}
+      className={`agent-animal agent-animal--${state === "processing" ? "running" : "rest"} agent-animal--static`}
       style={{ width: size, height: size }}
-      title={state === "processing" ? "奔跑中" : "休息中"}
+      title={state === "processing" ? "执行任务中" : "休息中"}
     >
-      {/* 奔跑时的速度线 */}
-      {state === "processing" && <span className="agent-animal__speed agent-animal__speed--1" />}
-      {state === "processing" && <span className="agent-animal__speed agent-animal__speed--2" />}
       <AgentAppearance {...appearance} className="ranch-animal__sprite" />
     </div>
   );

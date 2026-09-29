@@ -3,6 +3,7 @@ import { setTab, syncUrlWithSessionKey } from "../lib/app-settings.ts";
 import { loadAgents } from "../lib/controllers/agents.ts";
 import { loadChatHistory } from "../lib/controllers/chat.ts";
 import { loadSessions } from "../lib/controllers/sessions.ts";
+import { readA2aEnabled, setA2aEnabled, useTeamGroupChat } from "../lib/team-comm.ts";
 import type { GatewayAgentRow, GatewaySessionRow } from "../lib/types.ts";
 import { useAppStore, getReactiveState } from "../store/appStore.ts";
 
@@ -129,12 +130,10 @@ export function TeamsView() {
   const client = useAppStore((state) => state.client);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [showActivity, setShowActivity] = useState(true);
-  // Agent 间通信：写文本 → sessions.send 落到目标成员主会话并触发执行
-  const [commsText, setCommsText] = useState("");
-  const [commsBroadcast, setCommsBroadcast] = useState(false);
-  const [commsBusy, setCommsBusy] = useState(false);
-  const [commsNote, setCommsNote] = useState<string | null>(null);
-  const [commsLog, setCommsLog] = useState<Array<{ to: string; at: number; text: string }>>([]);
+  // Agent 间自动通信：A2A 开关 + 跨会话消息聚合（群聊视图）
+  const [a2aEnabled, setA2aEnabledState] = useState<boolean | null>(null);
+  const [a2aBusy, setA2aBusy] = useState(false);
+  const [a2aError, setA2aError] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(760);
   useEffect(() => {
@@ -218,35 +217,62 @@ export function TeamsView() {
   }, []);
 
   /**
-   * Agent 间通信协议：
-   *  1. 路由 —— 消息经网关 sessions.send 直达目标成员的主会话
-   *     （key = agent:<成员ID>:main），网关收到即触发该成员执行；
-   *  2. 广播 —— 逐一向所有其他团队成员的主会话发送同一文本；
-   *  3. 层级 —— SubAgent 会话不直接接收通信：它们由成员的主会话
-   *     派生（spawn），对 SubAgent 下指令应经由其父成员会话传递。
+   * Agent 间自动通信协议（网关原生 A2A）：
+   *  1. 能力 —— 开启 tools.agentToAgent 后，成员自带 sessions_send 工具，
+   *     可跨 Agent 互发消息（带来源归属，kind=inter_session）；
+   *  2. 聚合 —— useTeamGroupChat 轮询各成员主会话 chat.history，把
+   *     inter-session 消息（`[Inter-session message] sourceSession=...` 前缀）
+   *     解析为有向消息，assistant 发言聚合为群聊时间线；
+   *  3. 层级 —— SubAgent 不直接参与通信：它们由成员主会话派生，
+   *     对 SubAgent 下指令经其父成员会话传递（SubAgent 会话归 03 区）。
    */
-  const sendComms = useCallback(
-    async (targetIds: string[], text: string) => {
-      const body = text.trim();
-      if (!client || !body || commsBusy) return;
-      setCommsBusy(true);
-      setCommsNote(null);
-      try {
-        for (const id of targetIds) {
-          await client.request("sessions.send", { key: `agent:${id}:main`, message: body });
-        }
-        setCommsLog((prev) =>
-          [{ to: targetIds.join(", "), at: Date.now(), text: body }, ...prev].slice(0, 8),
-        );
-        setCommsText("");
-        setCommsNote(`已送达 ${targetIds.length} 个成员的主会话`);
-      } catch (err) {
-        setCommsNote(`发送失败：${String(err instanceof Error ? err.message : err)}`);
-      } finally {
-        setCommsBusy(false);
-      }
-    },
-    [client, commsBusy],
+  const commsMembers = useMemo(
+    () =>
+      members
+        .filter((member) => member.sessions.some((row) => !isChild(row)))
+        .map((member) => ({
+          id: member.id,
+          sessionKey: `agent:${member.id}:${agentsList?.mainKey || "main"}`,
+        })),
+    [members, agentsList],
+  );
+  const { messages: commMessages, refresh: refreshComms } = useTeamGroupChat(client, commsMembers);
+
+  useEffect(() => {
+    if (!client) return;
+    let cancelled = false;
+    void readA2aEnabled(client)
+      .then((value) => {
+        if (!cancelled) setA2aEnabledState(value);
+      })
+      .catch(() => {
+        if (!cancelled) setA2aEnabledState(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  const toggleA2a = useCallback(async () => {
+    if (!client || a2aBusy) return;
+    setA2aBusy(true);
+    setA2aError(null);
+    try {
+      const next = !(a2aEnabled ?? false);
+      await setA2aEnabled(client, next);
+      setA2aEnabledState(next);
+      refreshComms();
+    } catch (err) {
+      setA2aError(String(err instanceof Error ? err.message : err));
+    } finally {
+      setA2aBusy(false);
+    }
+  }, [client, a2aBusy, a2aEnabled, refreshComms]);
+
+  const memberName = useCallback(
+    (id: string) =>
+      id === "user" ? "我" : (members.find((member) => member.id === id)?.name ?? id),
+    [members],
   );
 
   const selectedMember =
@@ -265,6 +291,27 @@ export function TeamsView() {
   const leadChildX = columnX(0);
   const teammateX = (index: number) => columnX(index + (hasLeadChildren ? 1 : 0));
   const flowScale = Math.min(1, Math.max(0.1, (viewportWidth - 24) / width));
+
+  // 有向通信边：最近消息里 agent → agent 的点对点通信按对聚合（频次→线宽）
+  const commEdges = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const msg of commMessages) {
+      if (msg.from === "user" || msg.to === "group") continue;
+      if (msg.from === msg.to) continue;
+      const pair = `${msg.from}→${msg.to}`;
+      counts.set(pair, (counts.get(pair) ?? 0) + 1);
+    }
+    return [...counts.entries()];
+  }, [commMessages]);
+  const nodeCenterX = useCallback(
+    (id: string) => {
+      if (id === leadId) return width / 2;
+      const index = teammates.findIndex((member) => member.id === id);
+      return index >= 0 ? teammateX(index) + NODE_W / 2 : width / 2;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [leadId, teammates, width],
+  );
 
   return (
     <section className="teams-workbench" aria-label="协作工作台">
@@ -335,20 +382,47 @@ export function TeamsView() {
                     height={height}
                     aria-hidden="true"
                   >
+                    <defs>
+                      <marker
+                        id="comm-arrow"
+                        viewBox="0 0 10 10"
+                        refX="8"
+                        refY="5"
+                        markerWidth="7"
+                        markerHeight="7"
+                        orient="auto-start-reverse"
+                      >
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#e8862c" />
+                      </marker>
+                    </defs>
+                    {/* 主 Agent 的 SubAgent：从 01 主节点直接拉到 03 区（绕过 02） */}
                     {lead.children.map((child, index) => {
                       const x = leadChildX + NODE_W / 2;
-                      const y = 236 + index * 130;
+                      const y = 366 + index * 130;
                       const linked =
                         child.parentSessionKey === leadKey || child.spawnedBy === leadKey;
                       return (
                         <path
                           key={child.key}
                           className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
-                          d={
-                            index === 0
-                              ? `M ${width / 2} 160 C ${width / 2} 200, ${x} 200, ${x} ${y}`
-                              : `M ${x} ${y - 26} L ${x} ${y}`
-                          }
+                          d={`M ${width / 2} 160 C ${width / 2} 320, ${x} 330, ${x} ${y}`}
+                        />
+                      );
+                    })}
+                    {/* Agent 间有向通信（A2A）：橙色弧线 + 箭头指向接收方，线宽 = 频次 */}
+                    {commEdges.map(([pair, count]) => {
+                      const [fromId, toId] = pair.split("→");
+                      const x1 = nodeCenterX(fromId);
+                      const x2 = nodeCenterX(toId);
+                      if (x1 === x2) return null;
+                      const lift = Math.min(96, 44 + count * 8);
+                      return (
+                        <path
+                          key={pair}
+                          className="team-flow__edge team-flow__comm-edge"
+                          markerEnd="url(#comm-arrow)"
+                          style={{ strokeWidth: Math.min(4, 1.2 + count * 0.5) }}
+                          d={`M ${x1} 281 Q ${(x1 + x2) / 2} ${281 - lift}, ${x2} 281`}
                         />
                       );
                     })}
@@ -383,7 +457,7 @@ export function TeamsView() {
                     01 · 主 Agent 接收与分配
                   </div>
                   <div className="team-flow__stage" style={{ top: 192 }}>
-                    02 · Agent 与子会话执行
+                    02 · 核心团队成员执行
                   </div>
                   {childCount > 0 && (
                     <div className="team-flow__stage" style={{ top: 354 }}>
@@ -409,7 +483,7 @@ export function TeamsView() {
                     <div
                       className="team-flow__position"
                       key={child.key}
-                      style={{ left: leadChildX, top: 236 + index * 130 }}
+                      style={{ left: leadChildX, top: 366 + index * 130 }}
                     >
                       <NodeCard
                         title={sessionName(child)}
@@ -481,6 +555,52 @@ export function TeamsView() {
           </div>
         </div>
         <aside className="teams-workbench__inspector" aria-label="执行详情">
+          {/* Agent 间自动通信 · 群聊视图（常驻，不依赖选中项） */}
+          <div className="teams-comms2">
+            <h3>Agent 间通信 · 群聊</h3>
+            <div className="teams-comm-a2a">
+              <label className="teams-comm-a2a__switch">
+                <input
+                  type="checkbox"
+                  checked={a2aEnabled ?? false}
+                  disabled={a2aBusy}
+                  onChange={() => void toggleA2a()}
+                />
+                <span>自动协作（允许 Agent 之间直接互发消息）</span>
+              </label>
+              <small>
+                {a2aEnabled
+                  ? "已开启：成员可通过内置 sessions_send 工具自动互相沟通与汇报，消息实时汇总在下方。"
+                  : "开启后网关允许跨 Agent 通信（tools.agentToAgent），Agent 之间的协商、汇报会像群聊一样出现在这里，无需手动转发。"}
+              </small>
+              {a2aError && <small className="teams-comm-a2a__err">{a2aError}</small>}
+            </div>
+            <div className="teams-comm-feed">
+              {commMessages
+                .slice(-40)
+                .reverse()
+                .map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`teams-comm-msg teams-comm-msg--${msg.auto ? "auto" : "user"}`}
+                  >
+                    <div className="teams-comm-msg__head">
+                      <strong>{memberName(msg.from)}</strong>
+                      <span className="teams-comm-msg__dir">
+                        → {msg.to === "group" ? "全体" : memberName(msg.to)}
+                      </span>
+                      <small>{age(msg.ts)}</small>
+                    </div>
+                    <p>{msg.text.length > 240 ? `${msg.text.slice(0, 240)}…` : msg.text}</p>
+                  </div>
+                ))}
+              {commMessages.length === 0 && (
+                <p className="teams-comm-feed__empty">
+                  暂无通信记录。开启自动协作后，Agent 之间的自动沟通会像群聊一样显示在这里。
+                </p>
+              )}
+            </div>
+          </div>
           {selectedMember ? (
             <>
               <div className="teams-workbench__inspector-head">
@@ -554,59 +674,6 @@ export function TeamsView() {
                 {selectedMember.sessions.length === 0 && <p>暂无会话</p>}
               </div>
 
-              {/* Agent 间通信面板 */}
-              <div className="teams-comms2">
-                <h3>Agent 间通信</h3>
-                <textarea
-                  className="teams-comms2__input"
-                  rows={3}
-                  value={commsText}
-                  placeholder={`写给 ${selectedMember.name} 的主会话，发送后立即触发其执行`}
-                  onChange={(e) => setCommsText(e.target.value)}
-                />
-                {selectedMember.id !== leadId && teammates.length > 1 && (
-                  <label className="teams-comms2__option">
-                    <input
-                      type="checkbox"
-                      checked={commsBroadcast}
-                      onChange={(e) => setCommsBroadcast(e.target.checked)}
-                    />
-                    <span>同时广播给其他团队成员</span>
-                  </label>
-                )}
-                <div className="teams-comms2__row">
-                  <button
-                    type="button"
-                    className="btn primary"
-                    disabled={commsBusy || !commsText.trim()}
-                    onClick={() => {
-                      const targets = commsBroadcast
-                        ? teammates.map((m) => m.id)
-                        : [selectedMember.id];
-                      void sendComms(targets, commsText);
-                    }}
-                  >
-                    {commsBusy ? "发送中…" : "发送消息"}
-                  </button>
-                  {commsNote && <span className="teams-comms2__note">{commsNote}</span>}
-                </div>
-                <p className="teams-comms2__hint">
-                  协议：sessions.send 直达成员主会话并触发执行；SubAgent 不直接接收，
-                  指令经其父成员会话向下传递。
-                </p>
-                {commsLog.length > 0 && (
-                  <div className="teams-comms2__log">
-                    {commsLog.map((entry, i) => (
-                      <div key={i}>
-                        <small>
-                          → {entry.to} · {age(entry.at)}
-                        </small>
-                        <span>{entry.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
               <button
                 type="button"
                 className="btn primary"

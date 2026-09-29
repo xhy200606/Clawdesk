@@ -7,7 +7,20 @@
 export type AnimalSpecies = {
   emoji: string;
   label: string;
-  kind: "cow" | "horse" | "sheep" | "goat" | "pig" | "dog" | "cat" | "llama" | "deer";
+  kind:
+    | "cow"
+    | "horse"
+    | "sheep"
+    | "goat"
+    | "pig"
+    | "dog"
+    | "cat"
+    | "llama"
+    | "deer"
+    | "chicken"
+    | "duck"
+    | "rabbit"
+    | "squirrel";
   body: string;
   marking: string;
   muzzle: string;
@@ -93,6 +106,38 @@ export const ANIMAL_SPECIES: AnimalSpecies[] = [
     body: "#b88054",
     marking: "#f1d6b0",
     muzzle: "#dfbb9b",
+  },
+  {
+    emoji: "🐔",
+    label: "小鸡",
+    kind: "chicken",
+    body: "#f6f2e8",
+    marking: "#e0b13c",
+    muzzle: "#e8967c",
+  },
+  {
+    emoji: "🦆",
+    label: "鸭子",
+    kind: "duck",
+    body: "#f3f0e6",
+    marking: "#c8a24a",
+    muzzle: "#e8b83c",
+  },
+  {
+    emoji: "🐰",
+    label: "兔子",
+    kind: "rabbit",
+    body: "#f5f1ea",
+    marking: "#dcd2c6",
+    muzzle: "#f0c9c0",
+  },
+  {
+    emoji: "🐿️",
+    label: "松鼠",
+    kind: "squirrel",
+    body: "#c98a52",
+    marking: "#8a5a34",
+    muzzle: "#e6c19a",
   },
 ];
 

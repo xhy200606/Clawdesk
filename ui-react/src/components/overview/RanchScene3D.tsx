@@ -7,7 +7,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import React, { useRef, useMemo, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { resolveAgentAppearance, resolveAgentSpecies } from "../../lib/animals.ts";
-import { useRanchDayCycle } from "../../lib/ranch-daycycle.ts";
+import { useRanchDayCycle, DAYCYCLE_STARS } from "../../lib/ranch-daycycle.ts";
 import type { GatewayAgentRow, SessionActivityResult } from "../../lib/types.ts";
 import { AgentAppearance } from "./AgentAppearance.tsx";
 
@@ -444,15 +444,18 @@ function CowCharacter3D({
       initializedRef.current = true;
     }
 
-    // 与 2D 行为一致：执行任务（thinking/tool_calling/speaking）时在牧场内
-    // 来回奔跑，空闲/等待/异常时静止在自己的槽位
+    // 与 2D 行为一致：空闲/等待时在围栏圈内悠闲游走，
+    // 执行任务时在对应工作位置（槽位）附近小范围游走
     const isWorking =
       visualStatus === "thinking" || visualStatus === "tool_calling" || visualStatus === "speaking";
     if (isWorking) {
-      targetRef.current.x = targetPosition[0] + Math.sin(t * 0.45 + phase) * 2.4;
-      targetRef.current.z = targetPosition[2] + Math.cos(t * 0.3 + phase) * 1.1;
+      targetRef.current.x = targetPosition[0] + Math.sin(t * 0.5 + phase) * 1.2;
+      targetRef.current.z = targetPosition[2] + Math.cos(t * 0.35 + phase) * 0.8;
     } else {
-      targetRef.current.set(targetPosition[0], 0, targetPosition[2]);
+      // 圈内游走：圈中心约 (5, -4)（围栏区 x2~8 / z-6~-2），半径按个体相位错开
+      targetRef.current.x =
+        5 + Math.sin(t * 0.11 + phase) * (1.6 + Math.abs(Math.sin(phase)) * 0.8);
+      targetRef.current.z = -4 + Math.cos(t * 0.09 + phase) * 1.3;
     }
 
     // Smooth position lerp (no usa el prop, solo targetRef)
@@ -756,10 +759,11 @@ function SceneContent({
   const day = useRanchDayCycle(2000);
   return (
     <>
-      <ambientLight intensity={0.5 * day.lightLevel} />
+      <ambientLight intensity={0.35 * day.lightLevel + 0.12} />
       <directionalLight
         position={[8, 12, 8]}
-        intensity={1.2 * day.lightLevel}
+        intensity={1.1 * day.lightLevel + 0.15}
+        color={day.isNight ? "#b9c9ff" : "#fff6e8"}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -850,7 +854,9 @@ function SceneContent({
       })}
 
       {/* Luz ambiental hemisférica en lugar de Environment preset (evita carga async HDR) */}
-      <hemisphereLight args={[day.skyTop, "#8db651", 0.6 * day.lightLevel + 0.15]} />
+      <hemisphereLight
+        args={[day.skyTop, day.isNight ? "#2c3a26" : "#8db651", 0.6 * day.lightLevel + 0.15]}
+      />
     </>
   );
 }
@@ -876,6 +882,30 @@ export function RanchScene3D({ agents, sessionActivity }: RanchScene3DProps) {
         <fog attach="fog" args={[day.skyTop, 20, 40]} />
         <SceneContent agents={agents} sessionActivity={sessionActivity} />
       </Canvas>
+      {/* 天体 / 星空 / 色调 / 时钟（屏幕坐标，与 2D 一致） */}
+      <div className="ranch-daycycle-overlay" aria-hidden>
+        <div
+          className={day.showSun ? "ranch-daycycle__sun" : "ranch-daycycle__moon"}
+          style={{ left: `${day.orbX * 100}%`, top: `${day.orbY * 100}%` }}
+        />
+        {day.starAlpha > 0.02 &&
+          DAYCYCLE_STARS.map(([sx, sy, delay], i) => (
+            <span
+              key={i}
+              className="ranch-daycycle__star"
+              style={{
+                left: `${sx}%`,
+                top: `${sy}%`,
+                opacity: day.starAlpha,
+                animationDelay: `${delay}s`,
+              }}
+            />
+          ))}
+      </div>
+      <div className="ranch-daycycle__tint" style={{ background: day.tint }} aria-hidden />
+      <div className="ranch-daycycle__badge" aria-hidden>
+        {day.label} · {day.clock}
+      </div>
     </div>
   );
 }

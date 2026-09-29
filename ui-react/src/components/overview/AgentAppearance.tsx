@@ -280,6 +280,117 @@ function PixelAnimal({ emoji, className }: { emoji: string; className: string })
         <rect x="23" y="13" width="2" height="3" fill={M} />
       </>
     );
+  } else if (kind === "chicken") {
+    // 小鸡：圆身、红鸡冠、黄喙、肉垂、短腿
+    art = (
+      <>
+        {legs(
+          B,
+          [
+            [12, 24],
+            [19, 24],
+          ],
+          3,
+        )}
+        {/* 圆滚身体 */}
+        <rect x="9" y="15" width="14" height="10" fill={B} />
+        <rect x="11" y="14" width="10" height="1" fill={B} />
+        {/* 上翘尾羽 */}
+        <rect x="22" y="12" width="3" height="4" fill={M} />
+        <rect x="24" y="14" width="2" height="3" fill={M} />
+        {/* 头 + 鸡冠 */}
+        <rect x="7" y="10" width="8" height="8" fill={B} />
+        <rect x="8" y="7" width="2" height="3" fill="#d84a3a" />
+        <rect x="11" y="7" width="2" height="3" fill="#d84a3a" />
+        {/* 黄喙 + 肉垂 */}
+        <rect x="4" y="12" width="3" height="2" fill="#e8a13c" />
+        <rect x="5" y="15" width="2" height="2" fill="#d84a3a" />
+        <rect x="9" y="12" width="1" height="1" fill={DARK} />
+        {/* 收拢的翅膀 */}
+        <rect x="13" y="18" width="7" height="4" fill={M} />
+      </>
+    );
+  } else if (kind === "duck") {
+    // 鸭子：扁黄喙、长颈、卧姿长身、翘尾
+    art = (
+      <>
+        {legs(
+          M,
+          [
+            [13, 25],
+            [19, 25],
+          ],
+          3,
+        )}
+        {/* 长身 */}
+        <rect x="8" y="17" width="17" height="8" fill={B} />
+        {/* 翘尾 */}
+        <rect x="24" y="13" width="3" height="4" fill={M} />
+        {/* 颈 + 头 */}
+        <rect x="5" y="11" width="5" height="8" fill={B} />
+        <rect x="3" y="9" width="7" height="5" fill={B} />
+        {/* 扁喙 */}
+        <rect x="0" y="10" width="3" height="2" fill={muzzle} />
+        <rect x="6" y="10" width="1" height="1" fill={DARK} />
+        {/* 翅膀条纹 */}
+        <rect x="12" y="19" width="8" height="4" fill={M} />
+      </>
+    );
+  } else if (kind === "rabbit") {
+    // 兔子：长耳朵、圆身、蓬短尾
+    art = (
+      <>
+        {legs(
+          B,
+          [
+            [11, 23],
+            [19, 23],
+          ],
+          4,
+        )}
+        {/* 圆身 */}
+        <rect x="8" y="15" width="16" height="9" fill={B} />
+        {/* 头 */}
+        <rect x="2" y="9" width="8" height="6" fill={B} />
+        <rect x="4" y="14" width="6" height="4" fill={B} />
+        {/* 长耳（一竖一斜） */}
+        <rect x="3" y="2" width="2" height="7" fill={B} />
+        <rect x="6" y="1" width="2" height="7" fill={B} />
+        <rect x="3" y="3" width="1" height="5" fill={muzzle} />
+        <rect x="6" y="2" width="1" height="5" fill={muzzle} />
+        <rect x="5" y="11" width="1" height="1" fill={DARK} />
+        <rect x="2" y="12" width="2" height="1" fill={muzzle} />
+        {/* 蓬尾 */}
+        <rect x="24" y="17" width="3" height="3" fill={muzzle} />
+      </>
+    );
+  } else if (kind === "squirrel") {
+    // 松鼠：蓬松大尾（S 形）、立姿小身、立耳
+    art = (
+      <>
+        {legs(
+          B,
+          [
+            [12, 24],
+            [18, 24],
+          ],
+          3,
+        )}
+        {/* 小身 */}
+        <rect x="9" y="15" width="13" height="9" fill={B} />
+        {/* 头 + 立耳 */}
+        <rect x="5" y="10" width="7" height="6" fill={B} />
+        <rect x="5" y="7" width="2" height="3" fill={B} />
+        <rect x="9" y="7" width="2" height="3" fill={B} />
+        <rect x="7" y="12" width="1" height="1" fill={DARK} />
+        {/* 抱在胸前的小爪 */}
+        <rect x="6" y="15" width="3" height="2" fill={muzzle} />
+        {/* 蓬松大尾（S 形上卷） */}
+        <rect x="21" y="4" width="3" height="4" fill={M} />
+        <rect x="22" y="7" width="4" height="12" fill={M} />
+        <rect x="20" y="18" width="4" height="3" fill={M} />
+      </>
+    );
   } else {
     // deer：纤细身形 + 分叉鹿角 + 梅花点
     art = (

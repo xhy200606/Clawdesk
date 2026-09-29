@@ -2494,7 +2494,8 @@
     position: absolute;
     z-index: 60;
     top: 8px;
-    right: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     padding: 2px 9px;
     border-radius: 999px;
     font-size: 11px;
@@ -2503,4 +2504,22 @@
     background: rgba(20, 24, 34, 0.5);
     backdrop-filter: blur(3px);
     pointer-events: none;
+}
+
+/* ─── 3D 场景的天体/星空叠加层（屏幕坐标，与 2D 一致） ─── */
+.ranch-daycycle-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* ─── 牛马档案形象：完全静止（禁一切位移动画） ─── */
+.agent-animal--static .ranch-animal__sprite {
+    animation: none !important;
+}
+
+.agent-animal--static .agent-animal__speed {
+    display: none !important;
 }
