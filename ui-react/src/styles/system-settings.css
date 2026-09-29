@@ -245,3 +245,10 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* 牧场大门提示文字 */
+.sys-settings__hint {
+    margin: -4px 0 10px;
+    font-size: 12px;
+    color: var(--text-muted, #8a93a5);
+}

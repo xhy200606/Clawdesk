@@ -1289,8 +1289,8 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         {/* Grass pattern */}
         <div className="ranch-tiles" />
 
-        {/* Dirt paths */}
-        <div className="ranch-path ranch-path--h" style={{ left: 0, right: 0, top: "55%" }} />
+        {/* Dirt paths（起点避开左上角河道区，河不截路） */}
+        <div className="ranch-path ranch-path--h" style={{ left: "7%", right: 0, top: "55%" }} />
         <div className="ranch-path ranch-path--v" style={{ left: "45%", top: 0, bottom: 0 }} />
         <div
           className="ranch-path ranch-path--v"
@@ -1622,11 +1622,12 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" />
           </svg>
         </button>
-        {/* ── 昼夜循环：色调滤镜 + 牧场时钟 ── */}
-        <div className="ranch-daycycle__tint" style={{ background: day.tint }} aria-hidden />
-        <div className="ranch-daycycle__badge" aria-hidden>
-          {day.label} · {day.clock} · {weather.icon} {weather.label}
-        </div>
+      </div>
+
+      {/* ── 昼夜色调 + 牧场时钟（场景根层，屏幕坐标：位于 2D/3D 切换按钮正下方） ── */}
+      <div className="ranch-daycycle__tint" style={{ background: day.tint }} aria-hidden />
+      <div className="ranch-daycycle__badge" aria-hidden>
+        {day.label} · {day.clock} · {weather.icon} {weather.label}
       </div>
     </div>
   );

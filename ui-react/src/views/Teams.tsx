@@ -427,18 +427,27 @@ export function TeamsView() {
                         <path d="M0,0 L10,5 L0,10 Z" fill="#e8862c" />
                       </marker>
                     </defs>
-                    {/* 主 Agent 的 SubAgent：从 01 主节点直接拉到 03 区（绕过 02） */}
+                    {/* 主 Agent 的 SubAgent：单一 SubAgent（无其他成员）时从主卡底部垂直直连；
+                        多个/复杂拓扑才沿左缘侧面走线 */}
                     {visibleLeadChildren.map((child, index) => {
                       const y = subBaseY + subRowOf(index) * 130;
                       const midY = y + 50; // 进入 SubAgent 卡片左侧中部
                       const linked =
                         child.parentSessionKey === leadKey || child.spawnedBy === leadKey;
-                      // 侧面走线：主卡左侧出 → 沿画布左缘空带竖直下行 → 横向进 SubAgent 左侧
+                      const directConnect =
+                        visibleLeadChildren.length === 1 && visibleTeammates.length === 0;
+                      const cx = subCol(index) + NODE_W / 2;
+                      // 直连：主卡底部中心垂直下到 SubAgent 顶部中心
+                      // 侧走：主卡左侧出 → 沿画布左缘空带竖直下行 → 横向进 SubAgent 左侧
                       return (
                         <path
                           key={child.key}
                           className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
-                          d={`M ${width / 2 - NODE_W / 2} 130 L 24 ${130} L 24 ${midY} L ${subCol(index)} ${midY}`}
+                          d={
+                            directConnect
+                              ? `M ${width / 2} 160 L ${cx} 160 L ${cx} ${y}`
+                              : `M ${width / 2 - NODE_W / 2} 130 L 24 ${130} L 24 ${midY} L ${subCol(index)} ${midY}`
+                          }
                         />
                       );
                     })}

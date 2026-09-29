@@ -2392,7 +2392,7 @@ pre.code-block {
   border-radius: 24px;
   resize: vertical;
   white-space: pre-wrap;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   line-height: 1.5;
   border: 1px solid var(--input);
   background: var(--card);

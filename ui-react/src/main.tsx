@@ -1,9 +1,10 @@
 import "./styles.css";
 import React from "react";
-import { restoreSystemPrefs } from "./lib/system-prefs.ts";
+import { restoreSystemPrefs, initAutoZoom } from "./lib/system-prefs.ts";
 
-// 启动即恢复本机外观偏好（界面/聊天字体、强调色）
+// 启动即恢复本机外观偏好（界面/聊天字体、强调色）+ 页面智能缩放
 restoreSystemPrefs();
+initAutoZoom();
 import { createRoot } from "react-dom/client";
 
 console.log("[main] starting...");

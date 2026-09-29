@@ -207,10 +207,10 @@ export function NavSidebar() {
       <div className="nav-brand">
         <div className="brand">
           <div className="brand-logo">
-            <img src={faviconSrc} alt="ClawDeck" />
+            <img src={faviconSrc} alt="Clawdesk" />
           </div>
           <div className="brand-text">
-            <div className="brand-title">OPENCLAW</div>
+            <div className="brand-title">CLAWDESK</div>
             <div className="brand-sub">{t("global.brandSub")}</div>
           </div>
         </div>

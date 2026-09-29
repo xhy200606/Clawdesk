@@ -73,7 +73,11 @@ const WEBFONT_FAMILY_HINTS: Array<[RegExp, string]> = [
 
 const injectedWebfonts = new Set<string>();
 
-/** 选中含网络字体的栈时按需注入 Google Fonts（失败静默，浏览器回退本地字形） */
+// 网络字体镜像：fonts.googleapis.com 在大陆不可达，改用 loli.net 镜像
+// （失败仍静默回退本地字形，不影响功能）
+const WEBFONT_BASE = "https://fonts.loli.net/css2?family";
+
+/** 选中含网络字体的栈时按需注入字体镜像 <link>（失败静默，浏览器回退本地字形） */
 function ensureWebfont(fontStack: string) {
   if (!fontStack) return;
   for (const [pattern, query] of WEBFONT_FAMILY_HINTS) {
@@ -81,7 +85,7 @@ function ensureWebfont(fontStack: string) {
     injectedWebfonts.add(query);
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = `https://fonts.googleapis.com/css2?family=${query}&display=swap`;
+    link.href = `${WEBFONT_BASE}=${query}&display=swap`;
     link.onerror = () => link.remove();
     document.head.appendChild(link);
   }
@@ -183,4 +187,22 @@ export function applySystemPrefs(prefs: SystemPrefs) {
 /** 启动时调用：恢复上次的系统偏好 */
 export function restoreSystemPrefs() {
   applySystemPrefs(loadSystemPrefs());
+}
+
+// ─── 页面智能缩放 ────────────────────────────────────────────────
+// 视口窄于 DESIGN_WIDTH 时整页按比例缩小（CSS zoom），保证不出现横向滚动；
+// 宽视口不受影响。缩放值挂在 :root 的 --app-zoom，由 base.css 应用到 body。
+
+const DESIGN_WIDTH = 1100;
+const MIN_ZOOM = 0.6;
+
+/** 启动时调用：监听视口宽度自动缩放整个页面 */
+export function initAutoZoom() {
+  const apply = () => {
+    const w = window.innerWidth;
+    const zoom = w < DESIGN_WIDTH ? Math.max(MIN_ZOOM, w / DESIGN_WIDTH) : 1;
+    document.documentElement.style.setProperty("--app-zoom", zoom.toFixed(4));
+  };
+  apply();
+  window.addEventListener("resize", apply);
 }

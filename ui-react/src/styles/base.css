@@ -203,6 +203,8 @@ body {
   margin: 0;
   font: 400 14px/1.55 var(--font-ui);
   letter-spacing: -0.02em;
+  /* 页面智能缩放：视口窄于设计宽度时整页等比缩小（见 lib/system-prefs.ts initAutoZoom） */
+  zoom: var(--app-zoom, 1);
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;

@@ -1212,7 +1212,7 @@ export const en: TranslationMap = {
     },
   },
   setupWizard: {
-    welcomeTitle: "Welcome to ClawDeck",
+    welcomeTitle: "Welcome to Clawdesk",
     welcomeDesc: "Just a few steps to set up your AI assistant and get started.",
     modelStep: "Model Config",
     channelStep: "Channel Config",

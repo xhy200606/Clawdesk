@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo } from "react";
-import { AccessCard } from "../components/overview/AccessCard.tsx";
+import { DragHandle } from "../components/overview/AccessCard.tsx";
 import { AgentsCard } from "../components/overview/AgentsCard.tsx";
+import { GatewayFields } from "../components/overview/GatewayCard.tsx";
 import { RanchScene } from "../components/overview/RanchScene.tsx";
 // Pure React overview components
 import { SnapshotCard, OverviewIcons } from "../components/overview/SnapshotCard.tsx";
 import { SwapyLayout, getSavedCardOrder } from "../components/overview/SwapyLayout.tsx";
 import { UsageChartCard } from "../components/overview/UsageChartCard.tsx";
-import { loadOverview, setTab } from "../lib/app-settings.ts";
+import { setTab } from "../lib/app-settings.ts";
 import type {
   SessionActivityResult,
   GatewayAgentRow,
@@ -14,7 +15,7 @@ import type {
   SessionsUsageResult,
   ChannelsStatusSnapshot,
 } from "../lib/types.ts";
-import { useAppStore, getReactiveState } from "../store/appStore.ts";
+import { useAppStore } from "../store/appStore.ts";
 
 // ─── Token Stats Row ─────────────────────────────────────────
 
@@ -123,7 +124,6 @@ export function OverviewView() {
   const overviewUsageResult = s((st) => st.overviewUsageResult);
   const overviewWeekUsageResult = s((st) => st.overviewWeekUsageResult);
   const applySettings = s((st) => st.applySettings);
-  const set = s((st) => st.set);
   // [version-adapt] presence 是网关/浏览器实例（每个标签页都算），不是牛马。
   // 在线牛马 = 有 running 会话的 agent 数；正在接客 = running 会话数。
   const allSessions = (sessionsResult?.sessions ?? []) as Array<{
@@ -241,7 +241,8 @@ export function OverviewView() {
   }, [configForm, channelsSnapshot]);
 
   const snapshot = hello?.snapshot as { authMode?: string } | undefined;
-  const isTrustedProxy = snapshot?.authMode === "trusted-proxy";
+  // isTrustedProxy 曾由主页「牧场大门」卡片展示；接入字段移入系统设置后此处不再使用
+  void snapshot?.authMode;
 
   const todayTokens = (overviewUsageResult as SessionsUsageResult | null)?.totals?.totalTokens ?? 0;
   const allTokens = (overviewCostDaily as CostUsageSummary | null)?.totals?.totalTokens ?? 0;
@@ -262,23 +263,36 @@ export function OverviewView() {
       />
     ),
     access: (
-      <AccessCard
-        key="access"
-        settings={settings}
-        password={password}
-        isTrustedProxy={isTrustedProxy}
-        connected={connected}
-        helloVersion={hello?.server?.version ?? null}
-        onSettingsChange={(next) => applySettings(next)}
-        onPasswordChange={(next) => set({ password: next })}
-        onSessionKeyChange={(next) => {
-          set({ sessionKey: next, chatMessage: "" });
-          applySettings({ ...settings, sessionKey: next, lastActiveSessionKey: next });
-        }}
-        onConnect={() => {}}
-        onRefresh={() => void loadOverview(getReactiveState() as never)}
-        onReconnect={() => reconnect()}
-      />
+      // [split] 牧场大门（接入字段）已移入系统设置；主页只保留网关连接
+      <div data-swapy-slot="access" key="access">
+        <div data-swapy-item="access">
+          <div className="card ov-card--gateways">
+            <div className="card-header-row">
+              <DragHandle />
+              <div>
+                <div className="card-title">网关连接</div>
+                <div className="card-sub">管理 OpenClaw 网关 · 多网关切换与版本检测</div>
+              </div>
+              <span
+                className="pill"
+                style={{
+                  marginLeft: "auto",
+                  color: connected ? "var(--color-success, #1D9E75)" : "#A32D2D",
+                }}
+              >
+                {connected ? "已连接" : "未连接"}
+              </span>
+            </div>
+            <GatewayFields
+              settings={settings}
+              connected={connected}
+              helloVersion={hello?.server?.version ?? null}
+              onSettingsChange={(next) => applySettings(next)}
+              onReconnect={() => reconnect()}
+            />
+          </div>
+        </div>
+      </div>
     ),
     agents: (
       <AgentsCard

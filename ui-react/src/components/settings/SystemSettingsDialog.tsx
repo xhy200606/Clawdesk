@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
+import { i18n, t, SUPPORTED_LOCALES, type Locale } from "../../i18n/index.ts";
 import {
   ACCENT_PRESETS,
   FONT_PRESETS,
@@ -27,9 +28,17 @@ const PREVIEW_TEXT = "你好，OpenClaw！The quick brown fox jumps over the laz
 export function SystemSettingsDialog({ onClose }: { onClose: () => void }) {
   const theme = useAppStore((s) => s.theme);
   const settings = useAppStore((s) => s.settings);
+  const password = useAppStore((s) => s.password);
   const set = useAppStore((s) => s.set);
   const applySettings = useAppStore((s) => s.applySettings);
   const [prefs, setPrefs] = useState<SystemPrefs>(() => loadSystemPrefs());
+
+  const currentLocale = i18n.getLocale();
+  const handleLocaleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value as Locale;
+    void i18n.setLocale(v);
+    applySettings({ ...settings, locale: v });
+  };
 
   const update = (patch: Partial<SystemPrefs>) => {
     const next = { ...prefs, ...patch };
@@ -155,6 +164,69 @@ export function SystemSettingsDialog({ onClose }: { onClose: () => void }) {
           <h3>字体</h3>
           {fontPicker("uiFont", "界面字体", "侧栏、设置、卡片等整个界面")}
           {fontPicker("chatFont", "聊天字体", "仅聊天消息正文，可单独换成等宽/衬线")}
+        </section>
+
+        {/* 牧场大门（网关接入字段，自主页迁入） */}
+        <section className="sys-settings__section">
+          <h3>牧场大门 · 网关接入</h3>
+          <p className="sys-settings__hint">
+            连接与鉴权参数仅保存在本浏览器；主页保留「网关连接」卡片用于连接管理与重连。
+          </p>
+          <div className="access-grid access-grid--compact">
+            <label className="field">
+              <span>WebSocket URL</span>
+              <input
+                type="text"
+                defaultValue={settings.gatewayUrl}
+                onBlur={(e) => applySettings({ ...settings, gatewayUrl: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>网关 Token</span>
+              <input
+                type="text"
+                defaultValue={settings.token}
+                onBlur={(e) => applySettings({ ...settings, token: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>访问密码（不保存到网关）</span>
+              <input
+                type="password"
+                placeholder="system or shared password"
+                defaultValue={password}
+                onBlur={(e) => set({ password: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>默认会话 Key</span>
+              <input
+                type="text"
+                defaultValue={settings.sessionKey ?? ""}
+                onBlur={(e) => {
+                  set({ sessionKey: e.target.value });
+                  applySettings({
+                    ...settings,
+                    sessionKey: e.target.value,
+                    lastActiveSessionKey: e.target.value,
+                  });
+                }}
+              />
+            </label>
+            <label className="field">
+              <span>界面语言</span>
+              <select value={currentLocale} onChange={handleLocaleChange}>
+                {SUPPORTED_LOCALES.map((loc) => {
+                  const key = loc.replace(/-([a-zA-Z])/g, (_, c: string) => c.toUpperCase());
+                  return (
+                    <option key={loc} value={loc}>
+                      {t(`languages.${key}`)}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+          </div>
         </section>
       </div>
     </div>,

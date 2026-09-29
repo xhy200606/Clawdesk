@@ -1220,7 +1220,7 @@ export const zh_CN: TranslationMap = {
     },
   },
   setupWizard: {
-    welcomeTitle: "欢迎使用 ClawDeck",
+    welcomeTitle: "欢迎使用 Clawdesk",
     welcomeDesc: "只需几步即可完成初始配置，让你的 AI 助手立即上线。",
     modelStep: "模型配置",
     channelStep: "渠道配置",
