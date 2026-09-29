@@ -30,7 +30,8 @@ export type Tab =
   | "json-edit"
   | "models"
   | "debug"
-  | "logs";
+  | "logs"
+  | "settings";
 
 const TAB_PATHS: Record<Tab, string> = {
   agents: "/agents",
@@ -50,6 +51,7 @@ const TAB_PATHS: Record<Tab, string> = {
   models: "/models",
   debug: "/debug",
   logs: "/logs",
+  settings: "/settings",
 };
 
 const PATH_TO_TAB = new Map(Object.entries(TAB_PATHS).map(([tab, path]) => [path, tab as Tab]));
@@ -169,6 +171,8 @@ export function iconForTab(tab: Tab): IconName {
       return "bug";
     case "logs":
       return "scrollText";
+    case "settings":
+      return "settings";
     default:
       return "folder";
   }

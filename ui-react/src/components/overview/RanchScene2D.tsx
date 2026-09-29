@@ -280,12 +280,14 @@ function PixelPond() {
 // 河道：从顶部右缘蜿蜒流向左侧边缘（viewBox 180x620），桥架在中段近直线处、
 // 与河道切线垂直（rotate 82°），树已全部移出河道区。
 function PixelRiver() {
-  const FLOW = "M 128 0 C 82 105, 50 235, 40 370 S 12 520, 0 600";
+  // 河道：从顶边 (x≈22.5%) 蜿蜒向左下，在 55% 高度处与横路相交（此处架桥与路连通），
+  // 最后流入左下池塘。viewBox 320×700 ↔ 容器 32%×70% 世界坐标。
+  const FLOW = "M 225 0 C 175 110, 125 210, 104 320 S 76 500, 62 640";
   return (
     <svg
       width="100%"
       height="100%"
-      viewBox="0 0 180 620"
+      viewBox="0 0 320 700"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"
       style={{ imageRendering: "pixelated", display: "block" }}
@@ -304,14 +306,14 @@ function PixelRiver() {
       />
       {/* 波光（沿河道分布） */}
       <path
-        d="M 112 60 q 8 6 0 12 M 90 132 q 8 6 0 12 M 72 208 q 8 6 0 12 M 56 288 q 8 6 0 12 M 42 372 q 8 6 0 12 M 28 462 q 8 6 0 12 M 14 546 q 8 6 0 12"
+        d="M 200 60 q 8 6 0 12 M 152 150 q 8 6 0 12 M 122 240 q 8 6 0 12 M 104 330 q 8 6 0 12 M 88 430 q 8 6 0 12 M 74 520 q 8 6 0 12"
         stroke="#8ad8c8"
         strokeWidth="3"
         fill="none"
         opacity="0.6"
       />
-      {/* 木桥（横跨河面，与河道切线垂直） */}
-      <g transform="translate(47 300) rotate(82)">
+      {/* 木桥：架在河道与 55% 横路的交点 (93,385)，桥面沿路方向（近水平），与路连通 */}
+      <g transform="translate(93 385) rotate(81)">
         <rect x="-10" y="-27" width="20" height="54" rx="2" fill="#a07020" />
         <rect x="-7.5" y="-24" width="15" height="48" fill="#c09040" />
         <rect x="-7.5" y="-15" width="15" height="2.5" fill="#a07020" opacity="0.6" />
@@ -327,23 +329,25 @@ function PixelRiver() {
   );
 }
 
-// ── 2D 天气层（雨 / 雪 / 雾；晴朗无覆盖层） ──
+// ── 2D 天气层（雨 / 雷 / 雪 / 雾 / 阴；晴朗无覆盖层） ──
 const WEATHER_TINT_2D: Record<RanchWeather, string | null> = {
   sunny: null,
+  overcast: "rgba(120, 130, 145, 0.18)",
   rain: "rgba(40, 60, 92, 0.20)",
+  storm: "rgba(24, 32, 56, 0.34)",
   snow: "rgba(205, 220, 240, 0.14)",
   fog: "rgba(196, 206, 216, 0.24)",
 };
 
 function RanchWeather2D({ weather, seed }: { weather: RanchWeather; seed: number }) {
   const drops = useMemo(() => {
-    if (weather !== "rain" && weather !== "snow") return [];
-    const count = weather === "rain" ? 64 : 46;
+    if (weather !== "rain" && weather !== "snow" && weather !== "storm") return [];
+    const count = weather === "storm" ? 96 : weather === "rain" ? 64 : 46;
     return Array.from({ length: count }, (_, i) => ({
       left: seededRand(seed, i) * 100,
-      delay: seededRand(seed, i + 1000) * (weather === "rain" ? 1.6 : 6),
+      delay: seededRand(seed, i + 1000) * (weather === "rain" || weather === "storm" ? 1.6 : 6),
       duration:
-        weather === "rain"
+        weather === "rain" || weather === "storm"
           ? 0.65 + seededRand(seed, i + 2000) * 0.5
           : 4.5 + seededRand(seed, i + 2000) * 3.5,
       scale: 0.75 + seededRand(seed, i + 3000) * 0.6,
@@ -351,9 +355,10 @@ function RanchWeather2D({ weather, seed }: { weather: RanchWeather; seed: number
   }, [weather, seed]);
 
   if (weather === "sunny") return null;
+  const isWet = weather === "rain" || weather === "storm";
   return (
     <div className={`ranch-weather ranch-weather--${weather}`} aria-hidden>
-      {weather === "rain" &&
+      {isWet &&
         drops.map((d, i) => (
           <i
             key={i}
@@ -366,6 +371,7 @@ function RanchWeather2D({ weather, seed }: { weather: RanchWeather; seed: number
             }}
           />
         ))}
+      {weather === "storm" && <span className="ranch-weather__flash" aria-hidden />}
       {weather === "snow" &&
         drops.map((d, i) => (
           <i
@@ -392,6 +398,38 @@ function RanchWeather2D({ weather, seed }: { weather: RanchWeather; seed: number
       {WEATHER_TINT_2D[weather] && (
         <div className="ranch-weather__tint" style={{ background: WEATHER_TINT_2D[weather] }} />
       )}
+    </div>
+  );
+}
+
+// ── 晴夜萤火虫（随机游走的发光点，仅晴朗 + 夜晚出现） ──
+function Fireflies2D({ seed }: { seed: number }) {
+  const flies = useMemo(
+    () =>
+      Array.from({ length: 14 }, (_, i) => ({
+        left: 8 + seededRand(seed, i) * 84,
+        top: 22 + seededRand(seed, i + 100) * 62,
+        delay: seededRand(seed, i + 200) * 6,
+        duration: 5 + seededRand(seed, i + 300) * 6,
+        drift: 20 + seededRand(seed, i + 400) * 46,
+      })),
+    [seed],
+  );
+  return (
+    <div className="ranch-fireflies" aria-hidden>
+      {flies.map((f, i) => (
+        <span
+          key={i}
+          className="ranch-firefly"
+          style={{
+            left: `${f.left}%`,
+            top: `${f.top}%`,
+            animationDelay: `${f.delay}s, ${f.delay}s`,
+            animationDuration: `${3 + f.duration * 0.4}s, ${f.duration}s`,
+            ["--ff-drift" as string]: `${f.drift}px`,
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -783,19 +821,18 @@ function DecoItem({ type }: { type: DecoType }) {
 // ─── Scene Layout Data ──────────────────────────────────────────────
 
 const TREES: Array<{ left: string; top: string; size: "sm" | "lg" }> = [
-  // 左上角河道区（left<18% 且 top<62%）不放树；以下树全部移到河岸右侧/边缘之外
-  { left: "22%", top: "-2%", size: "lg" },
-  { left: "16%", top: "-2%", size: "sm" },
-  { left: "30%", top: "0%", size: "sm" },
+  // 河道区（顶边 x≈21~25% 蜿蜒至左缘 y≈50%、宽 ~3.5%）不放树
+  { left: "30%", top: "-2%", size: "sm" },
   { left: "36%", top: "-2%", size: "lg" },
+  { left: "48%", top: "-1%", size: "lg" },
   { left: "90%", top: "0%", size: "lg" },
   { left: "95%", top: "2%", size: "sm" },
-  { left: "9%", top: "28%", size: "sm" },
-  { left: "10%", top: "47%", size: "lg" },
-  { left: "2%", top: "65%", size: "sm" },
+  { left: "17%", top: "26%", size: "sm" },
+  { left: "16%", top: "47%", size: "lg" },
+  { left: "2%", top: "78%", size: "sm" },
   { left: "94%", top: "30%", size: "sm" },
   { left: "96%", top: "55%", size: "lg" },
-  { left: "0%", top: "82%", size: "lg" },
+  { left: "0%", top: "88%", size: "lg" },
   { left: "7%", top: "85%", size: "sm" },
   { left: "20%", top: "86%", size: "sm" },
   { left: "40%", top: "84%", size: "lg" },
@@ -1289,27 +1326,23 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         {/* Grass pattern */}
         <div className="ranch-tiles" />
 
-        {/* Dirt paths（起点避开左上角河道区，河不截路） */}
-        <div className="ranch-path ranch-path--h" style={{ left: "7%", right: 0, top: "55%" }} />
+        {/* Dirt paths（横路保持完整贯穿；围栏圈内不放路） */}
+        <div className="ranch-path ranch-path--h" style={{ left: 0, right: 0, top: "55%" }} />
         <div className="ranch-path ranch-path--v" style={{ left: "45%", top: 0, bottom: 0 }} />
         <div
           className="ranch-path ranch-path--v"
           style={{ left: "20%", top: "55%", height: "45%" }}
         />
-        <div
-          className="ranch-path ranch-path--h"
-          style={{ left: "45%", right: 0, top: "30%", width: "55%", height: 24 }}
-        />
 
-        {/* River + bridge（左上角区域，贯穿角落；牛马活动区不受影响） */}
+        {/* River + bridge：左上角蜿蜒而下，在 55% 横路处架桥与路连通，下游汇入池塘 */}
         <div
           style={{
             position: "absolute",
             left: 0,
             top: 0,
-            width: "18%",
-            height: "62%",
-            zIndex: 1,
+            width: "32%",
+            height: "70%",
+            zIndex: 2,
             pointerEvents: "none",
           }}
         >
@@ -1326,12 +1359,12 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
           <PixelBarn />
         </div>
 
-        {/* Small houses */}
+        {/* Small houses（绿顶小屋避开河道区） */}
         <div
           style={{
             position: "absolute",
-            left: "8%",
-            top: "36%",
+            left: "28%",
+            top: "40%",
             zIndex: 4,
             imageRendering: "pixelated",
             pointerEvents: "none",
@@ -1564,6 +1597,9 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
 
       {/* ── 天气层（雨/雪/雾，覆盖在世界之上、屏幕坐标） ── */}
       <RanchWeather2D weather={weather.weather} seed={weather.seed} />
+
+      {/* ── 晴夜萤火虫 ── */}
+      {weather.weather === "sunny" && day.isNight && <Fireflies2D seed={weather.seed} />}
 
       {/* Title（屏幕坐标固定：不随世界层缩放/平移） */}
       <div className="ranch-title">

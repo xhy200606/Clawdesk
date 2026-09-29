@@ -16,7 +16,6 @@ import {
   type UserProfile,
 } from "../../lib/user-profile.ts";
 import { useAppStore, getReactiveState } from "../../store/appStore.ts";
-import { SystemSettingsDialog } from "../settings/SystemSettingsDialog.tsx";
 
 const THEME_ORDER: ThemeMode[] = ["system", "light", "dark"];
 const THEME_ICONS: Record<ThemeMode, string> = {
@@ -89,7 +88,6 @@ export function UserProfileBar() {
   const [langPos, setLangPos] = useState<PortalPos>({ bottom: 0, left: 0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsPos, setSettingsPos] = useState<PortalPos>({ bottom: 0, left: 0 });
-  const [sysOpen, setSysOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const langTriggerRef = useRef<HTMLButtonElement>(null);
@@ -291,8 +289,11 @@ export function UserProfileBar() {
             </span>
           </button>
 
-          {/* 系统设置 — 关于软件的本机外观（主题/颜色/字体） */}
-          <button className="user-profile-menu__item" onClick={() => setSysOpen(true)}>
+          {/* 系统设置 — 独立整页视图（不再用弹窗） */}
+          <button
+            className="user-profile-menu__item"
+            onClick={() => setTabLib(getReactiveState() as never, "settings")}
+          >
             <svg
               viewBox="0 0 24 24"
               width="16"
@@ -314,9 +315,6 @@ export function UserProfileBar() {
             </svg>
             <span>系统设置</span>
           </button>
-          {sysOpen &&
-            createPortal(<SystemSettingsDialog onClose={() => setSysOpen(false)} />, document.body)}
-
           {/* Language — hover flyout */}
           <button
             ref={langTriggerRef}

@@ -268,11 +268,12 @@ function Ground() {
         <planeGeometry args={[20, 20]} />
         <meshStandardMaterial color={GRASS_COLOR} roughness={0.9} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+      {/* Dirt roads（与 2D 对应：竖路 45% → x=-1，横路 55% → z=1） */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-1, 0, 0]}>
         <planeGeometry args={[1.2, 20]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 1]}>
         <planeGeometry args={[20, 1.2]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
@@ -581,19 +582,20 @@ function Bridge3D({ at, angle }: { at: [number, number]; angle: number }) {
 }
 
 function River3D() {
-  // 与 2D 新河道对应：从后缘 (z=-10) 蜿蜒流向左缘 (x=-10, z≈+2)，
-  // 2D 场景 x% → 3D x=-10+x*0.2，y% → 3D z=-10+y*0.2
+  // 与 2D 新河道对应：从后缘 (z≈-9.8) 蜿蜒向左下，在横路 (z=1) 处架桥与路连通，
+  // 下游汇入池塘 (-8.3, 3.6)。所有端点收在场内（|x|,|z| ≤ 9.8），河被场地边界截断。
   const segments: { from: [number, number]; to: [number, number] }[] = [
-    { from: [-7.4, -10.0], to: [-8.1, -7.9] },
-    { from: [-8.1, -7.9], to: [-8.8, -5.8] },
-    { from: [-8.8, -5.8], to: [-9.1, -4.0] },
-    { from: [-9.1, -4.0], to: [-9.2, -3.0] },
-    { from: [-9.2, -3.0], to: [-9.6, 0.0] },
-    { from: [-9.6, 0.0], to: [-10.0, 2.0] },
+    { from: [-5.5, -9.8], to: [-6.6, -7.6] },
+    { from: [-6.6, -7.6], to: [-7.6, -5.4] },
+    { from: [-7.6, -5.4], to: [-8.3, -3.2] },
+    { from: [-8.3, -3.2], to: [-8.8, -1.2] },
+    { from: [-8.8, -1.2], to: [-9.2, 1.0] },
+    { from: [-9.2, 1.0], to: [-9.0, 2.2] },
+    { from: [-9.0, 2.2], to: [-8.3, 3.6] },
   ];
-  // 桥架在 2D (47,300) 对应处，横跨河面（与该段河道切线垂直）
-  const bridgeAt: [number, number] = [-9.06, -4.0];
-  const bridgeAngle = -0.13;
+  // 桥架在河道与横路 (z=1) 的交点，桥面沿路方向（沿 x 轴）与路连通
+  const bridgeAt: [number, number] = [-9.2, 1.0];
+  const bridgeAngle = 0;
   return (
     <group>
       {segments.map((seg, i) => (
@@ -601,6 +603,58 @@ function River3D() {
       ))}
       <Bridge3D at={bridgeAt} angle={bridgeAngle} />
     </group>
+  );
+}
+
+// ─── 晴夜萤火虫（贴地漂浮 + 闪烁，仅晴朗夜晚出现） ───
+function Fireflies3D({ seed }: { seed: number }) {
+  const pointsRef = useRef<THREE.Points>(null);
+  const count = 22;
+  const { geometry, base } = useMemo(() => {
+    const positions = new Float32Array(count * 3);
+    const bases: [number, number, number][] = [];
+    for (let i = 0; i < count; i++) {
+      const x = -8 + seededRand(seed, i) * 16;
+      const z = -8 + seededRand(seed, i + 100) * 16;
+      const y = 0.6 + seededRand(seed, i + 200) * 1.6;
+      bases.push([x, y, z]);
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = z;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    return { geometry: geo, base: bases };
+  }, [seed]);
+
+  useFrame(() => {
+    const pts = pointsRef.current;
+    if (!pts) return;
+    const attr = pts.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const arr = attr.array as Float32Array;
+    const t = performance.now() / 1000;
+    for (let i = 0; i < count; i++) {
+      arr[i * 3] = base[i][0] + Math.sin(t * 0.5 + i * 1.7) * 0.8;
+      arr[i * 3 + 1] = base[i][1] + Math.sin(t * 0.9 + i * 2.3) * 0.35;
+      arr[i * 3 + 2] = base[i][2] + Math.cos(t * 0.4 + i * 1.1) * 0.8;
+    }
+    attr.needsUpdate = true;
+    const mat = pts.material as THREE.PointsMaterial;
+    mat.opacity = 0.55 + Math.sin(t * 2.2) * 0.35;
+  });
+
+  return (
+    <points ref={pointsRef} geometry={geometry} frustumCulled={false}>
+      <pointsMaterial
+        size={0.22}
+        color="#d8ffa0"
+        transparent
+        opacity={0.8}
+        sizeAttenuation
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
   );
 }
 
@@ -1043,7 +1097,7 @@ function SceneContent({
       [9, 0, 0],
       [9, 0, 4],
       [9, 0, 7],
-      [-7.6, 0, -2.2],
+      [-7.2, 0, -2.4],
       [-6.8, 0, 0.5],
       [-7.5, 0, 5],
       [-8, 0, 8],
@@ -1057,21 +1111,26 @@ function SceneContent({
   );
 
   const day = useRanchDayCycle(2000);
-  // 雨天/大雾时环境光略降（阴天氛围），但夜晚基础亮度已整体调高
+  // 阴雨/雷暴/大雾环境光略降（雷暴最暗），夜晚基础亮度已整体调高
   const lightLevel =
-    weather.weather === "rain" || weather.weather === "fog"
-      ? day.lightLevel * 0.85
-      : day.lightLevel;
+    weather.weather === "storm"
+      ? day.lightLevel * 0.7
+      : weather.weather === "rain" || weather.weather === "fog" || weather.weather === "overcast"
+        ? day.lightLevel * 0.85
+        : day.lightLevel;
   return (
     <>
       <SkyBodies3D />
       <StarField3D alpha={day.starAlpha} />
-      {(weather.weather === "rain" || weather.weather === "snow") && (
+      {(weather.weather === "rain" ||
+        weather.weather === "storm" ||
+        weather.weather === "snow") && (
         <WeatherParticles3D
-          kind={weather.weather === "rain" ? "rain" : "snow"}
+          kind={weather.weather === "snow" ? "snow" : "rain"}
           seed={weather.seed}
         />
       )}
+      {weather.weather === "sunny" && day.isNight && <Fireflies3D seed={weather.seed} />}
       <ambientLight intensity={0.35 * lightLevel + 0.12} />
       <directionalLight
         position={[8, 12, 8]}
@@ -1106,11 +1165,11 @@ function SceneContent({
       {/* Edificios */}
       <Barn position={[-3, 0, -4]} />
       <Windmill position={[6, 0, -5]} />
-      <SmallHouse position={[-6, 0, 2]} roofColor="#48a838" />
+      <SmallHouse position={[-6, 0, 3.2]} roofColor="#48a838" />
       <SmallHouse position={[2, 0, 5]} roofColor="#d04040" />
       <SmallHouse position={[6, 0, 4]} roofColor="#4080d0" />
 
-      <Pond3D position={[-4, 0.02, 4]} />
+      <Pond3D position={[-8.3, 0.02, 3.6]} />
 
       {/* 左上角河流 + 木桥（与 2D 牧场对应） */}
       <River3D />
@@ -1189,15 +1248,18 @@ export type RanchScene3DProps = {
 export function RanchScene3D({ agents, sessionActivity }: RanchScene3DProps) {
   const day = useRanchDayCycle();
   const weather = useRanchWeather();
-  // 天气影响雾：大雾浓、雨雪次之，晴天保持原有远雾
+  // 天气影响雾：注意相机可拉远到 25 + 场景半径 ~12，雾 far 必须远大于 37，
+  // 否则缩小视角时整个场景被雾色吞掉（之前 fog far=17 导致整屏发白）
   const fogArgs =
     weather.weather === "fog"
-      ? ["#c4ced8", 5, 17]
-      : weather.weather === "rain"
-        ? [day.skyTop, 9, 26]
-        : weather.weather === "snow"
-          ? [day.skyTop, 11, 28]
-          : [day.skyTop, 20, 40];
+      ? ["#c4ced8", 16, 70]
+      : weather.weather === "storm"
+        ? [day.skyTop, 12, 55]
+        : weather.weather === "rain"
+          ? [day.skyTop, 15, 60]
+          : weather.weather === "snow"
+            ? [day.skyTop, 17, 65]
+            : [day.skyTop, 30, 90];
   return (
     <div className="ranch-scene ranch-scene--3d" style={{ background: day.skyBottom }}>
       <Canvas

@@ -7,7 +7,7 @@
  *  - 自然滚动：每个整点自动切换为新随机天气。
  */
 
-export type RanchWeather = "sunny" | "rain" | "snow" | "fog";
+export type RanchWeather = "sunny" | "overcast" | "rain" | "storm" | "snow" | "fog";
 
 export type RanchWeatherInfo = {
   weather: RanchWeather;
@@ -22,9 +22,11 @@ export type RanchWeatherInfo = {
 };
 
 const SLOTS: Array<{ w: RanchWeather; p: number; label: string; icon: string }> = [
-  { w: "sunny", p: 0.44, label: "晴朗", icon: "☀️" },
-  { w: "rain", p: 0.66, label: "下雨", icon: "🌧️" },
-  { w: "fog", p: 0.85, label: "大雾", icon: "🌫️" },
+  { w: "sunny", p: 0.3, label: "晴朗", icon: "☀️" },
+  { w: "overcast", p: 0.5, label: "阴天", icon: "☁️" },
+  { w: "rain", p: 0.68, label: "下雨", icon: "🌧️" },
+  { w: "storm", p: 0.78, label: "雷暴", icon: "⛈️" },
+  { w: "fog", p: 0.89, label: "大雾", icon: "🌫️" },
   { w: "snow", p: 1.0, label: "下雪", icon: "❄️" },
 ];
 

@@ -24,6 +24,7 @@ import { SkillsView } from "../../views/Skills.tsx";
 import { TeamsView } from "../../views/Teams.tsx";
 import { UsageView } from "../../views/Usage.tsx";
 import { SetupWizard } from "../onboarding/SetupWizard.tsx";
+import { SystemSettingsPage } from "../settings/SystemSettingsDialog.tsx";
 
 const VIEW_MAP: Record<string, React.ComponentType> = {
   chat: ChatView,
@@ -43,6 +44,7 @@ const VIEW_MAP: Record<string, React.ComponentType> = {
   instances: InstancesView,
   models: ModelsView,
   clawhub: ClawHubView,
+  settings: SystemSettingsPage,
 };
 
 // ─── Componente de título de sesión con menú desplegable ─────
@@ -173,7 +175,7 @@ export function MainContent() {
   const ViewComponent = VIEW_MAP[tab] ?? ChatView;
 
   // Skip header for overview and usage (they have their own headers)
-  const hideHeader = tab === "overview" || tab === "usage";
+  const hideHeader = tab === "overview" || tab === "usage" || tab === "settings";
 
   return (
     <main className={`content${tab === "chat" ? " content--chat" : ""}`}>

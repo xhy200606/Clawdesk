@@ -331,7 +331,8 @@
 
 .nav {
   grid-area: nav;
-  overflow-y: auto;
+  /* 侧栏整体不滚动：只有会话列表（.session-list）内部滚动 */
+  overflow: hidden;
   overflow-x: hidden;
   padding: clamp(10px, 1.5vw, 18px) clamp(8px, 1.2vw, 14px);
   background: var(--bg);
@@ -386,7 +387,7 @@
   width: var(--shell-nav-rail);
   min-width: var(--shell-nav-rail);
   padding: 10px 6px;
-  overflow: hidden auto;
+  overflow: hidden;
   border-right: 1px solid var(--border);
   opacity: 1;
   pointer-events: auto;
@@ -1396,4 +1397,21 @@
 @keyframes session-working-pulse {
   0%, 100% { opacity: 0.35; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* ── 侧栏固定：会话列表内部滚动 ── */
+.nav .nav-group:has(.session-list) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.nav .session-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }

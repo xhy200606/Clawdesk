@@ -43,6 +43,7 @@ export const en: TranslationMap = {
     "json-edit": "Edit JSON",
     debug: "Debug",
     logs: "Logs",
+    settings: "System Settings",
   },
   subtitles: {
     agents: "Manage agent workspaces, tools, and identities.",
@@ -62,6 +63,7 @@ export const en: TranslationMap = {
     "json-edit": "Edit the raw JSON5 config file directly.",
     debug: "Gateway snapshots, events, and manual RPC calls.",
     logs: "Live tail of the gateway file logs.",
+    settings: "Local theme, color & font preferences, plus ranch gate connection.",
   },
   overview: {
     access: {

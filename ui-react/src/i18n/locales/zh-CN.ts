@@ -43,6 +43,7 @@ export const zh_CN: TranslationMap = {
     "json-edit": "编辑 JSON",
     debug: "调试",
     logs: "日志",
+    settings: "系统设置",
   },
   subtitles: {
     agents: "管理Agent工作区、工具和身份。",
@@ -62,6 +63,7 @@ export const zh_CN: TranslationMap = {
     "json-edit": "直接编辑原始 JSON5 配置文件。",
     debug: "网关快照、事件和手动 RPC 调用。",
     logs: "网关文件日志的实时追踪。",
+    settings: "主题、颜色与字体的本机偏好，以及牧场大门网关接入。",
   },
   overview: {
     access: {

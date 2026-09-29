@@ -3172,3 +3172,21 @@
   --donut-bg-outer: rgba(0, 0, 0, 0.35);
   --donut-bg-inner: rgba(0, 0, 0, 0.5);
 }
+
+/* ── 概览卡片栅格：防止内容（如网关下拉的长 URL）把 1fr 列撑宽 ── */
+.overview-swapy > [data-swapy-slot],
+.overview-swapy > [data-swapy-slot] > [data-swapy-item],
+.overview-swapy > [data-swapy-slot] > [data-swapy-item] > .card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.overview-swapy .field select,
+.overview-swapy .field input {
+  min-width: 0;
+  width: 100%;
+}
+
+.overview-swapy .gw-version-row {
+  min-width: 0;
+}

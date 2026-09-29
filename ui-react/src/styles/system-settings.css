@@ -252,3 +252,21 @@
     font-size: 12px;
     color: var(--text-muted, #8a93a5);
 }
+
+/* ── 整页视图模式（路由 /settings，不再作为弹窗） ── */
+.sys-settings--page {
+  width: min(760px, 100%);
+  max-height: none;
+  margin: 0 auto;
+  padding: 8px 4px 40px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card, #181b22);
+  color: var(--text);
+  box-shadow: none;
+  overflow-y: visible;
+}
+
+.sys-settings--page .sys-settings__header {
+  padding-top: 20px;
+}
