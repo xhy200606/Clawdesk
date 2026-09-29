@@ -436,9 +436,9 @@ function CowCharacter3D({
     targetRef.current.set(...targetPosition);
   }, [targetPosition[0], targetPosition[1], targetPosition[2]]);
 
-  useFrame((clock) => {
+  useFrame((state, delta) => {
     if (!groupRef.current) return;
-    const t = clock.clock.elapsedTime;
+    const t = state.clock.elapsedTime;
     const pos = groupRef.current.position;
 
     // Inicializar la posición una sola vez
@@ -475,10 +475,12 @@ function CowCharacter3D({
     isWalkingRef.current = dist > 0.05;
 
     if (isWalkingRef.current) {
-      // Lerp con velocidad adaptativa（执行任务时步频更快 = 奔跑感）
-      const speed = Math.min(isWorking ? 0.13 : 0.08, dist * 0.04 + 0.01);
-      pos.x += dx * speed;
-      pos.z += dz * speed;
+      // 恒定速度移动（单位/秒）：闲逛慢走、执行任务小跑，
+      // 远目标也不会一帧跨大步（之前的指数 lerp 会造成“闪现”）
+      const stepSpeed = isWorking ? 1.6 : 0.85;
+      const step = Math.min(dist, stepSpeed * Math.min(delta, 0.1));
+      pos.x += (dx / dist) * step;
+      pos.z += (dz / dist) * step;
 
       // Rotar hacia la dirección de movimiento
       const angle = Math.atan2(dx, dz);
@@ -517,7 +519,7 @@ function CowCharacter3D({
           pos.x = targetRef.current.x + Math.sin(t * 20) * 0.03;
           break;
         case "spawning": {
-          const s = Math.min(1, clock.clock.elapsedTime * 1.5);
+          const s = Math.min(1, t * 1.5);
           const bounce = 1 + 0.1 * Math.sin(s * Math.PI * 3) * (1 - s);
           groupRef.current.scale.setScalar(bounce);
           break;

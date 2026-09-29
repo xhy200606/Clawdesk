@@ -282,13 +282,17 @@ export function TeamsView() {
   const hasLeadChildren = lead.children.length > 0;
   const columns = teammates.length + (hasLeadChildren ? 1 : 0);
   const width = Math.max(760, Math.max(columns, 1) * COLUMN_W + 64);
-  const height =
-    390 +
-    Math.max(0, ...teammates.map((member) => member.children.length), lead.children.length - 1) *
-      130;
+  // 03 区行数：主 Agent 的 SubAgent 横向铺满一行后换行；成员 SubAgent 竖排
+  const subRows = Math.max(
+    1,
+    Math.ceil(lead.children.length / Math.max(columns, 1)),
+    ...teammates.map((member) => member.children.length),
+  );
+  const height = 386 + subRows * 130 + 16;
   const columnX = (index: number) =>
     width / 2 - (columns * COLUMN_W) / 2 + index * COLUMN_W + (COLUMN_W - NODE_W) / 2;
-  const leadChildX = columnX(0);
+  const subCol = (index: number) => columnX(index % Math.max(columns, 1));
+  const subRowOf = (index: number) => Math.floor(index / Math.max(columns, 1));
   const teammateX = (index: number) => columnX(index + (hasLeadChildren ? 1 : 0));
   const flowScale = Math.min(1, Math.max(0.1, (viewportWidth - 24) / width));
 
@@ -397,15 +401,17 @@ export function TeamsView() {
                     </defs>
                     {/* 主 Agent 的 SubAgent：从 01 主节点直接拉到 03 区（绕过 02） */}
                     {lead.children.map((child, index) => {
-                      const x = leadChildX + NODE_W / 2;
-                      const y = 366 + index * 130;
+                      const x = subCol(index) + NODE_W / 2;
+                      const y = 386 + subRowOf(index) * 130;
                       const linked =
                         child.parentSessionKey === leadKey || child.spawnedBy === leadKey;
+                      // 肘形走线：主节点下方竖直下行 → 02 行卡片下方水平 → 落到 03 卡片
+                      const midY = 352;
                       return (
                         <path
                           key={child.key}
                           className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
-                          d={`M ${width / 2} 160 C ${width / 2} 320, ${x} 330, ${x} ${y}`}
+                          d={`M ${width / 2} 160 L ${width / 2} ${midY} L ${x} ${midY} L ${x} ${y}`}
                         />
                       );
                     })}
@@ -447,7 +453,7 @@ export function TeamsView() {
                           <path
                             key={child.key}
                             className={`team-flow__edge${linked ? " team-flow__edge--linked" : ""}${stateOf(child, activeTraceSessions) === "working" ? " team-flow__edge--active" : ""}`}
-                            d={`M ${x} 340 L ${x} ${366 + childIndex * 130}`}
+                            d={`M ${x} 340 L ${x} ${386 + childIndex * 130}`}
                           />
                         );
                       }),
@@ -460,7 +466,7 @@ export function TeamsView() {
                     02 · 核心团队成员执行
                   </div>
                   {childCount > 0 && (
-                    <div className="team-flow__stage" style={{ top: 354 }}>
+                    <div className="team-flow__stage" style={{ top: 374 }}>
                       03 · SubAgent 执行
                     </div>
                   )}
@@ -483,7 +489,7 @@ export function TeamsView() {
                     <div
                       className="team-flow__position"
                       key={child.key}
-                      style={{ left: leadChildX, top: 366 + index * 130 }}
+                      style={{ left: subCol(index), top: 386 + subRowOf(index) * 130 }}
                     >
                       <NodeCard
                         title={sessionName(child)}
@@ -517,7 +523,7 @@ export function TeamsView() {
                         <div
                           className="team-flow__position"
                           key={child.key}
-                          style={{ left: teammateX(index), top: 366 + childIndex * 130 }}
+                          style={{ left: teammateX(index), top: 386 + childIndex * 130 }}
                         >
                           <NodeCard
                             title={sessionName(child)}

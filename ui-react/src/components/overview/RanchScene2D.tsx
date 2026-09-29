@@ -1003,8 +1003,24 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         for (let idx = 0; idx < agents.length; idx++) {
           const agent = agents[idx];
           const base = agentStateMap.get(agent.id) ?? "idle";
-          next[agent.id] =
-            base === "processing" ? { dx: rnd(40), dy: rnd(26) } : { dx: rnd(250), dy: rnd(52) };
+          if (base === "processing") {
+            // 工作时：槽位附近小范围活动
+            next[agent.id] = { dx: rnd(40), dy: rnd(26) };
+          } else {
+            // 空闲/等待：围栏内区随机游走 + 随机固定（约 1/3 概率原地停一轮）。
+            // 围栏内区 200×90px；动物元素（图 32px + 名字 + 状态标签）宽约 70px、
+            // 高约 62px，目标点按「元素左上角」限制在 dx 12~120 / dy 4~24，
+            // 保证元素整体始终在栅栏内。
+            const prev = current[agent.id];
+            if (prev && Math.random() < 0.34) {
+              next[agent.id] = prev;
+            } else {
+              next[agent.id] = {
+                dx: Math.round(12 + Math.random() * 108),
+                dy: Math.round(4 + Math.random() * 20),
+              };
+            }
+          }
         }
         return next;
       });
@@ -1055,7 +1071,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
             }
           : {
               // 圈内随机游走：以围栏圈左上角 (52%, 18%) 为基准，
-              // dx/dy 已被限制在圈内区（28~172 / 24~66 px）
+              // dx/dy 已按动物元素尺寸限制在圈内区（12~120 / 4~24 px）
               left: `calc(52% + ${walk.dx}px)`,
               top: `calc(18% + ${walk.dy}px)`,
               transition: "left 3.4s ease-in-out, top 3.4s ease-in-out",
