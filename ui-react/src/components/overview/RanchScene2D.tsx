@@ -290,9 +290,9 @@ function PixelPond() {
 function PixelRiver() {
   // 河道：从顶边 (x≈22.5%) 蜿蜒向左下，在 55% 高度处与横路相交（此处架桥与路连通），
   // 最后流入左下池塘。viewBox 320×700 ↔ 容器 32%×70% 世界坐标。
-  const FLOW = "M 225 0 C 175 110, 125 210, 104 320 S 76 500, 62 640";
+  const FLOW = "M 225 0 C 175 110, 125 210, 104 320 S 83 430, 74 480 L 74 600";
   // 尾段：仅水面色（无岸线），延伸入池塘与池水融为一体
-  const FLOW_TAIL = "M 62 640 C 57 666, 74 683, 112 689";
+  const FLOW_TAIL = "M 74 600 C 74 635, 84 662, 112 689";
   return (
     <svg
       width="100%"
@@ -326,7 +326,7 @@ function PixelRiver() {
       />
       {/* 波光（沿河道分布） */}
       <path
-        d="M 200 60 q 8 6 0 12 M 152 150 q 8 6 0 12 M 122 240 q 8 6 0 12 M 104 330 q 8 6 0 12 M 88 430 q 8 6 0 12 M 74 520 q 8 6 0 12 M 64 620 q 8 6 0 12 M 82 665 q 8 6 0 12"
+        d="M 200 60 q 8 6 0 12 M 152 150 q 8 6 0 12 M 122 240 q 8 6 0 12 M 104 330 q 8 6 0 12 M 84 410 q 8 6 0 12 M 74 500 q 8 6 0 12 M 74 560 q 8 6 0 12 M 84 645 q 8 6 0 12"
         stroke="#8ad8c8"
         strokeWidth="3"
         fill="none"
@@ -340,18 +340,20 @@ function PixelRiver() {
         strokeWidth="46"
         strokeLinecap="round"
       />
-      {/* 木桥：架在河道与横路（y=55%）的真实交点 (74,550)，桥面沿路方向，与路连通 */}
-      <g transform="translate(74 550) rotate(90)">
-        <rect x="-23" y="-23" width="46" height="46" rx="2" fill="#a07020" />
-        <rect x="-20" y="-20.5" width="40" height="41" fill="#c09040" />
-        <rect x="-20" y="-13" width="40" height="2.5" fill="#a07020" opacity="0.6" />
-        <rect x="-20" y="-3" width="40" height="2.5" fill="#a07020" opacity="0.6" />
+      {/* 木桥：架在河道直线段与横路（y=55%）的正交交点 (74,550)，水平沿路方向。
+          厚 66vb（y）在屏幕上 = 4.6%×容器宽 = 路的像素厚度（容器 10:7）；长 46vb 跨河搭岸 */}
+      <g transform="translate(74 550)">
+        <rect x="-23" y="-33" width="46" height="66" rx="2" fill="#a07020" />
+        <rect x="-20" y="-30.5" width="40" height="61" fill="#c09040" />
+        <rect x="-20" y="-19" width="40" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-20" y="-6" width="40" height="2.5" fill="#a07020" opacity="0.6" />
         <rect x="-20" y="7" width="40" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-20" y="20" width="40" height="2.5" fill="#a07020" opacity="0.6" />
         {/* 桥头桩 */}
-        <rect x="-25" y="-23" width="5" height="7" fill="#8b5a2b" />
-        <rect x="20" y="-23" width="5" height="7" fill="#8b5a2b" />
-        <rect x="-25" y="16" width="5" height="7" fill="#8b5a2b" />
-        <rect x="20" y="16" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-25" y="-33" width="5" height="7" fill="#8b5a2b" />
+        <rect x="20" y="-33" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-25" y="26" width="5" height="7" fill="#8b5a2b" />
+        <rect x="20" y="26" width="5" height="7" fill="#8b5a2b" />
       </g>
     </svg>
   );
@@ -1455,7 +1457,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         {/* Dirt paths（横路保持完整贯穿；围栏圈内不放路） */}
         <div
           className="ranch-path ranch-path--h"
-          style={{ left: 0, right: 0, top: "55%", height: "4.6%" }}
+          style={{ left: 0, right: 0, top: "55%", height: "6.571%" }}
         />
         <div
           className="ranch-path ranch-path--v"

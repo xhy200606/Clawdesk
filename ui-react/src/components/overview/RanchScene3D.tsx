@@ -660,26 +660,26 @@ function RiverSegment3D({
 function Bridge3D({ at, angle }: { at: [number, number]; angle: number }) {
   return (
     <group position={[at[0], 0, at[1]]} rotation={[0, angle, 0]}>
-      {/* 桥面板（横跨河面） */}
+      {/* 桥面板（横跨河面）：厚 0.92 = 路宽，跨 1.4 = 河宽 0.72 + 两侧搭岸 */}
       <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
-        <boxGeometry args={[2.2, 0.06, 1.5]} />
+        <boxGeometry args={[1.4, 0.06, 0.92]} />
         <meshStandardMaterial color="#a07020" roughness={0.85} />
       </mesh>
       {/* 桥板纹路 */}
       {[0, 1, 2, 3].map((i) => (
-        <mesh key={i} position={[0, 0.155, -0.55 + i * 0.37]}>
-          <boxGeometry args={[2.2, 0.015, 0.05]} />
+        <mesh key={i} position={[0, 0.155, -0.33 + i * 0.22]}>
+          <boxGeometry args={[1.4, 0.015, 0.05]} />
           <meshStandardMaterial color="#8b5a2b" roughness={0.9} />
         </mesh>
       ))}
       {/* 扶手栏杆 */}
-      {[-0.7, 0.7].map((z) => (
+      {[-0.41, 0.41].map((z) => (
         <group key={z}>
           <mesh position={[0, 0.32, z]} castShadow>
-            <boxGeometry args={[2.2, 0.05, 0.05]} />
+            <boxGeometry args={[1.4, 0.05, 0.05]} />
             <meshStandardMaterial color="#c09040" roughness={0.8} />
           </mesh>
-          {[-0.95, 0, 0.95].map((x) => (
+          {[-0.6, 0, 0.6].map((x) => (
             <mesh key={x} position={[x, 0.22, z]} castShadow>
               <boxGeometry args={[0.06, 0.24, 0.06]} />
               <meshStandardMaterial color="#8b5a2b" roughness={0.85} />
