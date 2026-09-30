@@ -228,8 +228,20 @@
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='16' height='16' fill='%23d4be7a'/%3E%3Crect x='5' y='3' width='2' height='2' fill='%23c4ae6a' opacity='0.4'/%3E%3Crect x='10' y='11' width='1' height='2' fill='%23e0ca8a' opacity='0.3'/%3E%3C/svg%3E") repeat;
 }
 
+/* 分叉融合：交叉点同色圆片（尺寸=路宽 4.6%） */
+.ranch-path-joint {
+    position: absolute;
+    width: 4.6%;
+    aspect-ratio: 1 / 1;
+    background: #d4be7a;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
 :root[data-theme="dark"] .ranch-path--h,
-:root[data-theme="dark"] .ranch-path--v {
+:root[data-theme="dark"] .ranch-path--v,
+:root[data-theme="dark"] .ranch-path-joint {
     filter: brightness(0.6) saturate(0.8);
 }
 

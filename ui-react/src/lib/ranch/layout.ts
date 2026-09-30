@@ -22,7 +22,7 @@ export const ROADS = {
   hY: 55,
   /** 竖路一 x（全高贯穿） */
   v1X: 45,
-  /** 竖路二 x（仅南段：y 55→100） */
+  /** 竖路二 x（南段：y 44→100，北端为入户路汇入点） */
   v2X: 20,
 } as const;
 
@@ -42,6 +42,9 @@ export const RIVER_PTS: Array<[number, number]> = [
   [7, 58],
   [6.6, 61],
   [6.2, 64],
+  [6.8, 66.5],
+  [8.5, 68.2],
+  [11.2, 68.9],
 ];
 
 /** 河道半宽（世界%） */
@@ -74,8 +77,8 @@ export const BRIDGE = { x: 7.4, y: 55 } as const;
 export const SCENE_REF = { w: 692, h: 491 } as const;
 
 export const BARN = {
-  /** 2D div 左上角（%） */
-  left: 12,
+  /** 2D div 左上角（%）—— 移出河道（河上段斜穿 12~21%，26 起为东岸安全区） */
+  left: 26,
   top: 8,
   /** PixelBarn 像素尺寸 */
   pxW: 64,
@@ -110,11 +113,12 @@ export const POND_CENTER: [number, number] = [
 
 /** 入户路：谷仓门口 → 竖路二（V2）顶端的土路（2D/3D 共用折线，世界%） */
 export const HOUSE_PATH_PTS: Array<[number, number]> = [
-  [16.6, 19.8],
-  [18.5, 25],
-  [20, 33],
+  [30.6, 19.4],
+  [29.2, 25],
+  [26.5, 31.5],
+  [23, 36],
+  [20, 42],
   [20, 45],
-  [20, 54.5],
 ];
 
 // ── 围栏圈（2D：px 尺寸；3D：按参考场景折算世界%） ────────────────
@@ -144,12 +148,12 @@ export const penGate = (): [number, number] => [
 
 // ── 工作槽位（与 2D ZONES 同源；3D 由 w3d 派生） ──────────────────
 export const ZONES: Record<string, { left: number; top: number; label: string }> = {
-  thinking: { left: 14, top: 16, label: "谷仓前" },
+  thinking: { left: 27, top: 21, label: "谷仓前" },
   tool_calling: { left: 82, top: 10, label: "风车旁" },
   speaking: { left: 42, top: 50, label: "告示牌" },
   idle: { left: 58, top: 28, label: "池塘边" },
   error: { left: 30, top: 68, label: "原地" },
-  spawning: { left: 17, top: 22, label: "谷仓门口" },
+  spawning: { left: 32, top: 21, label: "谷仓门口" },
 };
 
 // ── 路网（寻路用路标图） ─────────────────────────────────────────

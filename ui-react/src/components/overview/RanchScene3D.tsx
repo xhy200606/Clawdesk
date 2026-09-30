@@ -111,7 +111,7 @@ function skyBodyPosition(hour: number): {
   };
 }
 
-function SkyBodies3D() {
+function SkyBodies3D({ cloudy }: { cloudy: boolean }) {
   const sunRef = useRef<THREE.Mesh>(null);
   const moonRef = useRef<THREE.Mesh>(null);
   const moonGlowRef = useRef<THREE.Mesh>(null);
@@ -129,13 +129,14 @@ function SkyBodies3D() {
     const mp = computeMoonPhase(now);
     if (sunRef.current) {
       if (sun) {
-        sunRef.current.visible = true;
+        // 雷暴/阴天：太阳被云层遮蔽
+        sunRef.current.visible = !cloudy;
         sunRef.current.position.set(...sun);
       } else {
         sunRef.current.visible = false;
       }
     }
-    const moonVisible = Boolean(moon);
+    const moonVisible = Boolean(moon) && !cloudy;
     if (moonRef.current) {
       moonRef.current.visible = moonVisible;
       if (moon) {
@@ -155,7 +156,7 @@ function SkyBodies3D() {
     if (moonLightRef.current) {
       // 月光：随月亮移动的冷色点光源，强度随月相照度变化（满月最亮）
       moonLightRef.current.visible = moonVisible;
-      moonLightRef.current.intensity = 6 + 32 * mp.illum;
+      moonLightRef.current.intensity = (cloudy ? 0.35 : 1) * (6 + 32 * mp.illum);
       if (moon)
         moonLightRef.current.position.set(moon[0] * 0.55, moon[1] * 0.55 + 4, moon[2] * 0.55);
     }
@@ -342,16 +343,16 @@ function Ground() {
       </mesh>
       {/* Dirt roads（与 2D 对应：竖路 45% → x=-1，横路 55% → z=1） */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-1, 0, 0]}>
-        <planeGeometry args={[1.2, 20]} />
+        <planeGeometry args={[0.92, 20]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 1]}>
-        <planeGeometry args={[20, 1.2]} />
+        <planeGeometry args={[20, 0.92]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
       {/* 竖路二（与 2D 一致：x=20%，仅南段 y55→100） */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w3d(ROADS.v2X, 50)[0], 0, 5.5]}>
-        <planeGeometry args={[1.2, 9]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w3d(ROADS.v2X, 50)[0], 0, 1.9]}>
+        <planeGeometry args={[0.92, 6.2]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
       {/* 入户路：谷仓门口 → 竖路二（与 2D 一致） */}
@@ -366,7 +367,7 @@ function Ground() {
 function DirtPathSegment3D({
   from,
   to,
-  width = 0.55,
+  width = 0.88,
 }: {
   from: [number, number];
   to: [number, number];
@@ -701,7 +702,7 @@ function River3D() {
   return (
     <group>
       {segments.map((seg, i) => (
-        <RiverSegment3D key={i} from={seg.from} to={seg.to} width={0.8} />
+        <RiverSegment3D key={i} from={seg.from} to={seg.to} width={0.72} />
       ))}
       <Bridge3D at={bridgeAt} angle={bridgeAngle} />
     </group>
@@ -1287,8 +1288,8 @@ function SceneContent({
 
   const treePositions = useMemo<[number, number, number][]>(
     () => [
-      [-5.5, 0, -8],
-      [-3.5, 0, -9],
+      [-6.8, 0, -8.2],
+      [-1.5, 0, -9.6],
       [-2, 0, -8.5],
       [2, 0, -9],
       [5, 0, -8],
@@ -1298,7 +1299,7 @@ function SceneContent({
       [9, 0, 4],
       [9, 0, 7],
       [-7.2, 0, -2.4],
-      [-6.8, 0, 0.5],
+      [-4.4, 0, 0],
       [-7.5, 0, 5],
       [-8, 0, 8],
       [-4, 0, 9],
@@ -1320,7 +1321,7 @@ function SceneContent({
         : day.lightLevel;
   return (
     <>
-      <SkyBodies3D />
+      <SkyBodies3D cloudy={weather.weather === "storm" || weather.weather === "overcast"} />
       <StarField3D alpha={day.starAlpha} />
       {(weather.weather === "rain" ||
         weather.weather === "storm" ||

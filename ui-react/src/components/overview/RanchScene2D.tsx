@@ -290,7 +290,7 @@ function PixelPond() {
 function PixelRiver() {
   // 河道：从顶边 (x≈22.5%) 蜿蜒向左下，在 55% 高度处与横路相交（此处架桥与路连通），
   // 最后流入左下池塘。viewBox 320×700 ↔ 容器 32%×70% 世界坐标。
-  const FLOW = "M 225 0 C 175 110, 125 210, 104 320 S 76 500, 62 640";
+  const FLOW = "M 225 0 C 175 110, 125 210, 104 320 S 76 500, 62 640 C 57 666, 74 683, 112 689";
   return (
     <svg
       width="100%"
@@ -314,7 +314,7 @@ function PixelRiver() {
       />
       {/* 波光（沿河道分布） */}
       <path
-        d="M 200 60 q 8 6 0 12 M 152 150 q 8 6 0 12 M 122 240 q 8 6 0 12 M 104 330 q 8 6 0 12 M 88 430 q 8 6 0 12 M 74 520 q 8 6 0 12"
+        d="M 200 60 q 8 6 0 12 M 152 150 q 8 6 0 12 M 122 240 q 8 6 0 12 M 104 330 q 8 6 0 12 M 88 430 q 8 6 0 12 M 74 520 q 8 6 0 12 M 64 620 q 8 6 0 12 M 82 665 q 8 6 0 12"
         stroke="#8ad8c8"
         strokeWidth="3"
         fill="none"
@@ -322,31 +322,31 @@ function PixelRiver() {
       />
       {/* 入户路：谷仓门口 → 竖路二顶端（与 3D HOUSE_PATH 一致） */}
       <path
-        d="M 166 198 C 185 240, 200 290, 200 380 L 200 552"
+        d="M 306 194 C 302 250, 285 310, 250 350 C 225 378, 202 395, 200 440"
         fill="none"
-        stroke="#b89a5e"
-        strokeWidth="13"
+        stroke="#c9b16d"
+        strokeWidth="44"
         strokeLinecap="round"
       />
       <path
-        d="M 166 198 C 185 240, 200 290, 200 380 L 200 552"
+        d="M 306 194 C 302 250, 285 310, 250 350 C 225 378, 202 395, 200 440"
         fill="none"
         stroke="#d4be7a"
-        strokeWidth="9"
+        strokeWidth="34"
         strokeLinecap="round"
       />
       {/* 木桥：架在河道与横路（y=55%）的真实交点 (74,550)，桥面沿路方向，与路连通 */}
       <g transform="translate(74 550) rotate(90)">
-        <rect x="-10" y="-27" width="20" height="54" rx="2" fill="#a07020" />
-        <rect x="-7.5" y="-24" width="15" height="48" fill="#c09040" />
-        <rect x="-7.5" y="-15" width="15" height="2.5" fill="#a07020" opacity="0.6" />
-        <rect x="-7.5" y="-4" width="15" height="2.5" fill="#a07020" opacity="0.6" />
-        <rect x="-7.5" y="7" width="15" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-23" y="-27" width="46" height="54" rx="2" fill="#a07020" />
+        <rect x="-20" y="-24" width="40" height="48" fill="#c09040" />
+        <rect x="-20" y="-15" width="40" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-20" y="-4" width="40" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-20" y="7" width="40" height="2.5" fill="#a07020" opacity="0.6" />
         {/* 桥头桩 */}
-        <rect x="-12" y="-27" width="5" height="7" fill="#8b5a2b" />
-        <rect x="7" y="-27" width="5" height="7" fill="#8b5a2b" />
-        <rect x="-12" y="20" width="5" height="7" fill="#8b5a2b" />
-        <rect x="7" y="20" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-25" y="-27" width="5" height="7" fill="#8b5a2b" />
+        <rect x="20" y="-27" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-25" y="20" width="5" height="7" fill="#8b5a2b" />
+        <rect x="20" y="20" width="5" height="7" fill="#8b5a2b" />
       </g>
     </svg>
   );
@@ -879,7 +879,7 @@ const TREES: Array<{ left: string; top: string; size: "sm" | "lg" }> = [
   { left: "90%", top: "0%", size: "lg" },
   { left: "95%", top: "2%", size: "sm" },
   { left: "17%", top: "26%", size: "sm" },
-  { left: "16%", top: "47%", size: "lg" },
+  { left: "25%", top: "46%", size: "lg" },
   { left: "2%", top: "78%", size: "sm" },
   { left: "94%", top: "30%", size: "sm" },
   { left: "96%", top: "55%", size: "lg" },
@@ -1229,9 +1229,11 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
             if (prev && Math.random() < 0.34) {
               next[agent.id] = prev;
             } else {
+              // 元素整体（图 32 + 名字 + 状态标签 ≈72px）必须留在 90px 圈高内：
+              // dy ≤ 14 → 14+72=86 < 90；dx ≤ 116 → 116+70=186 < 200
               next[agent.id] = {
-                dx: Math.round(12 + Math.random() * 108),
-                dy: Math.round(4 + Math.random() * 20),
+                dx: Math.round(12 + Math.random() * 104),
+                dy: Math.round(2 + Math.random() * 12),
               };
             }
           }
@@ -1444,12 +1446,21 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         {snowCover.active && <SnowCover2D seed={weather.seed} melting={snowCover.melting} />}
 
         {/* Dirt paths（横路保持完整贯穿；围栏圈内不放路） */}
-        <div className="ranch-path ranch-path--h" style={{ left: 0, right: 0, top: "55%" }} />
-        <div className="ranch-path ranch-path--v" style={{ left: "45%", top: 0, bottom: 0 }} />
+        <div
+          className="ranch-path ranch-path--h"
+          style={{ left: 0, right: 0, top: "55%", height: "4.6%" }}
+        />
         <div
           className="ranch-path ranch-path--v"
-          style={{ left: "20%", top: "55%", height: "45%" }}
+          style={{ left: "45%", top: 0, bottom: 0, width: "4.6%" }}
         />
+        <div
+          className="ranch-path ranch-path--v"
+          style={{ left: "20%", top: "44%", height: "56%", width: "4.6%" }}
+        />
+        {/* 分叉融合：交叉点同色圆片，消除接缝 */}
+        <div className="ranch-path-joint" style={{ left: "45%", top: "55%" }} />
+        <div className="ranch-path-joint" style={{ left: "20%", top: "55%" }} />
 
         {/* River + bridge：左上角蜿蜒而下，在 55% 横路处架桥与路连通，下游汇入池塘 */}
         <div
@@ -1472,7 +1483,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         </div>
 
         {/* Barn */}
-        <div className="ranch-barn" style={{ left: "12%", top: "8%" }}>
+        <div className="ranch-barn" style={{ left: "26%", top: "8%" }}>
           <PixelBarn />
         </div>
 

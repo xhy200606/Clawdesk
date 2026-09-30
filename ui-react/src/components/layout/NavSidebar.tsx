@@ -376,32 +376,34 @@ export function NavSidebar() {
                       <span className="session-item__icon">+</span>
                       <span className="session-item__name">{t("chatView.newSession")}</span>
                     </button>
-                    {visibleSessions.map((session) => {
-                      const isActive = session.key === sessionKey;
-                      const baseName = resolveSessionDisplayName(session.key, session);
-                      const preview = getSessionPreview(session.key);
-                      const name = preview || baseName;
-                      const time = formatRelativeTime(session.updatedAt);
-                      return (
-                        <SessionItem
-                          key={session.key}
-                          sessionKey={session.key}
-                          name={name}
-                          time={time}
-                          isActive={isActive}
-                          working={workingKeys.has(session.key)}
-                          projectMode={Boolean(activeProjectMeta)}
-                          inProject={inProjectSet.has(session.key)}
-                          onToggleProject={() => onToggleProject(session.key)}
-                          onSwitch={() => {
-                            if (!isActive) {
-                              switchSession(session.key);
-                              setTab("chat");
-                            }
-                          }}
-                        />
-                      );
-                    })}
+                    <div className="session-scroll">
+                      {visibleSessions.map((session) => {
+                        const isActive = session.key === sessionKey;
+                        const baseName = resolveSessionDisplayName(session.key, session);
+                        const preview = getSessionPreview(session.key);
+                        const name = preview || baseName;
+                        const time = formatRelativeTime(session.updatedAt);
+                        return (
+                          <SessionItem
+                            key={session.key}
+                            sessionKey={session.key}
+                            name={name}
+                            time={time}
+                            isActive={isActive}
+                            working={workingKeys.has(session.key)}
+                            projectMode={Boolean(activeProjectMeta)}
+                            inProject={inProjectSet.has(session.key)}
+                            onToggleProject={() => onToggleProject(session.key)}
+                            onSwitch={() => {
+                              if (!isActive) {
+                                switchSession(session.key);
+                                setTab("chat");
+                              }
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

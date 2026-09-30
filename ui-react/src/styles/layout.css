@@ -1415,3 +1415,11 @@
   overflow-y: auto;
   scrollbar-width: thin;
 }
+
+/* 会话条目限高：最多显示 6 条（约 38px/条），超出内部滚动 */
+.session-scroll {
+  max-height: 232px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
