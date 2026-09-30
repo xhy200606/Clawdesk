@@ -55,6 +55,8 @@ const HOUSE_PATH_3D = (() => {
 
 const GRASS_COLOR = new THREE.Color("#68b840");
 const DIRT_COLOR = new THREE.Color("#c8a868");
+// 摸鱼不出圈：远足功能停用（与 2D 一致）
+const EXCURSIONS_ENABLED = false;
 const WATER_COLOR = new THREE.Color("#4890d0");
 
 // ── Visual status system (mirrors RanchScene2D) ──
@@ -367,7 +369,7 @@ function Ground() {
 function DirtPathSegment3D({
   from,
   to,
-  width = 0.88,
+  width = 0.92,
 }: {
   from: [number, number];
   to: [number, number];
@@ -1268,7 +1270,7 @@ function SceneContent({
               next[agent.id] = rest.length > 0 ? rest : null;
             }
             // 空数组 = 到家
-          } else if (Math.random() < 0.16) {
+          } else if (EXCURSIONS_ENABLED && Math.random() < 0.16) {
             const dest = EXCURSIONS[Math.floor(Math.random() * EXCURSIONS.length)];
             const ptsW = [
               penGate(),

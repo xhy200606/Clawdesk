@@ -290,7 +290,9 @@ function PixelPond() {
 function PixelRiver() {
   // 河道：从顶边 (x≈22.5%) 蜿蜒向左下，在 55% 高度处与横路相交（此处架桥与路连通），
   // 最后流入左下池塘。viewBox 320×700 ↔ 容器 32%×70% 世界坐标。
-  const FLOW = "M 225 0 C 175 110, 125 210, 104 320 S 76 500, 62 640 C 57 666, 74 683, 112 689";
+  const FLOW = "M 225 0 C 175 110, 125 210, 104 320 S 76 500, 62 640";
+  // 尾段：仅水面色（无岸线），延伸入池塘与池水融为一体
+  const FLOW_TAIL = "M 62 640 C 57 666, 74 683, 112 689";
   return (
     <svg
       width="100%"
@@ -312,6 +314,16 @@ function PixelRiver() {
         strokeLinecap="round"
         opacity="0.7"
       />
+      {/* 尾段水面：入池部分与池水同色融合 */}
+      <path d={FLOW_TAIL} fill="none" stroke="#4a9e8a" strokeWidth="26" strokeLinecap="round" />
+      <path
+        d={FLOW_TAIL}
+        fill="none"
+        stroke="#5cb8a4"
+        strokeWidth="11"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
       {/* 波光（沿河道分布） */}
       <path
         d="M 200 60 q 8 6 0 12 M 152 150 q 8 6 0 12 M 122 240 q 8 6 0 12 M 104 330 q 8 6 0 12 M 88 430 q 8 6 0 12 M 74 520 q 8 6 0 12 M 64 620 q 8 6 0 12 M 82 665 q 8 6 0 12"
@@ -322,31 +334,24 @@ function PixelRiver() {
       />
       {/* 入户路：谷仓门口 → 竖路二顶端（与 3D HOUSE_PATH 一致） */}
       <path
-        d="M 306 194 C 302 250, 285 310, 250 350 C 225 378, 202 395, 200 440"
-        fill="none"
-        stroke="#c9b16d"
-        strokeWidth="44"
-        strokeLinecap="round"
-      />
-      <path
-        d="M 306 194 C 302 250, 285 310, 250 350 C 225 378, 202 395, 200 440"
+        d="M 306 194 C 302 250, 285 310, 250 350 C 225 378, 202 395, 200 440 L 200 552"
         fill="none"
         stroke="#d4be7a"
-        strokeWidth="34"
+        strokeWidth="46"
         strokeLinecap="round"
       />
       {/* 木桥：架在河道与横路（y=55%）的真实交点 (74,550)，桥面沿路方向，与路连通 */}
       <g transform="translate(74 550) rotate(90)">
-        <rect x="-23" y="-27" width="46" height="54" rx="2" fill="#a07020" />
-        <rect x="-20" y="-24" width="40" height="48" fill="#c09040" />
-        <rect x="-20" y="-15" width="40" height="2.5" fill="#a07020" opacity="0.6" />
-        <rect x="-20" y="-4" width="40" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-23" y="-23" width="46" height="46" rx="2" fill="#a07020" />
+        <rect x="-20" y="-20.5" width="40" height="41" fill="#c09040" />
+        <rect x="-20" y="-13" width="40" height="2.5" fill="#a07020" opacity="0.6" />
+        <rect x="-20" y="-3" width="40" height="2.5" fill="#a07020" opacity="0.6" />
         <rect x="-20" y="7" width="40" height="2.5" fill="#a07020" opacity="0.6" />
         {/* 桥头桩 */}
-        <rect x="-25" y="-27" width="5" height="7" fill="#8b5a2b" />
-        <rect x="20" y="-27" width="5" height="7" fill="#8b5a2b" />
-        <rect x="-25" y="20" width="5" height="7" fill="#8b5a2b" />
-        <rect x="20" y="20" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-25" y="-23" width="5" height="7" fill="#8b5a2b" />
+        <rect x="20" y="-23" width="5" height="7" fill="#8b5a2b" />
+        <rect x="-25" y="16" width="5" height="7" fill="#8b5a2b" />
+        <rect x="20" y="16" width="5" height="7" fill="#8b5a2b" />
       </g>
     </svg>
   );
@@ -1206,6 +1211,8 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
     return false;
   }, [agents, agentStateMap]);
 
+  // 摸鱼不出圈：远足功能停用（动物全程待在围栏圈内）
+  const EXCURSIONS_ENABLED = false;
   // 游走目标（相对偏移 px）：空闲在围栏圈内悠闲走动，工作在槽位附近小范围活动。
   // 每 ~3.6s 换一次目标点，配合 CSS transition 平滑移动；个体间隔随机自然。
   const [wander, setWander] = useState<Record<string, { dx: number; dy: number }>>({});
@@ -1261,7 +1268,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
           if (t) {
             if (t.leg < t.pts.length - 1) next[agent.id] = { ...t, leg: t.leg + 1 };
             // 走完 → 清空，之后重新随机决定是否再出发
-          } else if (Math.random() < 0.16) {
+          } else if (EXCURSIONS_ENABLED && Math.random() < 0.16) {
             const dest = EXCURSIONS[Math.floor(Math.random() * EXCURSIONS.length)];
             const pts = [penGate(), ...routeBetween(penCenter(), dest, { forceRoads: true }), dest];
             if (pts.length > 2) next[agent.id] = { pts, leg: 0 };
@@ -1478,7 +1485,7 @@ export function RanchScene2D({ agents, sessionActivity, zoom, onZoom }: RanchSce
         </div>
 
         {/* Pond */}
-        <div style={{ position: "absolute", left: "6%", top: "64%", zIndex: 2 }}>
+        <div style={{ position: "absolute", left: "6%", top: "64%", zIndex: 1 }}>
           <PixelPond />
         </div>
 
