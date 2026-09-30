@@ -30,7 +30,7 @@ function localDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-type UsagePoint = { agentId: string; timestamp: number; tokens: number };
+type UsagePoint = { key: string; agentId: string; timestamp: number; tokens: number };
 
 // ─── Chart.js instance management ────────────────────────────
 
@@ -310,6 +310,7 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
   const [usagePoints, setUsagePoints] = useState<UsagePoint[]>([]);
   const [pointsLoading, setPointsLoading] = useState(false);
   const [pointsError, setPointsError] = useState<string | null>(null);
+  const [pointsNote, setPointsNote] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -339,6 +340,7 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
       setUsagePoints([]);
       setPointsLoading(false);
       setPointsError(null);
+      setPointsNote(null);
       return;
     }
     const selected = hasFilter ? entries.filter((entry) => entry.agentId === agentFilter) : entries;
@@ -346,6 +348,7 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
     let canceled = false;
     setPointsLoading(true);
     setPointsError(null);
+    setPointsNote(null);
     setUsagePoints([]);
     void (async () => {
       const points: UsagePoint[] = [];
@@ -354,6 +357,7 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
       // transcript 已归档/清理的会话：网关返回 "No transcript found"，
       // 它们本来就没有逐小时记录，视为「无数据」而非失败，今日总量口径同步扣除。
       const noTranscript = new Set<string>();
+      const failedKeys = new Set<string>();
       const workers = Array.from({ length: Math.min(6, unique.length) }, async () => {
         while (cursor < unique.length) {
           const entry = unique[cursor++];
@@ -362,11 +366,13 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
               "sessions.usage.timeseries",
               {
                 key: entry.key,
+                maxPoints: 100000, // 关闭下采样：保证逐小时分布精确
               },
             );
             for (const point of series?.points ?? []) {
               if (Number.isFinite(point.timestamp) && Number.isFinite(point.totalTokens)) {
                 points.push({
+                  key: entry.key,
                   agentId: entry.agentId ?? entry.key.split(":")[1] ?? "",
                   timestamp: point.timestamp,
                   tokens: point.totalTokens,
@@ -376,36 +382,49 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (/no transcript found/i.test(msg)) noTranscript.add(entry.key);
-            else failures++;
+            else {
+              failures++;
+              failedKeys.add(entry.key);
+            }
           }
         }
       });
       await Promise.all(workers);
       if (canceled) return;
-      const baseExpected =
-        mode === "1d"
-          ? hasFilter
-            ? selected.reduce((sum, entry) => sum + (entry.usage?.totalTokens ?? 0), 0)
-            : (usageResult?.totals.totalTokens ?? 0)
-          : 0;
-      const missingTokens = selected
-        .filter((entry) => noTranscript.has(entry.key))
-        .reduce((sum, entry) => sum + (entry.usage?.totalTokens ?? 0), 0);
-      const expectedToday = baseExpected - missingTokens;
+      // 按会话逐一核对：transcript 时序（实时）与 sessions.usage 汇总（缓存，可能滞后）
+      // 天然存在时间差，不能全局硬比；只按会话找真正缺明细的部分，图表照常绘制。
       const todayKey = localDateKey(new Date());
-      const recordedToday = points.reduce(
-        (sum, point) =>
-          localDateKey(new Date(point.timestamp)) === todayKey ? sum + point.tokens : sum,
-        0,
-      );
+      const todayTokensByKey = new Map<string, number>();
+      for (const point of points) {
+        if (localDateKey(new Date(point.timestamp)) !== todayKey) continue;
+        todayTokensByKey.set(point.key, (todayTokensByKey.get(point.key) ?? 0) + point.tokens);
+      }
+      let archivedCount = 0;
+      let archivedTokens = 0;
+      let partialTokens = 0;
+      for (const entry of unique) {
+        const usage = entry.usage?.totalTokens ?? 0;
+        if (noTranscript.has(entry.key)) {
+          if (usage > 0) {
+            archivedCount++;
+            archivedTokens += usage;
+          }
+          continue;
+        }
+        if (failedKeys.has(entry.key)) continue;
+        const gap = usage - (todayTokensByKey.get(entry.key) ?? 0);
+        if (gap > Math.max(1000, usage * 0.1)) partialTokens += gap;
+      }
       setUsagePoints(points);
-      setPointsError(
-        failures > 0
-          ? `${failures} 个会话的逐小时用量读取失败`
-          : expectedToday > 0 && Math.abs(recordedToday - expectedToday) / expectedToday > 0.1
-            ? "逐小时记录与今日总量不一致，无法准确绘图"
-            : null,
-      );
+      const notes: string[] = [];
+      if (archivedCount > 0)
+        notes.push(
+          `${archivedCount} 个归档会话（${fmtT(archivedTokens)} tokens）无逐小时记录，未计入下图`,
+        );
+      if (partialTokens > 0)
+        notes.push(`部分会话缺少约 ${fmtT(partialTokens)} tokens 的逐小时明细`);
+      setPointsNote(notes.length > 0 ? notes.join("；") : null);
+      setPointsError(failures > 0 ? `${failures} 个会话的逐小时用量读取失败` : null);
       setPointsLoading(false);
     })();
     return () => {
@@ -613,17 +632,27 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
               </button>
             </div>
           </div>
-          {isChartMode && (mode === "1d" || hasFilter) && (pointsLoading || pointsError) ? (
+          {isChartMode && (mode === "1d" || hasFilter) && pointsLoading ? (
             <div className="muted" style={{ padding: 24, textAlign: "center" }}>
-              {pointsError ?? "正在读取真实用量记录…"}
+              正在读取真实用量记录…
             </div>
           ) : isChartMode ? (
-            <div
-              className="usage-line-chart"
-              style={{ marginTop: 12, position: "relative", height: 200 }}
-            >
-              <canvas ref={canvasRef} />
-            </div>
+            <>
+              <div
+                className="usage-line-chart"
+                style={{ marginTop: 12, position: "relative", height: 200 }}
+              >
+                <canvas ref={canvasRef} />
+              </div>
+              {(pointsError || pointsNote) && (
+                <div
+                  className="muted"
+                  style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.7 }}
+                >
+                  {pointsError ?? pointsNote}
+                </div>
+              )}
+            </>
           ) : (
             <div style={{ marginTop: 12, padding: "0 4px 4px" }}>
               {hasCtxContent ? (
