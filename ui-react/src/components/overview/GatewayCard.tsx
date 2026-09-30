@@ -90,6 +90,35 @@ export function GatewayFields({
   const versionDiff = latest && helloVersion ? compareVersions(helloVersion, latest) : null;
   const upToDate = versionDiff !== null ? versionDiff >= 0 : null;
 
+  // ─── 一键更新（Docker 版）：经同源 /updater 反代到服务端更新容器 ───
+  const [updateState, setUpdateState] = useState<"idle" | "confirm" | "running" | "done" | "error">(
+    "idle",
+  );
+  const [updateMsg, setUpdateMsg] = useState("");
+
+  const runUpdate = useCallback(
+    async (tag: string) => {
+      setUpdateState("running");
+      setUpdateMsg(`正在拉取镜像 ${tag} 并重启网关容器（约 1~3 分钟），请勿关闭页面…`);
+      try {
+        const r = await fetch("/updater/api/update", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ tag }),
+        });
+        const j = (await r.json()) as { ok?: boolean; error?: string };
+        if (!r.ok || !j.ok) throw new Error(j.error || `HTTP ${r.status}`);
+        setUpdateState("done");
+        setUpdateMsg(`已更新到 ${tag}，网关容器重启中，10 秒后自动重连…`);
+        setTimeout(() => onReconnect(), 10000);
+      } catch (e) {
+        setUpdateState("error");
+        setUpdateMsg(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [onReconnect],
+  );
+
   const switchTo = useCallback(
     (id: string) => {
       onSettingsChange(applyGatewayToSettings(settings, id));
@@ -197,6 +226,54 @@ export function GatewayFields({
           </div>
         </div>
       </div>
+
+      {/* 一键更新（检测到新版本或最近有更新动作时显示） */}
+      {updateState !== "idle" || (upToDate === false && latest) ? (
+        <div
+          style={{
+            marginTop: 8,
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {updateState === "idle" && upToDate === false && latest ? (
+            <button
+              className="btn btn--sm primary"
+              onClick={() => setUpdateState("confirm")}
+              disabled={!connected}
+              title={!connected ? "网关未连接时不允许更新" : "在服务器上拉取新镜像并重启网关容器"}
+            >
+              一键更新到 {latest}（Docker）
+            </button>
+          ) : null}
+          {updateState === "confirm" ? (
+            <>
+              <span style={{ fontSize: 12 }}>
+                将在服务器上拉取 v{latest} 镜像并重启网关容器，期间网关会短暂离线，确认？
+              </span>
+              <button className="btn btn--sm danger" onClick={() => runUpdate(latest ?? "")}>
+                确认更新
+              </button>
+              <button className="btn btn--sm" onClick={() => setUpdateState("idle")}>
+                取消
+              </button>
+            </>
+          ) : null}
+          {updateState === "running" ? (
+            <span style={{ fontSize: 12, opacity: 0.85 }}>{updateMsg}</span>
+          ) : null}
+          {updateState === "done" ? (
+            <span style={{ fontSize: 12, color: "var(--color-success, #1D9E75)" }}>
+              {updateMsg}
+            </span>
+          ) : null}
+          {updateState === "error" ? (
+            <span style={{ fontSize: 12, color: "#A32D2D" }}>更新失败：{updateMsg}</span>
+          ) : null}
+        </div>
+      ) : null}
 
       {editing || draftUrl ? (
         <div className="access-grid access-grid--compact" style={{ marginTop: 8 }}>
