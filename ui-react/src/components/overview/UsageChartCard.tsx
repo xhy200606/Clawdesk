@@ -311,6 +311,9 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
   const [pointsLoading, setPointsLoading] = useState(false);
   const [pointsError, setPointsError] = useState<string | null>(null);
   const [pointsNote, setPointsNote] = useState<string | null>(null);
+  // 用量快照（updater 采集器落盘，nginx 托管于 /usage-history/）：Map<dateKey, Map<agentId, hours[24]>>
+  // 会话被归档/压缩后实时时序就查不到它，只有快照里还留着归档前的逐小时用量。
+  const [snapData, setSnapData] = useState<Map<string, Map<string, number[]>> | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -432,6 +435,60 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
     };
   }, [mode, hasFilter, agentFilter, usageResult, weekUsageResult]);
 
+  // 拉取用量快照（1d 或 7d+筛选时），失败静默（快照缺失时回退纯实时渲染）
+  useEffect(() => {
+    if (mode !== "1d" && !(mode === "7d" && hasFilter)) return;
+    let canceled = false;
+    void (async () => {
+      const now = new Date();
+      const dates: string[] =
+        mode === "1d"
+          ? [localDateKey(now)]
+          : Array.from({ length: 7 }, (_, i) => {
+              const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i));
+              return localDateKey(d);
+            });
+      const acc = new Map<string, Map<string, number[]>>();
+      await Promise.all(
+        dates.map(async (dateKey) => {
+          try {
+            const r = await fetch(
+              `/usage-history/${dateKey}.json?t=${Math.floor(Date.now() / 60000)}`,
+              {
+                cache: "no-store",
+              },
+            );
+            if (!r.ok) return;
+            const j = (await r.json()) as {
+              sessions?: Record<string, { agent?: string; hours?: unknown }>;
+            };
+            if (!j?.sessions || typeof j.sessions !== "object") return;
+            // 按会话存 max 再按 agent 求和：会话组合变化（归档/压缩）不会少算
+            const m = new Map<string, number[]>();
+            for (const rec of Object.values(j.sessions)) {
+              const hours = rec?.hours;
+              if (!Array.isArray(hours) || hours.length !== 24) continue;
+              const agentId = rec?.agent || "unknown";
+              let arr = m.get(agentId);
+              if (!arr) {
+                arr = new Array<number>(24).fill(0);
+                m.set(agentId, arr);
+              }
+              for (let h = 0; h < 24; h++) arr[h] += (hours as number[])[h] ?? 0;
+            }
+            if (m.size > 0) acc.set(dateKey, m);
+          } catch {
+            /* 快照缺失不影响绘图 */
+          }
+        }),
+      );
+      if (!canceled) setSnapData(acc);
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [mode, hasFilter]);
+
   const today = localDateKey(new Date());
   const hourly = Array.from({ length: 24 }, (_, hour) => ({ hour, tokens: 0 }));
   for (const point of usagePoints) {
@@ -439,6 +496,17 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
     if (localDateKey(date) === today && (!hasFilter || point.agentId === agentFilter)) {
       hourly[date.getHours()].tokens += point.tokens;
     }
+  }
+  // 快照合并：按小时取 max（用量只增不减），补回归档/压缩会话的逐小时用量
+  const snapToday = snapData?.get(today);
+  const snapCovered = !!snapToday && snapToday.size > 0;
+  if (snapToday) {
+    const snapHourly = new Array<number>(24).fill(0);
+    for (const [agentId, hours] of snapToday) {
+      if (hasFilter && agentId !== agentFilter) continue;
+      for (let h = 0; h < 24; h++) snapHourly[h] += hours[h] ?? 0;
+    }
+    for (let h = 0; h < 24; h++) hourly[h].tokens = Math.max(hourly[h].tokens, snapHourly[h]);
   }
   const hasDayData = hourly.some((hour) => hour.tokens > 0);
 
@@ -459,6 +527,18 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
       for (const point of usagePoints) {
         const dateStr = localDateKey(new Date(point.timestamp));
         if (dayMap.has(dateStr)) dayMap.set(dateStr, (dayMap.get(dateStr) ?? 0) + point.tokens);
+      }
+      // 快照按日合并（此处 agentFilter 非空）：归档会话的当日用量从快照补回
+      if (snapData) {
+        for (const [dateKey, agents] of snapData) {
+          if (!dayMap.has(dateKey)) continue;
+          let sum = 0;
+          for (const [agentId, hours] of agents) {
+            if (agentId !== agentFilter) continue;
+            for (const v of hours) sum += v ?? 0;
+          }
+          dayMap.set(dateKey, Math.max(dayMap.get(dateKey) ?? 0, sum));
+        }
       }
       labels = Array.from(dayMap.keys()).map((d) => {
         const dt = new Date(d + "T00:00:00");
@@ -649,7 +729,8 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
                   className="muted"
                   style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.7 }}
                 >
-                  {pointsError ?? pointsNote}
+                  {pointsError ??
+                    (snapCovered ? "已合并用量快照，含归档会话的逐小时用量" : pointsNote)}
                 </div>
               )}
             </>
