@@ -334,7 +334,7 @@ function PixelRiver() {
       />
       {/* 入户路：谷仓门口 → 竖路二顶端（与 3D HOUSE_PATH 一致） */}
       <path
-        d="M 306 194 C 300 242, 283 288, 251 318 C 233 334, 223 346, 223 368 L 223 552"
+        d="M 306 194 C 294 252, 223 282, 223 310 L 223 552"
         fill="none"
         stroke="#d4be7a"
         strokeWidth="46"
