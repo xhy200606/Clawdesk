@@ -352,9 +352,9 @@ function Ground() {
         <planeGeometry args={[20, 0.92]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
-      {/* 竖路二（与 2D 一致：x=20%，仅南段 y55→100） */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w3d(ROADS.v2X, 50)[0], 0, 1.9]}>
-        <planeGeometry args={[0.92, 6.2]} />
+      {/* 竖路二（与 2D 一致：x=20%，南段 y43→100，北端为入户路汇入点） */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w3d(ROADS.v2X, 50)[0], 0, 3.65]}>
+        <planeGeometry args={[0.92, 9.7]} />
         <meshStandardMaterial color={DIRT_COLOR} roughness={1} />
       </mesh>
       {/* 入户路：谷仓门口 → 竖路二（与 2D 一致） */}
