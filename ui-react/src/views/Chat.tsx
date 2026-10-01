@@ -619,6 +619,44 @@ export function ChatView() {
     }
   }, [connected, sessionsResult]);
 
+  // 兜底自动刷新：万一事件通道漏掉（key 形态差异 / 事件丢失 / event gap），
+  // 低频拉历史比对，只有内容真的变化时才写入 store，且不打断流式输出。
+  useEffect(() => {
+    if (!connected || !sessionKey) return;
+    let stopped = false;
+    const fingerprint = (msgs: unknown[]) => {
+      const last = msgs[msgs.length - 1] as Record<string, unknown> | undefined;
+      const content =
+        typeof last?.content === "string" ? last.content : JSON.stringify(last?.content ?? "");
+      return `${msgs.length}:${String(last?.role ?? "")}:${content.slice(0, 120)}`;
+    };
+    const tick = async () => {
+      if (stopped || document.hidden) return;
+      const st = getReactiveState();
+      if (st.tab !== "chat" || st.chatStream !== null || st.chatSending || st.chatLoading) return;
+      try {
+        const res = await st.client?.request<{ messages?: unknown[] }>("chat.history", {
+          sessionKey: st.sessionKey,
+          limit: 200,
+        });
+        const messages = Array.isArray(res?.messages) ? (res?.messages as unknown[]) : [];
+        if (stopped || messages.length === 0) return;
+        const local = (st.chatMessages ?? []) as unknown[];
+        // 远端比本地新（条数更多或末尾不同）才替换，避免覆盖本地刚发的消息
+        if (messages.length >= local.length && fingerprint(messages) !== fingerprint(local)) {
+          st.chatMessages = messages;
+        }
+      } catch {
+        /* 轮询失败静默 */
+      }
+    };
+    const timer = window.setInterval(() => void tick(), 10000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [connected, sessionKey]);
+
   // --- Sidebar ---
   const sidebarOpen = s((st) => st.sidebarOpen);
   const sidebarContent = s((st) => st.sidebarContent);

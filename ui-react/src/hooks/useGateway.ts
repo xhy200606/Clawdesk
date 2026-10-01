@@ -13,6 +13,7 @@ import { loadAssistantIdentity } from "../lib/controllers/assistant-identity.ts"
 import {
   handleChatEvent,
   loadChatHistory,
+  sessionKeysMatch,
   type ChatEventPayload,
 } from "../lib/controllers/chat.ts";
 import { loadDevices } from "../lib/controllers/devices.ts";
@@ -188,6 +189,24 @@ export function useGateway() {
 // ---------------------------------------------------------------------------
 // Gateway event dispatcher
 // ---------------------------------------------------------------------------
+// 会话消息事件（session.message）是网关广播会话新消息的通道。收到当前会话的
+// 新消息时静默刷新历史，避免事件通道差异导致回答不出现。
+let chatHistoryRefreshTimer: number | null = null;
+function scheduleChatHistoryRefresh() {
+  if (chatHistoryRefreshTimer !== null) return;
+  chatHistoryRefreshTimer = window.setTimeout(() => {
+    chatHistoryRefreshTimer = null;
+    const st = getReactiveState();
+    // 流式输出/发送中不打断（本地增量优先）
+    if (st.chatStream !== null || st.chatSending) return;
+    if (st.chatLoading) {
+      scheduleChatHistoryRefresh();
+      return;
+    }
+    void loadChatHistory(st as never);
+  }, 400);
+}
+
 function handleGatewayEvent(evt: GatewayEventFrame) {
   const s = getReactiveState();
 
@@ -230,6 +249,14 @@ function handleGatewayEvent(evt: GatewayEventFrame) {
     }
     if (chatState === "final" && shouldReloadHistoryForFinalEvent(payload)) {
       void loadChatHistory(s as never);
+    }
+    return;
+  }
+
+  if (evt.event === "session.message") {
+    const payload = evt.payload as { sessionKey?: string } | undefined;
+    if (payload?.sessionKey && sessionKeysMatch(payload.sessionKey, s.sessionKey)) {
+      scheduleChatHistoryRefresh();
     }
     return;
   }

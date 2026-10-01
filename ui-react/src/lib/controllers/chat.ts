@@ -28,6 +28,21 @@ export type ChatEventPayload = {
   errorMessage?: string;
 };
 
+/**
+ * 会话 key 宽容匹配：store 里保存短 key（如 "main"），网关事件里是全限定
+ * key（如 "agent:main:main"）。严格相等会让所有 chat 事件被丢弃，表现为
+ * 「新回答必须手动刷新才出现」。
+ */
+export function sessionKeysMatch(a?: string | null, b?: string | null): boolean {
+  if (!a || !b) {
+    return false;
+  }
+  if (a === b) {
+    return true;
+  }
+  return a.endsWith(`:${b}`) || b.endsWith(`:${a}`);
+}
+
 export async function loadChatHistory(state: ChatState) {
   if (!state.client || !state.connected) {
     return;
@@ -228,13 +243,23 @@ export function handleChatEvent(state: ChatState, payload?: ChatEventPayload) {
   if (!payload) {
     return null;
   }
-  if (payload.sessionKey !== state.sessionKey) {
+  if (!sessionKeysMatch(payload.sessionKey, state.sessionKey)) {
     return null;
   }
 
+  // 网关事件的 runId 由网关生成，可能与本地 sendChatMessage 的 idempotencyKey
+  // 不同；只要本地正处于流式/发送中，就视为本次 run，否则 delta 会被当成
+  // 「别人的 run」丢弃（表现为回答不流式、不出现）。
+  const isLocalRun =
+    !payload.runId ||
+    !state.chatRunId ||
+    payload.runId === state.chatRunId ||
+    state.chatStream !== null ||
+    state.chatSending;
+
   // Final from another run (e.g. sub-agent announce): refresh history to show new message.
   // See https://github.com/openclaw/openclaw/issues/1909
-  if (payload.runId && state.chatRunId && payload.runId !== state.chatRunId) {
+  if (!isLocalRun) {
     if (payload.state === "final") {
       const finalMessage = normalizeFinalAssistantMessage(payload.message);
       if (finalMessage) {
