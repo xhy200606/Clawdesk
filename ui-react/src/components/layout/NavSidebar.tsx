@@ -602,7 +602,7 @@ function SessionItem({
   return (
     <>
       <div
-        className={`session-item${isActive ? " session-item--active" : ""}`}
+        className={`session-item${isActive ? " session-item--active" : ""}${working ? " session-item--working" : ""}`}
         onClick={onSwitch}
         title={name}
         role="button"

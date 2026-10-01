@@ -259,3 +259,42 @@
     background: var(--border);
     margin: 4px 8px;
 }
+
+/* ── 运行中的会话项：左侧流光条 + 名称高亮（与空闲会话明确区分） ── */
+.session-item--working .session-item__name {
+  color: #22d3ee;
+  font-weight: 600;
+}
+
+.session-item--working::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #22d3ee, #0284c7);
+  animation: session-working-bar 1.6s ease-in-out infinite;
+}
+
+:root[data-theme="light"] .session-item--working .session-item__name {
+  color: #0284c7;
+}
+
+@keyframes session-working-bar {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-item--working::before {
+    animation: none;
+    opacity: 0.9;
+  }
+}

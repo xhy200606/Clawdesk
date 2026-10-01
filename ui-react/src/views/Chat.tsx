@@ -16,7 +16,12 @@ import { handleChatScroll } from "../lib/app/app-scroll.ts";
 import { highlightCodeBlocks } from "../lib/chat/code-highlight.ts";
 import { normalizeMessage } from "../lib/chat/message-normalizer.ts";
 import { normalizeRoleForGrouping } from "../lib/chat/message-normalizer.ts";
-import { abortChatRun, loadChatHistory, type ChatState } from "../lib/controllers/chat.ts";
+import {
+  abortChatRun,
+  loadChatHistory,
+  sessionKeysMatch,
+  type ChatState,
+} from "../lib/controllers/chat.ts";
 import { loadConfig } from "../lib/controllers/config.ts";
 import { loadSessions, patchSession } from "../lib/controllers/sessions.ts";
 import { detectTextDirection } from "../lib/theme/text-direction.ts";
@@ -683,6 +688,18 @@ export function ChatView() {
   const isBusy = sending || chatStream !== null;
   const canCompose = connected;
 
+  // 当前会话是否「运行中」：本地正在发送/流式输出，或网关侧标记 hasActiveRun / running。
+  // 会话 key 双形态（短 key `main` vs 全限定 `agent:main:main`），比对必须宽容。
+  const sessionWorking = React.useMemo(() => {
+    if (isBusy) return true;
+    const rows = (sessionsResult?.sessions ?? []) as Array<Record<string, unknown>>;
+    return rows.some(
+      (row) =>
+        sessionKeysMatch(row.key as string, sessionKey) &&
+        (row.hasActiveRun === true || row.status === "running"),
+    );
+  }, [isBusy, sessionsResult, sessionKey]);
+
   // --- Resolved avatar ---
   const agentsList = s((st) => st.agentsList);
   const resolvedAvatarUrl = React.useMemo(() => {
@@ -1086,6 +1103,12 @@ export function ChatView() {
             set({ chatAttachments: next });
           }}
         />
+        {sessionWorking && (
+          <div className="chat-compose__running" role="status" aria-live="polite">
+            <span className="chat-compose__running-dot" />
+            <span>{isBusy ? "会话运行中 · 新消息将加入队列" : "该会话正在运行中"}</span>
+          </div>
+        )}
         <div className="chat-compose__row">
           <input
             ref={fileInputRef}
@@ -1200,9 +1223,27 @@ export function ChatView() {
               >
                 {canAbort ? t("chatView.stop") : t("chatView.newSession")}
               </button>
-              <button className="btn primary" disabled={!connected} onClick={handleSend}>
-                {isBusy ? t("chatView.queue") : t("chatView.send")}
-                <kbd className="btn-kbd">↵</kbd>
+              <button
+                className={`btn${sessionWorking ? " btn--running" : " primary"}`}
+                disabled={!connected}
+                onClick={handleSend}
+                title={
+                  sessionWorking
+                    ? isBusy
+                      ? "会话运行中，点击可将消息加入队列"
+                      : "该会话正在运行中"
+                    : undefined
+                }
+              >
+                {sessionWorking && (
+                  <span className="btn__dots" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                )}
+                {sessionWorking ? t("chatView.running") : t("chatView.send")}
+                {!sessionWorking && <kbd className="btn-kbd">↵</kbd>}
               </button>
             </div>
           </div>

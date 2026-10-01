@@ -255,6 +255,7 @@ export const en: TranslationMap = {
     newSession: "New session",
     queue: "Queue",
     send: "Send",
+    running: "Running",
     message: "Message",
     newMessages: "New messages",
     attachmentAlt: "Attachment preview",

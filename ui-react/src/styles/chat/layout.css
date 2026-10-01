@@ -1010,3 +1010,52 @@
     transform: translateY(0);
   }
 }
+
+/* ── 输入框上方的「会话运行中」状态条 ── */
+.chat-compose__running {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
+:root[data-theme="light"] .chat-compose__running {
+  color: #0369a1;
+  background: rgba(14, 165, 233, 0.08);
+  border-color: rgba(14, 165, 233, 0.28);
+}
+
+.chat-compose__running-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.85);
+  animation: compose-running-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes compose-running-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-compose__running-dot {
+    animation: none;
+  }
+}

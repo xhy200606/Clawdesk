@@ -253,6 +253,7 @@ export const zh_CN: TranslationMap = {
     newSession: "新会话",
     queue: "排队",
     send: "发送",
+    running: "运行中",
     message: "消息",
     newMessages: "新消息",
     attachmentAlt: "附件预览",
