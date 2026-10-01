@@ -4,7 +4,7 @@ import type {
   SessionsUsageResult,
   SessionUsageTimeSeries,
 } from "../../lib/types/types.ts";
-import { getReactiveState } from "../../store/appStore.ts";
+import { getReactiveState, useAppStore } from "../../store/appStore.ts";
 import { DragHandle } from "./AccessCard.tsx";
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -304,7 +304,9 @@ export type UsageChartCardProps = {
 };
 
 export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: UsageChartCardProps) {
-  const [mode, setMode] = useState<ChartMode>("7d");
+  const settings = useAppStore((s) => s.settings);
+  // 饲料消耗趋势默认显示 1d；切换 1d/7d 时会自动记住为默认（settings.usageDefaultMode）
+  const [mode, setMode] = useState<ChartMode>(settings.usageDefaultMode === "7d" ? "7d" : "1d");
   const [ctxRange, setCtxRange] = useState<CtxRange>("1d");
   const [agentFilter, setAgentFilter] = useState("");
   const [usagePoints, setUsagePoints] = useState<UsagePoint[]>([]);
@@ -645,6 +647,11 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
       _ctxChartInstance = null;
     }
     setMode(next);
+    // 1d/7d 切换即持久化为默认视图（下次进入默认显示；ctx 视图不记忆）
+    if (next === "1d" || next === "7d") {
+      const { settings: cur, applySettings: apply } = useAppStore.getState();
+      apply({ ...cur, usageDefaultMode: next });
+    }
   }, []);
 
   const handleCtxRange = useCallback((r: CtxRange) => {
@@ -698,10 +705,18 @@ export function UsageChartCard({ costDaily, usageResult, weekUsageResult }: Usag
               onChange={handleAgentChange}
             />
             <div className="usage-chart-toggle">
-              <button className={mode === "1d" ? "active" : ""} onClick={() => handleToggle("1d")}>
+              <button
+                className={mode === "1d" ? "active" : ""}
+                onClick={() => handleToggle("1d")}
+                title="今日视图（切换将记住为默认）"
+              >
                 1d
               </button>
-              <button className={mode === "7d" ? "active" : ""} onClick={() => handleToggle("7d")}>
+              <button
+                className={mode === "7d" ? "active" : ""}
+                onClick={() => handleToggle("7d")}
+                title="近 7 天视图（切换将记住为默认）"
+              >
                 7d
               </button>
               <button

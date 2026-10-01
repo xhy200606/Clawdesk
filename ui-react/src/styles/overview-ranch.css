@@ -245,6 +245,11 @@
     filter: brightness(0.6) saturate(0.8);
 }
 
+/* dark 下入户路（SVG 硬编码 #d4be7a）与 div 路同步压暗，否则两条路颜色不一致 */
+:root[data-theme="dark"] .ranch-house-path {
+    filter: brightness(0.6) saturate(0.8);
+}
+
 /* ── Pixel trees ── */
 .ranch-tree {
     position: absolute;

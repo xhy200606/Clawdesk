@@ -57,6 +57,7 @@ export type UiSettings = {
   navGroupsCollapsed: Record<string, boolean>; // Which nav groups are collapsed
   fileExplorerOpen: boolean; // 聊天页右侧 Workspace 文件管理器开关
   accent?: string; // 主题色（data-accent）：blue/green/purple/orange/rose/cyan
+  usageDefaultMode?: "1d" | "7d"; // 饲料消耗趋势默认视图（默认 1d，切换 1d/7d 时自动记住）
   locale?: string;
   // [multi-gateway] 已保存的网关列表与当前激活项
   gateways?: GatewayProfile[];
@@ -166,6 +167,10 @@ export function loadSettings(): UiSettings {
         typeof parsed.activeGatewayId === "string" && parsed.activeGatewayId
           ? parsed.activeGatewayId
           : defaults.activeGatewayId,
+      usageDefaultMode:
+        parsed.usageDefaultMode === "1d" || parsed.usageDefaultMode === "7d"
+          ? parsed.usageDefaultMode
+          : undefined,
     };
   } catch {
     return defaults;
